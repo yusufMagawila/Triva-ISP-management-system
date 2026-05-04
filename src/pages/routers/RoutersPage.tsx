@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity, Copy, Info, Download } from 'lucide-react';
 import { format } from 'date-fns';
@@ -19,6 +20,7 @@ interface RouterData {
 }
 
 export default function RoutersPage() {
+  const token = useAuthStore((s) => s.token);
   const [routers, setRouters] = useState<RouterData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -29,8 +31,8 @@ export default function RoutersPage() {
     setDownloadingScript(routerId);
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL ?? ''}/api/routers/${routerId}/setup-script`,
-        { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:4000'}/api/routers/${routerId}/setup-script`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!res.ok) throw new Error('Failed to download script');
       const blob = await res.blob();
