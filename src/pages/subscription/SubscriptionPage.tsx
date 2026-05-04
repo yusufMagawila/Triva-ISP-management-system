@@ -22,6 +22,7 @@ const PLAN_DETAILS = {
     features: ['Up to 2 routers', 'Up to 100 sessions/day', 'Email support'],
     color: 'border-blue-200 bg-blue-50',
     badge: 'bg-blue-100 text-blue-700',
+    recommended: false,
   },
   STANDARD: {
     label: 'Standard',
@@ -35,6 +36,7 @@ const PLAN_DETAILS = {
     features: ['Unlimited routers', 'Unlimited sessions', '24/7 support', 'Custom branding', 'API access'],
     color: 'border-purple-200 bg-purple-50',
     badge: 'bg-purple-100 text-purple-700',
+    recommended: false,
   },
 };
 
