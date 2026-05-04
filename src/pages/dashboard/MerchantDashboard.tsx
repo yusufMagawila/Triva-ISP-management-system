@@ -125,8 +125,7 @@ export default function MerchantDashboard() {
   const sub = user?.tenant?.subscription;
   const isTrialOrExpiring =
     sub &&
-    (sub.status === 'TRIAL' ||
-      new Date(sub.expiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000);
+    new Date(sub.expiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
 
   return (
     <div className="p-6 space-y-6">
@@ -144,7 +143,7 @@ export default function MerchantDashboard() {
           <Activity className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
           <div>
             <p className="font-medium text-yellow-800">
-              {sub.status === 'TRIAL' ? 'Trial Account' : 'Subscription Expiring Soon'}
+              {'Subscription Expiring Soon'}
             </p>
             <p className="text-sm text-yellow-700">
               Your subscription expires on {format(new Date(sub.expiresAt), 'MMM d, yyyy')}.

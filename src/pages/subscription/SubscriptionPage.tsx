@@ -3,40 +3,60 @@ import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { formatTZS } from '../../utils/currency';
 import toast from 'react-hot-toast';
-import { Shield, CheckCircle2, AlertTriangle, Clock, CreditCard, Phone } from 'lucide-react';
+import { Shield, CheckCircle2, AlertTriangle, CreditCard, Phone } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
 interface SubscriptionData {
   id: string;
   plan: 'BASIC' | 'STANDARD' | 'PREMIUM';
-  status: 'TRIAL' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+  status: 'PENDING_ACTIVATION' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
   startsAt: string;
   expiresAt: string;
   daysLeft: number;
   planPrices: { BASIC: number; STANDARD: number; PREMIUM: number };
+  planLimits: {
+    BASIC: { maxRouters: number; maxSessionsPerDay: number };
+    STANDARD: { maxRouters: number; maxSessionsPerDay: number };
+    PREMIUM: { maxRouters: number; maxSessionsPerDay: number };
+  };
 }
 
 const PLAN_DETAILS = {
   BASIC: {
     label: 'Basic',
-    features: ['Up to 2 routers', 'Up to 100 sessions/day', 'Email support'],
+    features: [
+      'Up to 2 routers',
+      'Up to 200 WiFi sessions/day',
+      'Captive portal payments',
+      'Dashboard & reports',
+    ],
     color: 'border-blue-200 bg-blue-50',
     badge: 'bg-blue-100 text-blue-700',
-    recommended: false,
+    recommended: false as const,
   },
   STANDARD: {
     label: 'Standard',
-    features: ['Up to 10 routers', 'Unlimited sessions', 'Priority support', 'Revenue reports'],
+    features: [
+      'Up to 10 routers',
+      'Unlimited WiFi sessions',
+      'Captive portal payments',
+      'Dashboard & reports',
+    ],
     color: 'border-brand-300 bg-brand-50',
     badge: 'bg-brand-100 text-brand-700',
-    recommended: true,
+    recommended: true as const,
   },
   PREMIUM: {
     label: 'Premium',
-    features: ['Unlimited routers', 'Unlimited sessions', '24/7 support', 'Custom branding', 'API access'],
+    features: [
+      'Unlimited routers',
+      'Unlimited WiFi sessions',
+      'Captive portal payments',
+      'Dashboard & reports',
+    ],
     color: 'border-purple-200 bg-purple-50',
     badge: 'bg-purple-100 text-purple-700',
-    recommended: false,
+    recommended: false as const,
   },
 };
 
@@ -88,8 +108,6 @@ export default function SubscriptionPage() {
   const statusColor =
     sub?.status === 'ACTIVE'
       ? 'bg-green-50 border-green-200 text-green-800'
-      : sub?.status === 'TRIAL'
-      ? 'bg-yellow-50 border-yellow-200 text-yellow-800'
       : 'bg-red-50 border-red-200 text-red-800';
 
   const isExpiringSoon = sub && sub.daysLeft <= 7;
@@ -108,8 +126,6 @@ export default function SubscriptionPage() {
             <div className="flex-shrink-0">
               {sub.status === 'ACTIVE' ? (
                 <CheckCircle2 className="w-10 h-10 text-green-500" />
-              ) : sub.status === 'TRIAL' ? (
-                <Clock className="w-10 h-10 text-yellow-500" />
               ) : (
                 <AlertTriangle className="w-10 h-10 text-red-500" />
               )}
@@ -122,9 +138,7 @@ export default function SubscriptionPage() {
                 </span>
               </div>
               <p className="text-sm">
-                {sub.status === 'TRIAL'
-                  ? `Free trial — ${sub.daysLeft} days remaining`
-                  : sub.status === 'ACTIVE'
+                {sub.status === 'ACTIVE'
                   ? `Active until ${format(new Date(sub.expiresAt), 'MMMM d, yyyy')} · ${sub.daysLeft} days left`
                   : `Expired on ${format(new Date(sub.expiresAt), 'MMMM d, yyyy')}`}
               </p>
