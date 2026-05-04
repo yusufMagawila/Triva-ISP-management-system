@@ -6,12 +6,14 @@ interface User {
   id: string;
   email: string;
   name: string;
+  phone?: string;
   role: 'SUPER_ADMIN' | 'ADMIN' | 'MERCHANT';
   tenantId: string | null;
   tenant: {
     id: string;
     name: string;
     slug: string;
+    status: string;
     subscription: { status: string; expiresAt: string } | null;
   } | null;
 }

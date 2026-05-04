@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import { useSocketStore } from './store/socketStore';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
+import ActivatePage from './pages/Activate';
 import DashboardLayout from './components/DashboardLayout';
 import MerchantDashboard from './pages/dashboard/MerchantDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
@@ -27,6 +28,16 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Redirects PENDING merchants to /activate before they can use the dashboard */
+function ActiveMerchantRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'MERCHANT' && user.tenant?.status === 'PENDING') {
+    return <Navigate to="/activate" replace />;
+  }
+  return <>{children}</>;
+}
+
 export default function App() {
   const { fetchMe, user } = useAuthStore();
   const { connect, disconnect } = useSocketStore();
@@ -46,12 +57,22 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/activate"
+        element={
+          <PrivateRoute>
+            <ActivatePage />
+          </PrivateRoute>
+        }
+      />
 
       <Route
         path="/"
         element={
           <PrivateRoute>
-            <DashboardLayout />
+            <ActiveMerchantRoute>
+              <DashboardLayout />
+            </ActiveMerchantRoute>
           </PrivateRoute>
         }
       >

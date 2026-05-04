@@ -8,13 +8,14 @@ import { Wifi, Eye, EyeOff } from 'lucide-react';
 interface RegisterResponse {
   data: {
     token: string;
+    activationRequired?: boolean;
     user: {
       id: string;
       email: string;
       name: string;
       role: 'MERCHANT';
       tenantId: string;
-      tenant: { id: string; name: string; slug: string; subscription: { status: string; expiresAt: string } | null };
+      tenant: { id: string; name: string; slug: string; status: string; subscription: { status: string; expiresAt: string } | null };
     };
   };
 }
@@ -54,8 +55,8 @@ export default function RegisterPage() {
         password: form.password,
       });
       setAuth(res.data.data.token, res.data.data.user);
-      toast.success('Account created! Welcome to TRIVA 🎉');
-      navigate('/dashboard');
+      toast.success('Account created! Please activate your account.');
+      navigate('/activate');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Registration failed');
     } finally {
