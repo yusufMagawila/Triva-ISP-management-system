@@ -23,6 +23,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   fetchMe: () => Promise<void>;
+  setAuth: (token: string, user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -63,6 +64,11 @@ export const useAuthStore = create<AuthState>()(
         } catch {
           set({ user: null, token: null });
         }
+      },
+
+      setAuth: (token: string, user: User) => {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        set({ token, user });
       },
     }),
     {

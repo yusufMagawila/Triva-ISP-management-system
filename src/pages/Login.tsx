@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 import { Wifi } from 'lucide-react';
@@ -71,6 +71,12 @@ export default function LoginPage() {
 
           <p className="text-center text-xs text-gray-400 mt-6">
             TRIVA © {new Date().getFullYear()} — Secure WiFi Billing
+          </p>
+          <p className="text-center text-sm text-gray-500 mt-3">
+            New shop?{' '}
+            <Link to="/register" className="text-brand-600 font-medium hover:underline">
+              Create a free account
+            </Link>
           </p>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import { formatTZS } from '../../utils/currency';
 import { CreditCard, Plus, Pencil, Trash2, Clock, Zap } from 'lucide-react';
 
 interface Plan {
@@ -101,7 +102,7 @@ export default function PlansPage() {
               <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="1 Hour Access" />
             </div>
             <div>
-              <label className="label">Price (KES)</label>
+              <label className="label">Price (TZS)</label>
               <input type="number" step="0.01" min="0" className="input" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required placeholder="30" />
             </div>
             <div>
@@ -143,7 +144,7 @@ export default function PlansPage() {
             <div key={p.id} className={`card p-5 ${p.status === 'INACTIVE' ? 'opacity-60' : ''}`}>
               <div className="flex items-start justify-between mb-2">
                 <h3 className="font-bold text-gray-900 text-lg">{p.name}</h3>
-                <span className="text-xl font-bold text-brand-600">KES {Number(p.price).toLocaleString()}</span>
+                <span className="text-xl font-bold text-brand-600">{formatTZS(p.price)}</span>
               </div>
               {p.description && <p className="text-sm text-gray-500 mb-3">{p.description}</p>}
               <div className="space-y-1.5 mb-4">

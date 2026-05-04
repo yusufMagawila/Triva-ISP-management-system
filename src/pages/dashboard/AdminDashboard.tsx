@@ -53,7 +53,7 @@ export default function AdminDashboard() {
     { title: 'Total Tenants', value: stats?.totalTenants ?? 0, icon: Building2, color: 'bg-blue-100 text-blue-600' },
     { title: 'Total Users', value: stats?.totalUsers ?? 0, icon: Users, color: 'bg-purple-100 text-purple-600' },
     { title: 'Active Sessions', value: stats?.activeSessions ?? 0, icon: Activity, color: 'bg-green-100 text-green-600' },
-    { title: "Today's Revenue", value: `KES ${Number(stats?.todayRevenue ?? 0).toLocaleString()}`, icon: TrendingUp, color: 'bg-orange-100 text-orange-600' },
+    { title: "Today's Revenue", value: `TZS ${Number(stats?.todayRevenue ?? 0).toLocaleString()}`, icon: TrendingUp, color: 'bg-orange-100 text-orange-600' },
   ];
 
   return (

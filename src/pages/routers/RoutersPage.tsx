@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity } from 'lucide-react';
+import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity, Copy, Info } from 'lucide-react';
 import { format } from 'date-fns';
+
+const PORTAL_BASE = 'https://pandabus.live/captive-portal';
 
 interface RouterData {
   id: string;
@@ -30,6 +32,8 @@ export default function RoutersPage() {
     hotspotName: 'hotspot1',
     location: '',
   });
+
+  const [showSetup, setShowSetup] = useState<string | null>(null);
 
   useEffect(() => { loadRouters(); }, []);
 
@@ -188,12 +192,60 @@ export default function RoutersPage() {
                   Ping
                 </button>
                 <button
+                  className="btn-secondary btn-sm"
+                  title="Setup instructions"
+                  onClick={() => setShowSetup(showSetup === r.id ? null : r.id)}
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+                <button
                   className="btn-danger btn-sm"
                   onClick={() => handleDelete(r.id)}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
+
+              {/* MikroTik setup instructions */}
+              {showSetup === r.id && (
+                <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-brand-500" />
+                    MikroTik Hotspot Setup
+                  </p>
+
+                  {/* Captive portal URL */}
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">1. Paste this as the <strong>Login Page URL</strong> in Hotspot Settings:</p>
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                      <code className="text-xs text-gray-700 break-all flex-1">
+                        {`${PORTAL_BASE}/?router=${r.id}`}
+                      </code>
+                      <button
+                        className="flex-shrink-0 text-gray-400 hover:text-brand-600"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${PORTAL_BASE}/?router=${r.id}`);
+                          toast.success('URL copied!');
+                        }}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Winbox steps */}
+                  <div className="text-xs text-gray-600 space-y-1 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                    <p className="font-semibold text-blue-800 mb-1.5">Steps in Winbox / WebFig:</p>
+                    <p>① <strong>IP → Hotspot → Server Profiles</strong> → open your profile</p>
+                    <p>② Set <strong>Login By</strong> = <code>HTTP CHAP</code></p>
+                    <p>③ In <strong>Login Page</strong> tab → paste the URL above</p>
+                    <p>④ Also enable <strong>API</strong>: <strong>IP → Services → api</strong> → Port <code>8728</code></p>
+                    <p>⑤ Add an API user: <strong>System → Users → Add</strong></p>
+                    <p>   Name: <code>triva-api</code> · Group: <code>full</code></p>
+                    <p className="text-blue-700 mt-2">MikroTik will auto-pass <code>?mac=</code> and <code>?ip=</code> to the portal URL.</p>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

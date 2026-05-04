@@ -12,6 +12,7 @@ import {
   LogOut,
   Building2,
   CircleDot,
+  Shield,
 } from 'lucide-react';
 
 const merchantNav = [
@@ -20,6 +21,7 @@ const merchantNav = [
   { to: '/plans', label: 'Plans', icon: CreditCard },
   { to: '/sessions', label: 'Sessions', icon: Activity },
   { to: '/payments', label: 'Payments', icon: CreditCard },
+  { to: '/subscription', label: 'Subscription', icon: Shield },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 

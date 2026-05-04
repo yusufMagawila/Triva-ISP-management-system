@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { formatTZS } from '../../utils/currency';
 import { CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -77,7 +78,7 @@ export default function PaymentsPage() {
                       <td className="px-5 py-3">{p.phone ?? '—'}</td>
                       <td className="px-5 py-3">{p.plan.name}</td>
                       <td className="px-5 py-3 font-semibold">
-                        {p.currency} {Number(p.amount).toLocaleString()}
+                        {formatTZS(p.amount)}
                       </td>
                       <td className="px-5 py-3 font-mono text-xs text-gray-500">
                         {p.mongikeTxId ? p.mongikeTxId.slice(0, 12) + '...' : '—'}
