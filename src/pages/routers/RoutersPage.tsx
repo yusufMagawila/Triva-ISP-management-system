@@ -242,10 +242,14 @@ export default function RoutersPage() {
 
                   {/* One-click script download */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-green-800 mb-1.5">⚡ Auto-Configure in Seconds</p>
+                    <p className="text-xs font-semibold text-green-800 mb-1.5">TRIVA Integration Helper</p>
                     <p className="text-xs text-green-700 mb-2">
-                      Download this script and paste it into your MikroTik terminal (Winbox → New Terminal, or SSH).
-                      It will configure the hotspot, walled garden, and captive portal redirect automatically.
+                      Download this `.rsc` helper for an existing MikroTik HotSpot server. It only adds TRIVA
+                      walled-garden rules. It does not create the HotSpot or install a custom login page.
+                    </p>
+                    <p className="text-xs text-green-700 mb-2">
+                      Avoid pasting it over SSH on the same guest bridge you are reconfiguring. Upload it to
+                      MikroTik Files and import it with a dry-run first.
                     </p>
                     <button
                       onClick={() => handleDownloadScript(r.id, r.name)}
@@ -253,13 +257,13 @@ export default function RoutersPage() {
                       className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium px-3 py-2 rounded-lg disabled:opacity-50 transition-colors"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      {downloadingScript === r.id ? 'Downloading...' : 'Download Setup Script (.rsc)'}
+                      {downloadingScript === r.id ? 'Downloading...' : 'Download Helper Script (.rsc)'}
                     </button>
                   </div>
 
                   {/* Captive portal URL */}
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">1. Paste this as the <strong>Login Page URL</strong> in Hotspot Settings:</p>
+                    <p className="text-xs text-gray-500 mb-1">Portal URL for your custom HotSpot redirect page:</p>
                     <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
                       <code className="text-xs text-gray-700 break-all flex-1">
                         {`${PORTAL_BASE}/?router=${r.id}`}
@@ -278,14 +282,14 @@ export default function RoutersPage() {
 
                   {/* Winbox steps */}
                   <div className="text-xs text-gray-600 space-y-1 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                    <p className="font-semibold text-blue-800 mb-1.5">Steps in Winbox / WebFig:</p>
-                    <p>① <strong>IP → Hotspot → Server Profiles</strong> → open your profile</p>
-                    <p>② Set <strong>Login By</strong> = <code>HTTP CHAP</code></p>
-                    <p>③ In <strong>Login Page</strong> tab → paste the URL above</p>
-                    <p>④ Also enable <strong>API</strong>: <strong>IP → Services → api</strong> → Port <code>8728</code></p>
-                    <p>⑤ Add an API user: <strong>System → Users → Add</strong></p>
-                    <p>   Name: <code>triva-api</code> · Group: <code>full</code></p>
-                    <p className="text-blue-700 mt-2">MikroTik will auto-pass <code>?mac=</code> and <code>?ip=</code> to the portal URL.</p>
+                    <p className="font-semibold text-blue-800 mb-1.5">Actual setup flow in Winbox / WebFig:</p>
+                    <p>① Create the HotSpot first with <strong>IP → Hotspot → Setup</strong>.</p>
+                    <p>② Make sure the HotSpot server name matches the <strong>Hotspot Name</strong> saved in TRIVA.</p>
+                    <p>③ Upload the helper file to <strong>Files</strong>, run a dry-run import, then import for real.</p>
+                    <p>④ Use the URL above inside your custom HotSpot <code>login.html</code> redirect flow.</p>
+                    <p>⑤ Also enable <strong>API</strong>: <strong>IP → Services → api</strong> → Port <code>8728</code>.</p>
+                    <p>⑥ Add an API user: <strong>System → Users → Add</strong> → Name <code>triva-api</code> → Group <code>full</code>.</p>
+                    <p className="text-blue-700 mt-2">TRIVA reads <code>router</code>, and can also consume <code>mac</code> and <code>ip</code> if your custom HotSpot page forwards them.</p>
                   </div>
                 </div>
               )}
