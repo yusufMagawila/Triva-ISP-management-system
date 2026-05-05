@@ -138,14 +138,14 @@ export default function RoutersPage() {
               <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Main Router" />
             </div>
             <div>
-              <label className="label">Reachable Router IP</label>
+              <label className="label">Dashboard API IP</label>
               <input className="input" value={form.ipAddress} onChange={(e) => setForm({ ...form, ipAddress: e.target.value })} required placeholder="41.59.10.20" />
-              <p className="text-xs text-gray-500 mt-1">Use the public or forwarded IP that TRIVA VPS can reach. Do not use a private 192.168.x.x address unless the backend is on the same LAN.</p>
+              <p className="text-xs text-gray-500 mt-1">Use a public or forwarded IP if you want dashboard ping and direct MikroTik management. If the site has no inbound API reachability, the auto installer can still keep live sales working through TRIVA pull sync.</p>
             </div>
             <div>
-              <label className="label">Reachable API Port</label>
+              <label className="label">Dashboard API Port</label>
               <input type="number" className="input" value={form.apiPort} onChange={(e) => setForm({ ...form, apiPort: parseInt(e.target.value) })} />
-              <p className="text-xs text-gray-500 mt-1">If you forward external port 28728 to MikroTik 8728, enter 28728 here.</p>
+              <p className="text-xs text-gray-500 mt-1">If you forward external port 28728 to MikroTik 8728, enter 28728 here. Without inbound reachability, direct dashboard control may stay offline but paid sessions can still go live via the installed sync script.</p>
             </div>
             <div>
               <label className="label">Hotspot Server Name</label>
@@ -252,10 +252,10 @@ export default function RoutersPage() {
                     <p className="text-xs font-semibold text-green-800 mb-1.5">10-Minute Technician Pack</p>
                     <p className="text-xs text-green-700 mb-2">
                       Use the auto installer first on TRIVA-prepared routers. It imports the router-specific login pages,
-                      enables MikroTik API internally on port 8728, and adds TRIVA walled-garden rules in one pass.
+                      enables MikroTik API internally on port 8728, adds TRIVA walled-garden rules, and installs a live sync job that pulls paid-session updates from TRIVA every 15 seconds.
                     </p>
                     <p className="text-xs text-green-700 mb-2">
-                      If the site still needs custom Hotspot setup, upstream NAT work, or anything fails during import,
+                      If the site still needs custom Hotspot setup, or anything fails during import,
                       download the manual and finish with the guided fallback steps.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2">
@@ -303,17 +303,18 @@ export default function RoutersPage() {
                     <p>① Imports the router-specific TRIVA login pages into the hotspot folder</p>
                     <p>② Enables the MikroTik API service internally on port 8728</p>
                     <p>③ Adds the TRIVA walled-garden host and HTTPS rules</p>
-                    <p>④ Prints the exact verification steps for the technician</p>
-                    <p className="text-blue-700 mt-2">Use the manual only when the site still needs custom Hotspot or NAT work.</p>
+                    <p>④ Installs a recurring live sync job so paid sessions can go live without inbound router API access</p>
+                    <p>⑤ Prints the exact verification steps for the technician</p>
+                    <p className="text-blue-700 mt-2">Use the manual only when the site still needs custom Hotspot work or the import fails.</p>
                   </div>
 
                   <div className="text-xs text-gray-600 space-y-1 bg-amber-50 border border-amber-100 rounded-lg p-3">
                     <p className="font-semibold text-amber-800 mb-1.5">Installer pre-checks:</p>
                     <p>① The exact Hotspot server name saved for this router: <strong>{r.hotspotName}</strong></p>
-                    <p>② The dashboard must save a publicly reachable endpoint: <strong>{r.ipAddress}:{r.apiPort}</strong></p>
+                    <p>② Outbound internet from the router is required for live sync</p>
                     <p>③ Router already has internet and a Hotspot server created</p>
-                    <p>④ If the site is under CGNAT or has no upstream port forward, automation stops there</p>
-                    <p className="text-amber-700 mt-2">This is how a shop technician stays under 10 minutes: auto installer first, manual only on blockers.</p>
+                    <p>④ Public or forwarded API reachability is only needed for dashboard ping and direct control, not for the live sales flow</p>
+                    <p className="text-amber-700 mt-2">This is how a shop technician stays under 10 minutes: register the router, import the installer, and the router keeps itself in sync with TRIVA.</p>
                   </div>
                 </div>
               )}
