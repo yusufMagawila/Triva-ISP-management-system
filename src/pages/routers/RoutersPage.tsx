@@ -133,12 +133,14 @@ export default function RoutersPage() {
               <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Main Router" />
             </div>
             <div>
-              <label className="label">IP Address</label>
-              <input className="input" value={form.ipAddress} onChange={(e) => setForm({ ...form, ipAddress: e.target.value })} required placeholder="192.168.1.1" />
+              <label className="label">Reachable Router IP</label>
+              <input className="input" value={form.ipAddress} onChange={(e) => setForm({ ...form, ipAddress: e.target.value })} required placeholder="41.59.10.20" />
+              <p className="text-xs text-gray-500 mt-1">Use the public or forwarded IP that TRIVA VPS can reach. Do not use a private 192.168.x.x address unless the backend is on the same LAN.</p>
             </div>
             <div>
-              <label className="label">API Port</label>
+              <label className="label">Reachable API Port</label>
               <input type="number" className="input" value={form.apiPort} onChange={(e) => setForm({ ...form, apiPort: parseInt(e.target.value) })} />
+              <p className="text-xs text-gray-500 mt-1">If you forward external port 28728 to MikroTik 8728, enter 28728 here.</p>
             </div>
             <div>
               <label className="label">Hotspot Server Name</label>
