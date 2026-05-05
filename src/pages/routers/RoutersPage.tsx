@@ -25,28 +25,33 @@ export default function RoutersPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [pinging, setPinging] = useState<string | null>(null);
-  const [downloadingManual, setDownloadingManual] = useState<string | null>(null);
+  const [downloadingAsset, setDownloadingAsset] = useState<string | null>(null);
 
-  async function handleDownloadManual(routerId: string, routerName: string) {
-    setDownloadingManual(routerId);
+  async function handleDownloadSetupAsset(
+    routerId: string,
+    routerName: string,
+    format: 'installer' | 'manual'
+  ) {
+    setDownloadingAsset(`${routerId}:${format}`);
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_URL ?? 'http://localhost:4000'}/api/routers/${routerId}/setup-script`,
+        `${import.meta.env.VITE_API_URL ?? 'http://localhost:4000'}/api/routers/${routerId}/setup-script?format=${format}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (!res.ok) throw new Error('Failed to download setup manual');
+      if (!res.ok) throw new Error(`Failed to download setup ${format}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `triva-${routerName.replace(/[^a-z0-9]/gi, '-')}-setup-manual.txt`;
+      const fileSuffix = format === 'installer' ? 'auto-installer.rsc' : 'setup-manual.txt';
+      a.download = `triva-${routerName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${fileSuffix}`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Setup manual downloaded!');
+      toast.success(format === 'installer' ? 'Auto installer downloaded!' : 'Setup manual downloaded!');
     } catch {
-      toast.error('Failed to download setup manual');
+      toast.error(format === 'installer' ? 'Failed to download auto installer' : 'Failed to download setup manual');
     } finally {
-      setDownloadingManual(null);
+      setDownloadingAsset(null);
     }
   }
   const [form, setForm] = useState({
@@ -242,25 +247,35 @@ export default function RoutersPage() {
                     MikroTik Hotspot Setup
                   </p>
 
-                  {/* Per-router manual download */}
+                  {/* Per-router installer and manual downloads */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-green-800 mb-1.5">Per-Router Setup Manual</p>
+                    <p className="text-xs font-semibold text-green-800 mb-1.5">10-Minute Technician Pack</p>
                     <p className="text-xs text-green-700 mb-2">
-                      Download a router-specific setup manual generated from this router's saved details.
-                      It guides the merchant step by step using this router's hotspot name, API port, and portal URL.
+                      Use the auto installer first on TRIVA-prepared routers. It imports the router-specific login pages,
+                      enables MikroTik API internally on port 8728, and adds TRIVA walled-garden rules in one pass.
                     </p>
                     <p className="text-xs text-green-700 mb-2">
-                      The manual is safer than auto-setup because the merchant can follow it on any MikroTik model
-                      and confirm each step using the router's actual network layout.
+                      If the site still needs custom Hotspot setup, upstream NAT work, or anything fails during import,
+                      download the manual and finish with the guided fallback steps.
                     </p>
-                    <button
-                      onClick={() => handleDownloadManual(r.id, r.name)}
-                      disabled={downloadingManual === r.id}
-                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium px-3 py-2 rounded-lg disabled:opacity-50 transition-colors"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      {downloadingManual === r.id ? 'Downloading...' : 'Download Setup Manual (.txt)'}
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={() => handleDownloadSetupAsset(r.id, r.name, 'installer')}
+                        disabled={downloadingAsset === `${r.id}:installer`}
+                        className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium px-3 py-2 rounded-lg disabled:opacity-50 transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        {downloadingAsset === `${r.id}:installer` ? 'Downloading...' : 'Download Auto Installer (.rsc)'}
+                      </button>
+                      <button
+                        onClick={() => handleDownloadSetupAsset(r.id, r.name, 'manual')}
+                        disabled={downloadingAsset === `${r.id}:manual`}
+                        className="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-green-700 border border-green-300 text-xs font-medium px-3 py-2 rounded-lg disabled:opacity-50 transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        {downloadingAsset === `${r.id}:manual` ? 'Downloading...' : 'Download Manual (.txt)'}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Captive portal URL */}
@@ -284,13 +299,21 @@ export default function RoutersPage() {
 
                   {/* Winbox steps */}
                   <div className="text-xs text-gray-600 space-y-1 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                    <p className="font-semibold text-blue-800 mb-1.5">What the manual includes:</p>
+                    <p className="font-semibold text-blue-800 mb-1.5">What the installer fast path covers:</p>
+                    <p>① Imports the router-specific TRIVA login pages into the hotspot folder</p>
+                    <p>② Enables the MikroTik API service internally on port 8728</p>
+                    <p>③ Adds the TRIVA walled-garden host and HTTPS rules</p>
+                    <p>④ Prints the exact verification steps for the technician</p>
+                    <p className="text-blue-700 mt-2">Use the manual only when the site still needs custom Hotspot or NAT work.</p>
+                  </div>
+
+                  <div className="text-xs text-gray-600 space-y-1 bg-amber-50 border border-amber-100 rounded-lg p-3">
+                    <p className="font-semibold text-amber-800 mb-1.5">Installer pre-checks:</p>
                     <p>① The exact Hotspot server name saved for this router: <strong>{r.hotspotName}</strong></p>
-                    <p>② The exact router API port saved in TRIVA: <strong>{r.apiPort}</strong></p>
-                    <p>③ The exact captive portal URL for this router</p>
-                    <p>④ Guidance for API, Hotspot, login page, and walled-garden configuration</p>
-                    <p>⑤ A final checklist to verify this router is ready for sales</p>
-                    <p className="text-blue-700 mt-2">Download the manual and follow it on the MikroTik device step by step.</p>
+                    <p>② The dashboard must save a publicly reachable endpoint: <strong>{r.ipAddress}:{r.apiPort}</strong></p>
+                    <p>③ Router already has internet and a Hotspot server created</p>
+                    <p>④ If the site is under CGNAT or has no upstream port forward, automation stops there</p>
+                    <p className="text-amber-700 mt-2">This is how a shop technician stays under 10 minutes: auto installer first, manual only on blockers.</p>
                   </div>
                 </div>
               )}
