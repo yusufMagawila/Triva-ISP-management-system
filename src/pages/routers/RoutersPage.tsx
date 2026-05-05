@@ -1,65 +1,38 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
-import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
-import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity, Copy, Info, Download } from 'lucide-react';
+import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity, Copy, Info } from 'lucide-react';
 import { format } from 'date-fns';
 
 const PORTAL_BASE = 'https://pandabus.live/captive-portal';
+const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
 
 interface RouterData {
   id: string;
   name: string;
   ipAddress: string;
   apiPort: number;
+  provisioningKey: string | null;
+  serialNumber: string | null;
+  hardwareMac: string | null;
   hotspotName: string;
   location: string | null;
   status: 'ONLINE' | 'OFFLINE' | 'ERROR';
   lastSeenAt: string | null;
+  lastBootstrapAt: string | null;
+  provisionedAt: string | null;
   _count: { sessions: number };
 }
 
 export default function RoutersPage() {
-  const token = useAuthStore((s) => s.token);
   const [routers, setRouters] = useState<RouterData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [pinging, setPinging] = useState<string | null>(null);
-  const [downloadingAsset, setDownloadingAsset] = useState<string | null>(null);
-
-  async function handleDownloadSetupAsset(
-    routerId: string,
-    routerName: string,
-    format: 'installer' | 'manual'
-  ) {
-    setDownloadingAsset(`${routerId}:${format}`);
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL ?? 'http://localhost:4000'}/api/routers/${routerId}/setup-script?format=${format}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!res.ok) throw new Error(`Failed to download setup ${format}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const fileSuffix = format === 'installer' ? 'auto-installer.rsc' : 'setup-manual.txt';
-      a.download = `triva-${routerName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${fileSuffix}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(format === 'installer' ? 'Auto installer downloaded!' : 'Setup manual downloaded!');
-    } catch {
-      toast.error(format === 'installer' ? 'Failed to download auto installer' : 'Failed to download setup manual');
-    } finally {
-      setDownloadingAsset(null);
-    }
-  }
   const [form, setForm] = useState({
     name: '',
-    ipAddress: '',
-    apiPort: 8728,
-    username: '',
-    password: '',
+    serialNumber: '',
+    hardwareMac: '',
     hotspotName: 'hotspot1',
     location: '',
   });
@@ -67,6 +40,21 @@ export default function RoutersPage() {
   const [showSetup, setShowSetup] = useState<string | null>(null);
 
   useEffect(() => { loadRouters(); }, []);
+
+  function copyText(value: string, label: string) {
+    navigator.clipboard.writeText(value);
+    toast.success(`${label} copied`);
+  }
+
+  function getBootstrapScriptUrl(router: RouterData) {
+    if (!router.provisioningKey) return '';
+    return `${API_BASE}/bootstrap/router?provisioningKey=${encodeURIComponent(router.provisioningKey)}&format=rsc`;
+  }
+
+  function getBootstrapInfoUrl(router: RouterData) {
+    if (!router.provisioningKey) return '';
+    return `${API_BASE}/bootstrap/router?provisioningKey=${encodeURIComponent(router.provisioningKey)}`;
+  }
 
   async function loadRouters() {
     try {
@@ -81,9 +69,9 @@ export default function RoutersPage() {
     e.preventDefault();
     try {
       await api.post('/routers', form);
-      toast.success('Router added successfully');
+      toast.success('Router asset created');
       setShowForm(false);
-      setForm({ name: '', ipAddress: '', apiPort: 8728, username: '', password: '', hotspotName: 'hotspot1', location: '' });
+      setForm({ name: '', serialNumber: '', hardwareMac: '', hotspotName: 'hotspot1', location: '' });
       loadRouters();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to add router');
@@ -93,13 +81,25 @@ export default function RoutersPage() {
   async function handlePing(id: string) {
     setPinging(id);
     try {
-      const res = await api.post<{ data: { status: string } }>(`/routers/${id}/ping`);
+      const res = await api.post<{ data: { status: string; lastBootstrapAt: string | null } }>(`/routers/${id}/ping`);
       setRouters((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, status: res.data.data.status as RouterData['status'] } : r))
+        prev.map((r) => (
+          r.id === id
+            ? {
+                ...r,
+                status: res.data.data.status as RouterData['status'],
+                lastBootstrapAt: res.data.data.lastBootstrapAt ?? r.lastBootstrapAt,
+              }
+            : r
+        ))
       );
-      toast.success(`Router is ${res.data.data.status}`);
+      toast.success(
+        res.data.data.status === 'ONLINE'
+          ? 'Router has checked in recently'
+          : 'Router is waiting for a bootstrap heartbeat'
+      );
     } catch {
-      toast.error('Ping failed');
+      toast.error('Router check failed');
     } finally {
       setPinging(null);
     }
@@ -121,7 +121,7 @@ export default function RoutersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Routers</h1>
-          <p className="text-gray-500 mt-0.5">Manage your MikroTik routers</p>
+          <p className="text-gray-500 mt-0.5">Create zero-touch router assets and let each device self-provision from TRIVA</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4" /> Add Router
@@ -131,40 +131,36 @@ export default function RoutersPage() {
       {/* Add Router Form */}
       {showForm && (
         <div className="card p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Add New Router</h2>
+          <h2 className="font-semibold text-gray-900 mb-4">Create Router Asset</h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Router Name</label>
               <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Main Router" />
             </div>
             <div>
-              <label className="label">Dashboard API IP</label>
-              <input className="input" value={form.ipAddress} onChange={(e) => setForm({ ...form, ipAddress: e.target.value })} required placeholder="41.59.10.20" />
-              <p className="text-xs text-gray-500 mt-1">Use a public or forwarded IP if you want dashboard ping and direct MikroTik management. If the site has no inbound API reachability, the auto installer can still keep live sales working through TRIVA pull sync.</p>
-            </div>
-            <div>
-              <label className="label">Dashboard API Port</label>
-              <input type="number" className="input" value={form.apiPort} onChange={(e) => setForm({ ...form, apiPort: parseInt(e.target.value) })} />
-              <p className="text-xs text-gray-500 mt-1">If you forward external port 28728 to MikroTik 8728, enter 28728 here. Without inbound reachability, direct dashboard control may stay offline but paid sessions can still go live via the installed sync script.</p>
-            </div>
-            <div>
               <label className="label">Hotspot Server Name</label>
               <input className="input" value={form.hotspotName} onChange={(e) => setForm({ ...form, hotspotName: e.target.value })} placeholder="hotspot1" />
+              <p className="text-xs text-gray-500 mt-1">TRIVA stores the hotspot server identity here and delivers the runtime sync stage from the bootstrap service.</p>
             </div>
             <div>
-              <label className="label">Username</label>
-              <input className="input" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required placeholder="admin" />
+              <label className="label">Serial Number (optional)</label>
+              <input className="input" value={form.serialNumber} onChange={(e) => setForm({ ...form, serialNumber: e.target.value })} placeholder="AA12BC34DD56" />
+              <p className="text-xs text-gray-500 mt-1">If you already know the factory serial, bind it now. Otherwise the router can bind itself on first bootstrap contact.</p>
             </div>
             <div>
-              <label className="label">Password</label>
-              <input type="password" className="input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              <label className="label">WAN MAC (optional)</label>
+              <input className="input" value={form.hardwareMac} onChange={(e) => setForm({ ...form, hardwareMac: e.target.value })} placeholder="64:D1:54:AA:BB:CC" />
+              <p className="text-xs text-gray-500 mt-1">This gives TRIVA a second bootstrap identity without assuming router reachability from the dashboard.</p>
             </div>
             <div className="md:col-span-2">
               <label className="label">Location (optional)</label>
               <input className="input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Shop floor, 2nd floor..." />
             </div>
+            <div className="md:col-span-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              TRIVA now assigns the control-plane IP, API account, and bootstrap identity automatically. The router must reach <span className="font-semibold">{API_BASE}/bootstrap/router</span> on its own; no public Winbox or forwarded API port is assumed.
+            </div>
             <div className="md:col-span-2 flex gap-3">
-              <button type="submit" className="btn-primary">Add Router</button>
+              <button type="submit" className="btn-primary">Create Asset</button>
               <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
             </div>
           </form>
@@ -179,8 +175,8 @@ export default function RoutersPage() {
       ) : routers.length === 0 ? (
         <div className="card p-12 text-center text-gray-400">
           <Router className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No routers added yet</p>
-          <p className="text-sm">Add your first MikroTik router to get started</p>
+          <p className="font-medium">No router assets yet</p>
+          <p className="text-sm">Create the first router asset, then let the device self-provision from TRIVA</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -189,7 +185,7 @@ export default function RoutersPage() {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <h3 className="font-semibold text-gray-900">{r.name}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{r.ipAddress}:{r.apiPort}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Control plane {r.ipAddress}:{r.apiPort}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   {r.status === 'ONLINE' ? (
@@ -207,11 +203,18 @@ export default function RoutersPage() {
                 <p className="text-xs text-gray-500 mb-3">📍 {r.location}</p>
               )}
 
+              <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                <p className="font-medium text-gray-800">{r.provisionedAt ? 'Provisioned asset' : 'Awaiting first bootstrap'}</p>
+                <p className="mt-1">Hotspot: {r.hotspotName}</p>
+                <p className="mt-1">Serial: {r.serialNumber ?? 'Will bind on first contact'}</p>
+                <p className="mt-1">MAC: {r.hardwareMac ?? 'Will bind on first contact'}</p>
+              </div>
+
               <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
                 <Activity className="w-3.5 h-3.5" />
                 <span>{r._count.sessions} total sessions</span>
-                {r.lastSeenAt && (
-                  <span>· Last seen {format(new Date(r.lastSeenAt), 'MMM d HH:mm')}</span>
+                {(r.lastBootstrapAt || r.lastSeenAt) && (
+                  <span>· Last check-in {format(new Date(r.lastBootstrapAt ?? r.lastSeenAt ?? ''), 'MMM d HH:mm')}</span>
                 )}
               </div>
 
@@ -222,11 +225,11 @@ export default function RoutersPage() {
                   disabled={pinging === r.id}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${pinging === r.id ? 'animate-spin' : ''}`} />
-                  Ping
+                  Check In
                 </button>
                 <button
                   className="btn-secondary btn-sm"
-                  title="Setup instructions"
+                  title="Provisioning details"
                   onClick={() => setShowSetup(showSetup === r.id ? null : r.id)}
                 >
                   <Info className="w-3.5 h-3.5" />
@@ -239,46 +242,69 @@ export default function RoutersPage() {
                 </button>
               </div>
 
-              {/* MikroTik setup instructions */}
+              {/* Zero-touch provisioning details */}
               {showSetup === r.id && (
                 <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
                   <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
                     <Info className="w-3.5 h-3.5 text-brand-500" />
-                    MikroTik Hotspot Setup
+                    Zero-Touch Provisioning
                   </p>
 
-                  {/* Per-router installer and manual downloads */}
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-green-800 mb-1.5">10-Minute Technician Pack</p>
-                    <p className="text-xs text-green-700 mb-2">
-                      Use the auto installer first on TRIVA-prepared routers. It imports the router-specific login pages,
-                      enables MikroTik API internally on port 8728, adds TRIVA walled-garden rules, and installs a live sync job that pulls paid-session updates from TRIVA every 15 seconds.
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
+                    <p className="text-xs font-semibold text-green-800">Bootstrap Identity</p>
+                    <div className="flex items-center gap-2 bg-white/80 border border-green-200 rounded-lg px-3 py-2">
+                      <code className="text-xs text-gray-700 break-all flex-1">
+                        {r.provisioningKey ?? 'Legacy router record without provisioning key'}
+                      </code>
+                      {r.provisioningKey && (
+                        <button
+                          className="flex-shrink-0 text-gray-400 hover:text-brand-600"
+                          onClick={() => copyText(r.provisioningKey!, 'Provisioning key')}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-green-700">
+                      This key is the router asset identity. The device must contact TRIVA with this identity instead of depending on a reachable LAN or public API address.
                     </p>
-                    <p className="text-xs text-green-700 mb-2">
-                      If the site still needs custom Hotspot setup, or anything fails during import,
-                      download the manual and finish with the guided fallback steps.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <button
-                        onClick={() => handleDownloadSetupAsset(r.id, r.name, 'installer')}
-                        disabled={downloadingAsset === `${r.id}:installer`}
-                        className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium px-3 py-2 rounded-lg disabled:opacity-50 transition-colors"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        {downloadingAsset === `${r.id}:installer` ? 'Downloading...' : 'Download Auto Installer (.rsc)'}
-                      </button>
-                      <button
-                        onClick={() => handleDownloadSetupAsset(r.id, r.name, 'manual')}
-                        disabled={downloadingAsset === `${r.id}:manual`}
-                        className="flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-green-700 border border-green-300 text-xs font-medium px-3 py-2 rounded-lg disabled:opacity-50 transition-colors"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        {downloadingAsset === `${r.id}:manual` ? 'Downloading...' : 'Download Manual (.txt)'}
-                      </button>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1">Bootstrap endpoint for the router:</p>
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                      <code className="text-xs text-gray-700 break-all flex-1">
+                        {r.provisioningKey ? getBootstrapScriptUrl(r) : 'Provisioning key missing. Recreate or migrate this router asset.'}
+                      </code>
+                      {r.provisioningKey && (
+                        <button
+                          className="flex-shrink-0 text-gray-400 hover:text-brand-600"
+                          onClick={() => copyText(getBootstrapScriptUrl(r), 'Bootstrap URL')}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Captive portal URL */}
+                  <div className="text-xs text-gray-600 space-y-1 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                    <p className="font-semibold text-blue-800 mb-1.5">What the bootstrap stage installs:</p>
+                    <p>① The TRIVA-managed API account on the router</p>
+                    <p>② A recurring heartbeat to keep this asset online in the dashboard</p>
+                    <p>③ A recurring session-sync job so paid sessions go live without inbound NAT reachability</p>
+                    <p>④ The TRIVA captive portal files when the hotspot directory exists</p>
+                    <p className="text-blue-700 mt-2">This is the supported onboarding path now. The dashboard no longer distributes per-router installer or manual packs.</p>
+                  </div>
+
+                  <div className="text-xs text-gray-600 space-y-1 bg-amber-50 border border-amber-100 rounded-lg p-3">
+                    <p className="font-semibold text-amber-800 mb-1.5">Provisioning notes:</p>
+                    <p>① Assigned control-plane IP: <strong>{r.ipAddress}</strong></p>
+                    <p>② Hotspot server stored for this asset: <strong>{r.hotspotName}</strong></p>
+                    <p>③ Router runtime info endpoint: <strong>{r.provisioningKey ? getBootstrapInfoUrl(r) : 'Unavailable'}</strong></p>
+                    <p>④ TRIVA only needs outbound internet from the router. No port-forwarded API is assumed.</p>
+                    <p className="text-amber-700 mt-2">Shop flow: create the asset, power the router online, let it call TRIVA, and watch the card move online when the heartbeat arrives.</p>
+                  </div>
+
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Portal URL for your custom HotSpot redirect page:</p>
                     <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
@@ -287,34 +313,11 @@ export default function RoutersPage() {
                       </code>
                       <button
                         className="flex-shrink-0 text-gray-400 hover:text-brand-600"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${PORTAL_BASE}/?router=${r.id}`);
-                          toast.success('URL copied!');
-                        }}
+                        onClick={() => copyText(`${PORTAL_BASE}/?router=${r.id}`, 'Portal URL')}
                       >
                         <Copy className="w-4 h-4" />
                       </button>
                     </div>
-                  </div>
-
-                  {/* Winbox steps */}
-                  <div className="text-xs text-gray-600 space-y-1 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                    <p className="font-semibold text-blue-800 mb-1.5">What the installer fast path covers:</p>
-                    <p>① Imports the router-specific TRIVA login pages into the hotspot folder</p>
-                    <p>② Enables the MikroTik API service internally on port 8728</p>
-                    <p>③ Adds the TRIVA walled-garden host and HTTPS rules</p>
-                    <p>④ Installs a recurring live sync job so paid sessions can go live without inbound router API access</p>
-                    <p>⑤ Prints the exact verification steps for the technician</p>
-                    <p className="text-blue-700 mt-2">Use the manual only when the site still needs custom Hotspot work or the import fails.</p>
-                  </div>
-
-                  <div className="text-xs text-gray-600 space-y-1 bg-amber-50 border border-amber-100 rounded-lg p-3">
-                    <p className="font-semibold text-amber-800 mb-1.5">Installer pre-checks:</p>
-                    <p>① The exact Hotspot server name saved for this router: <strong>{r.hotspotName}</strong></p>
-                    <p>② Outbound internet from the router is required for live sync</p>
-                    <p>③ Router already has internet and a Hotspot server created</p>
-                    <p>④ Public or forwarded API reachability is only needed for dashboard ping and direct control, not for the live sales flow</p>
-                    <p className="text-amber-700 mt-2">This is how a shop technician stays under 10 minutes: register the router, import the installer, and the router keeps itself in sync with TRIVA.</p>
                   </div>
                 </div>
               )}
