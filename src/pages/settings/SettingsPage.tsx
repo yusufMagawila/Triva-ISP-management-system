@@ -11,20 +11,16 @@ export default function SettingsPage() {
 
   // Payment settings
   const [mongikApiKey, setMongikApiKey] = useState('');
-  const [mongikWebhookToken, setMongikWebhookToken] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [showWebhookToken, setShowWebhookToken] = useState(false);
   const [apiKeySet, setApiKeySet] = useState(false);
-  const [webhookTokenSet, setWebhookTokenSet] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
 
   const isMerchant = user?.role === 'MERCHANT';
 
   useEffect(() => {
     if (!isMerchant) return;
-    api.get('/auth/settings').then((r: { data: { data: { mongikApiKeySet: boolean; mongikWebhookTokenSet: boolean } } }) => {
+    api.get('/auth/settings').then((r: { data: { data: { mongikApiKeySet: boolean } } }) => {
       setApiKeySet(r.data.data.mongikApiKeySet);
-      setWebhookTokenSet(r.data.data.mongikWebhookTokenSet);
     }).catch(() => {});
   }, [isMerchant]);
 
@@ -51,21 +47,18 @@ export default function SettingsPage() {
 
   async function handlePaymentSettings(e: React.FormEvent) {
     e.preventDefault();
-    if (!mongikApiKey && !mongikWebhookToken) {
-      toast.error('Enter at least one value to save');
+    if (!mongikApiKey) {
+      toast.error('Enter a Mongike API key');
       return;
     }
     setSavingPayment(true);
     try {
       await api.patch('/auth/settings', {
         ...(mongikApiKey ? { mongikApiKey: mongikApiKey.trim() } : {}),
-        ...(mongikWebhookToken ? { mongikWebhookToken: mongikWebhookToken.trim() } : {}),
       });
       toast.success('Payment settings saved');
       setMongikApiKey('');
-      setMongikWebhookToken('');
       if (mongikApiKey) setApiKeySet(true);
-      if (mongikWebhookToken) setWebhookTokenSet(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save payment settings');
     } finally {
@@ -116,7 +109,7 @@ export default function SettingsPage() {
             <h2 className="font-semibold text-gray-900">Payment Settings (Mongike)</h2>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Configure your Mongike API key so WiFi payments are deposited directly into your account.
+            Configure your Mongike API key so WiFi payments are deposited directly into your account. TRIVA verifies payment status directly with Mongike and also reconciles pending payments in the background if a webhook arrives late.
           </p>
 
           {!apiKeySet && (
@@ -158,30 +151,6 @@ export default function SettingsPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-1">Found in your Mongike dashboard under API Keys.</p>
-            </div>
-
-            <div>
-              <label className="label">
-                Mongike Webhook Token {webhookTokenSet && <span className="text-green-600 text-xs ml-1">(already set)</span>}
-              </label>
-              <div className="relative">
-                <input
-                  type={showWebhookToken ? 'text' : 'password'}
-                  className="input pr-10"
-                  placeholder={webhookTokenSet ? 'Enter new token to replace' : 'Webhook verification token'}
-                  value={mongikWebhookToken}
-                  onChange={(e) => setMongikWebhookToken(e.target.value)}
-                  autoComplete="off"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowWebhookToken((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showWebhookToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">Set this same token in Mongike's webhook configuration.</p>
             </div>
 
             <button type="submit" className="btn-primary" disabled={savingPayment}>
