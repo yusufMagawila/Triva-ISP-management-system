@@ -25,28 +25,28 @@ export default function RoutersPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [pinging, setPinging] = useState<string | null>(null);
-  const [downloadingScript, setDownloadingScript] = useState<string | null>(null);
+  const [downloadingManual, setDownloadingManual] = useState<string | null>(null);
 
-  async function handleDownloadScript(routerId: string, routerName: string) {
-    setDownloadingScript(routerId);
+  async function handleDownloadManual(routerId: string, routerName: string) {
+    setDownloadingManual(routerId);
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_URL ?? 'http://localhost:4000'}/api/routers/${routerId}/setup-script`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (!res.ok) throw new Error('Failed to download script');
+      if (!res.ok) throw new Error('Failed to download setup manual');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `triva-${routerName.replace(/[^a-z0-9]/gi, '-')}-setup.rsc`;
+      a.download = `triva-${routerName.replace(/[^a-z0-9]/gi, '-')}-setup-manual.txt`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Script downloaded!');
+      toast.success('Setup manual downloaded!');
     } catch {
-      toast.error('Failed to download setup script');
+      toast.error('Failed to download setup manual');
     } finally {
-      setDownloadingScript(null);
+      setDownloadingManual(null);
     }
   }
   const [form, setForm] = useState({
@@ -240,25 +240,24 @@ export default function RoutersPage() {
                     MikroTik Hotspot Setup
                   </p>
 
-                  {/* One-click script download */}
+                  {/* Per-router manual download */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-xs font-semibold text-green-800 mb-1.5">One-Paste Installer</p>
+                    <p className="text-xs font-semibold text-green-800 mb-1.5">Per-Router Setup Manual</p>
                     <p className="text-xs text-green-700 mb-2">
-                      This installer auto-detects the LAN bridge, creates or updates the MikroTik HotSpot,
-                      enables API on port 8728, installs the TRIVA login page, and adds the required
-                      walled-garden rules.
+                      Download a router-specific setup manual generated from this router's saved details.
+                      It guides the merchant step by step using this router's hotspot name, API port, and portal URL.
                     </p>
                     <p className="text-xs text-green-700 mb-2">
-                      Assumption: the router already has working internet and a LAN bridge with an IPv4 address.
-                      Download, paste into terminal, and it should provision the TRIVA hotspot in one run.
+                      The manual is safer than auto-setup because the merchant can follow it on any MikroTik model
+                      and confirm each step using the router's actual network layout.
                     </p>
                     <button
-                      onClick={() => handleDownloadScript(r.id, r.name)}
-                      disabled={downloadingScript === r.id}
+                      onClick={() => handleDownloadManual(r.id, r.name)}
+                      disabled={downloadingManual === r.id}
                       className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-medium px-3 py-2 rounded-lg disabled:opacity-50 transition-colors"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      {downloadingScript === r.id ? 'Downloading...' : 'Download Installer Script (.rsc)'}
+                      {downloadingManual === r.id ? 'Downloading...' : 'Download Setup Manual (.txt)'}
                     </button>
                   </div>
 
@@ -283,13 +282,13 @@ export default function RoutersPage() {
 
                   {/* Winbox steps */}
                   <div className="text-xs text-gray-600 space-y-1 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                    <p className="font-semibold text-blue-800 mb-1.5">Installer expectations:</p>
-                    <p>① Your router already has WAN internet working.</p>
-                    <p>② Your guest LAN is on interface <strong>bridge</strong>, or at least one MikroTik bridge exists.</p>
-                    <p>③ That bridge already has an IPv4 address assigned.</p>
-                    <p>④ TRIVA will install a router-specific <code>login.html</code> automatically.</p>
-                    <p>⑤ The hotspot server created by the installer will use the <strong>Hotspot Name</strong> saved in TRIVA.</p>
-                    <p className="text-blue-700 mt-2">The portal URL above is what the installed MikroTik login page redirects guests to.</p>
+                    <p className="font-semibold text-blue-800 mb-1.5">What the manual includes:</p>
+                    <p>① The exact Hotspot server name saved for this router: <strong>{r.hotspotName}</strong></p>
+                    <p>② The exact router API port saved in TRIVA: <strong>{r.apiPort}</strong></p>
+                    <p>③ The exact captive portal URL for this router</p>
+                    <p>④ Guidance for API, Hotspot, login page, and walled-garden configuration</p>
+                    <p>⑤ A final checklist to verify this router is ready for sales</p>
+                    <p className="text-blue-700 mt-2">Download the manual and follow it on the MikroTik device step by step.</p>
                   </div>
                 </div>
               )}
