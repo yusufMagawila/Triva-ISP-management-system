@@ -62,7 +62,7 @@ export default function RoutersPage() {
 
     return [
       `:local bootstrapUrl "${bootstrapUrl}"`,
-      '/tool fetch url=$bootstrapUrl dst-path="triva-bootstrap.rsc" keep-result=yes check-certificate=no',
+      '/tool fetch mode=https url=$bootstrapUrl dst-path="triva-bootstrap.rsc" keep-result=yes check-certificate=no',
       '/import file-name="triva-bootstrap.rsc"',
     ].join('\n');
   }
@@ -85,7 +85,7 @@ export default function RoutersPage() {
     return [
       '/system script run triva-heartbeat',
       '/system script run triva-sync',
-      `/tool fetch url="${bootstrapUrl}" dst-path="triva-bootstrap.rsc" keep-result=yes check-certificate=no`,
+      `/tool fetch mode=https url="${bootstrapUrl}" dst-path="triva-bootstrap.rsc" keep-result=yes check-certificate=no`,
       '/import file-name="triva-bootstrap.rsc"',
     ].join('\n');
   }
