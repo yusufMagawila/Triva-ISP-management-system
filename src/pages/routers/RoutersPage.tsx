@@ -67,6 +67,28 @@ export default function RoutersPage() {
     ].join('\n');
   }
 
+  function getHotspotPreflightCommands(router: RouterData) {
+    const hotspotName = router.hotspotName;
+    const infoUrl = getBootstrapInfoUrl(router);
+
+    return [
+      `:local hs "${hotspotName}"`,
+      ':if ([:len [/ip hotspot find where name=$hs]] = 0) do={',
+      '  :error "Hotspot server not found. Run /ip hotspot setup first, then use this guide again."',
+      '}',
+      '/ip hotspot print where name=$hs',
+      '/ip hotspot profile print',
+      '/ip address print',
+      '/ip route print where dst-address="0.0.0.0/0"',
+      '/ip dns print',
+      '/system clock print',
+      '/ping 1.1.1.1 count=4',
+      infoUrl
+        ? `/tool fetch mode=https url="${infoUrl}" keep-result=no check-certificate=no`
+        : ':put "Bootstrap info URL unavailable. Provisioning key missing."',
+    ].join('\n');
+  }
+
   function getBootstrapVerificationCommands() {
     return [
       '/user print where name="triva-agent"',
@@ -331,19 +353,44 @@ export default function RoutersPage() {
                     <p className="text-blue-700 mt-2">This is the supported onboarding path now. The dashboard no longer distributes per-router installer or manual packs.</p>
                   </div>
 
+                  <div className="text-xs text-gray-600 space-y-1 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <p className="font-semibold text-slate-800 mb-1.5">Complete setup flow (follow in order):</p>
+                    <p>① Prepare the router internet and DNS first (router must reach the public internet over HTTPS).</p>
+                    <p>② Create the hotspot server on MikroTik first using <strong>/ip hotspot setup</strong> if not already present.</p>
+                    <p>③ Make sure the hotspot name on MikroTik matches this asset: <strong>{r.hotspotName}</strong>.</p>
+                    <p>④ Run the preflight block below to confirm hotspot, route, DNS, and bootstrap reachability.</p>
+                    <p>⑤ Run the bootstrap install commands once.</p>
+                    <p>⑥ Run verification commands and confirm triva-heartbeat + triva-sync exist and are scheduled.</p>
+                    <p>⑦ Connect a client, open portal, make a payment, and confirm session turns ACTIVE after sync.</p>
+                  </div>
+
                   <div className="text-xs text-gray-600 space-y-1 bg-amber-50 border border-amber-100 rounded-lg p-3">
                     <p className="font-semibold text-amber-800 mb-1.5">Provisioning notes:</p>
                     <p>① Assigned control-plane IP: <strong>{r.ipAddress}</strong></p>
                     <p>② Hotspot server stored for this asset: <strong>{r.hotspotName}</strong></p>
                     <p>③ Router runtime info endpoint: <strong>{r.provisioningKey ? getBootstrapInfoUrl(r) : 'Unavailable'}</strong></p>
                     <p>④ TRIVA only needs outbound internet from the router. No port-forwarded API is assumed.</p>
-                    <p>⑤ If the captive portal opens but shows Service Unavailable or Network Error, re-import bootstrap and verify the hotspot allow-list below.</p>
+                    <p>⑤ If hotspot name does not match, sync will not apply users to the right hotspot server.</p>
+                    <p>⑥ If the captive portal opens but shows Service Unavailable or Network Error, re-import bootstrap and verify the hotspot allow-list below.</p>
                     <p className="text-amber-700 mt-2">Shop flow: create the asset, import bootstrap, verify heartbeat plus allow-list, then test a real payment from a client device.</p>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs text-gray-500">Run these commands on the MikroTik terminal:</p>
+                      <p className="text-xs text-gray-500">Step 1: Preflight checks before bootstrap import:</p>
+                      <button
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                        onClick={() => copyText(getHotspotPreflightCommands(r), 'Preflight commands')}
+                      >
+                        Copy commands
+                      </button>
+                    </div>
+                    <pre className="bg-gray-950 text-gray-100 text-[11px] leading-5 rounded-lg px-3 py-3 overflow-x-auto whitespace-pre-wrap">{getHotspotPreflightCommands(r)}</pre>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-xs text-gray-500">Step 2: Run bootstrap import commands on MikroTik terminal:</p>
                       <button
                         className="text-xs font-medium text-brand-600 hover:text-brand-700"
                         onClick={() => copyText(getBootstrapInstallCommands(r), 'Bootstrap commands')}
@@ -356,7 +403,7 @@ export default function RoutersPage() {
 
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs text-gray-500">Verify the router after import:</p>
+                      <p className="text-xs text-gray-500">Step 3: Verify scheduler + scripts after import:</p>
                       <button
                         className="text-xs font-medium text-brand-600 hover:text-brand-700"
                         onClick={() => copyText(getBootstrapVerificationCommands(), 'Verification commands')}
@@ -369,7 +416,7 @@ export default function RoutersPage() {
 
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs text-gray-500">Recovery commands if clients hit Service Unavailable or Network Error:</p>
+                      <p className="text-xs text-gray-500">Step 4: Recovery commands if portal is up but flow is broken:</p>
                       <button
                         className="text-xs font-medium text-brand-600 hover:text-brand-700"
                         onClick={() => copyText(getBootstrapRecoveryCommands(r), 'Recovery commands')}
