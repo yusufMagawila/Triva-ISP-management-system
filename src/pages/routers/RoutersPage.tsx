@@ -56,6 +56,40 @@ export default function RoutersPage() {
     return `${API_BASE}/bootstrap/router/${encodeURIComponent(router.provisioningKey)}/info`;
   }
 
+  function getBootstrapInstallCommands(router: RouterData) {
+    const bootstrapUrl = getBootstrapScriptUrl(router);
+    if (!bootstrapUrl) return 'Provisioning key missing. Recreate or migrate this router asset.';
+
+    return [
+      `:local bootstrapUrl "${bootstrapUrl}"`,
+      '/tool fetch url=$bootstrapUrl dst-path="triva-bootstrap.rsc" keep-result=yes check-certificate=no',
+      '/import file-name="triva-bootstrap.rsc"',
+    ].join('\n');
+  }
+
+  function getBootstrapVerificationCommands() {
+    return [
+      '/user print where name="triva-agent"',
+      '/system script print where name~"triva"',
+      '/system scheduler print where name~"triva"',
+      '/ip hotspot walled-garden print where comment~"TRIVA bootstrap"',
+      '/ip hotspot walled-garden ip print where comment~"TRIVA bootstrap"',
+      '/ip service print where name="api"',
+    ].join('\n');
+  }
+
+  function getBootstrapRecoveryCommands(router: RouterData) {
+    const bootstrapUrl = getBootstrapScriptUrl(router);
+    if (!bootstrapUrl) return 'Provisioning key missing. Recreate or migrate this router asset.';
+
+    return [
+      '/system script run triva-heartbeat',
+      '/system script run triva-sync',
+      `/tool fetch url="${bootstrapUrl}" dst-path="triva-bootstrap.rsc" keep-result=yes check-certificate=no`,
+      '/import file-name="triva-bootstrap.rsc"',
+    ].join('\n');
+  }
+
   async function loadRouters() {
     try {
       const res = await api.get<{ data: RouterData[] }>('/routers');
@@ -293,6 +327,7 @@ export default function RoutersPage() {
                     <p>② A recurring heartbeat to keep this asset online in the dashboard</p>
                     <p>③ A recurring session-sync job so paid sessions go live without inbound NAT reachability</p>
                     <p>④ The TRIVA captive portal files when the hotspot directory exists</p>
+                    <p>⑤ The hotspot allow-list for pandabus.live, triva.pandabus.live, mongike.com, and *.mongike.com</p>
                     <p className="text-blue-700 mt-2">This is the supported onboarding path now. The dashboard no longer distributes per-router installer or manual packs.</p>
                   </div>
 
@@ -302,7 +337,56 @@ export default function RoutersPage() {
                     <p>② Hotspot server stored for this asset: <strong>{r.hotspotName}</strong></p>
                     <p>③ Router runtime info endpoint: <strong>{r.provisioningKey ? getBootstrapInfoUrl(r) : 'Unavailable'}</strong></p>
                     <p>④ TRIVA only needs outbound internet from the router. No port-forwarded API is assumed.</p>
-                    <p className="text-amber-700 mt-2">Shop flow: create the asset, power the router online, let it call TRIVA, and watch the card move online when the heartbeat arrives.</p>
+                    <p>⑤ If the captive portal opens but shows Service Unavailable or Network Error, re-import bootstrap and verify the hotspot allow-list below.</p>
+                    <p className="text-amber-700 mt-2">Shop flow: create the asset, import bootstrap, verify heartbeat plus allow-list, then test a real payment from a client device.</p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-xs text-gray-500">Run these commands on the MikroTik terminal:</p>
+                      <button
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                        onClick={() => copyText(getBootstrapInstallCommands(r), 'Bootstrap commands')}
+                      >
+                        Copy commands
+                      </button>
+                    </div>
+                    <pre className="bg-gray-950 text-gray-100 text-[11px] leading-5 rounded-lg px-3 py-3 overflow-x-auto whitespace-pre-wrap">{getBootstrapInstallCommands(r)}</pre>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-xs text-gray-500">Verify the router after import:</p>
+                      <button
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                        onClick={() => copyText(getBootstrapVerificationCommands(), 'Verification commands')}
+                      >
+                        Copy commands
+                      </button>
+                    </div>
+                    <pre className="bg-gray-950 text-gray-100 text-[11px] leading-5 rounded-lg px-3 py-3 overflow-x-auto whitespace-pre-wrap">{getBootstrapVerificationCommands()}</pre>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="text-xs text-gray-500">Recovery commands if clients hit Service Unavailable or Network Error:</p>
+                      <button
+                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                        onClick={() => copyText(getBootstrapRecoveryCommands(r), 'Recovery commands')}
+                      >
+                        Copy commands
+                      </button>
+                    </div>
+                    <pre className="bg-gray-950 text-gray-100 text-[11px] leading-5 rounded-lg px-3 py-3 overflow-x-auto whitespace-pre-wrap">{getBootstrapRecoveryCommands(r)}</pre>
+                  </div>
+
+                  <div className="text-xs text-gray-600 space-y-1 bg-rose-50 border border-rose-100 rounded-lg p-3">
+                    <p className="font-semibold text-rose-800 mb-1.5">Critical buy-flow hosts that must stay reachable before login:</p>
+                    <p>① pandabus.live</p>
+                    <p>② triva.pandabus.live</p>
+                    <p>③ mongike.com</p>
+                    <p>④ *.mongike.com</p>
+                    <p className="text-rose-700 mt-2">Bootstrap now installs these rules automatically so the portal UI can load plans, start payments, and keep the paid-session flow alive.</p>
                   </div>
 
                   <div>
