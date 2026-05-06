@@ -48,12 +48,12 @@ export default function RoutersPage() {
 
   function getBootstrapScriptUrl(router: RouterData) {
     if (!router.provisioningKey) return '';
-    return `${API_BASE}/bootstrap/router?provisioningKey=${encodeURIComponent(router.provisioningKey)}&format=rsc`;
+    return `${API_BASE}/bootstrap/router/${encodeURIComponent(router.provisioningKey)}`;
   }
 
   function getBootstrapInfoUrl(router: RouterData) {
     if (!router.provisioningKey) return '';
-    return `${API_BASE}/bootstrap/router?provisioningKey=${encodeURIComponent(router.provisioningKey)}`;
+    return `${API_BASE}/bootstrap/router/${encodeURIComponent(router.provisioningKey)}/info`;
   }
 
   async function loadRouters() {
