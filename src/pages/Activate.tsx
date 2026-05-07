@@ -34,7 +34,6 @@ export default function ActivatePage() {
       const tenantStatus = res.data.data?.tenant?.status ?? res.data.data?.tenantStatus;
       if (tenantStatus === 'ACTIVE') {
         toast.success('Account activated! Welcome to TRIVA.');
-        // Re-fetch auth to get updated user/tenant
         const meRes = await api.get('/auth/me') as { data: { data: unknown } };
         const token = localStorage.getItem('token') ?? '';
         setAuth(token, meRes.data.data as Parameters<typeof setAuth>[1]);
@@ -50,64 +49,93 @@ export default function ActivatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: '#f5f5f7' }}
+    >
+      <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
-            <Wifi className="w-8 h-8 text-white" />
+          <div
+            className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 shadow-lg"
+            style={{ background: '#0071e3' }}
+          >
+            <Wifi className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">TRIVA</h1>
-          <p className="text-gray-500 mt-1">Activate Your Account</p>
+          <h1
+            className="text-3xl font-bold tracking-tight"
+            style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+          >
+            TRIVA
+          </h1>
+          <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>
+            Activate Your Account
+          </p>
         </div>
 
-        <div className="card p-8 shadow-xl">
+        <div className="card p-8">
           {!paid ? (
             <>
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-amber-100 rounded-full mb-3">
-                  <CreditCard className="w-6 h-6 text-amber-600" />
+                <div
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-full mb-3"
+                  style={{ background: '#fff3e0' }}
+                >
+                  <CreditCard className="w-5 h-5" style={{ color: '#f57c00' }} />
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">One-Time Activation Fee</h2>
-                <p className="text-gray-500 text-sm mt-1">Pay once to unlock your hotspot management account</p>
+                <h2
+                  className="text-xl font-semibold tracking-tight"
+                  style={{ color: '#1d1d1f', letterSpacing: '-0.02em' }}
+                >
+                  One-Time Activation Fee
+                </h2>
+                <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>
+                  Pay once to unlock your hotspot management account
+                </p>
               </div>
 
               {/* Fee breakdown */}
-              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
+              <div
+                className="rounded-2xl p-4 mb-5"
+                style={{ background: '#f0f6ff', border: '1px solid #dceeff' }}
+              >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-600 text-sm">Account Activation</span>
-                  <span className="font-bold text-gray-900">TZS 35,000</span>
+                  <span className="text-sm" style={{ color: '#3a3a3c' }}>Account Activation</span>
+                  <span className="font-bold" style={{ color: '#1d1d1f' }}>TZS 35,000</span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-gray-500 border-t border-blue-100 pt-2 mt-2">
+                <div
+                  className="flex items-center justify-between text-xs pt-2 mt-2"
+                  style={{ borderTop: '1px solid #dceeff', color: '#6e6e73' }}
+                >
                   <span>Includes first month (BASIC plan)</span>
-                  <span className="text-green-600 font-medium">+ 30 days free</span>
+                  <span className="font-medium" style={{ color: '#34c759' }}>+ 30 days free</span>
                 </div>
               </div>
 
-              <div className="space-y-3 text-sm text-gray-600 mb-6">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  <span>Full access to your TRIVA merchant dashboard</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  <span>Connect unlimited MikroTik routers</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  <span>Collect WiFi payments directly to your mobile money</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
-                  <span>After 30 days, renew from TZS 15,000/month</span>
-                </div>
+              <div className="space-y-2.5 text-sm mb-5" style={{ color: '#3a3a3c' }}>
+                {[
+                  'Full access to your TRIVA merchant dashboard',
+                  'Connect MikroTik routers with zero-touch provisioning',
+                  'Collect WiFi payments directly to your mobile money',
+                  'After 30 days, renew from TZS 15,000/month',
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#34c759' }} />
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
 
               <form onSubmit={handlePay} className="space-y-4">
                 <div>
                   <label className="label">M-Pesa / Airtel Money Number</label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">+255</span>
+                    <span
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium"
+                      style={{ color: '#6e6e73' }}
+                    >
+                      +255
+                    </span>
                     <input
                       type="tel"
                       className="input pl-14"
@@ -118,37 +146,48 @@ export default function ActivatePage() {
                     />
                   </div>
                 </div>
-                <button type="submit" className="btn-primary w-full text-base py-3" disabled={loading}>
-                  {loading ? 'Sending payment request...' : 'Pay TZS 35,000 via Mobile Money'}
+                <button type="submit" className="btn-primary w-full py-3 text-base" disabled={loading}>
+                  {loading ? 'Sending payment request…' : 'Pay TZS 35,000 via Mobile Money'}
                 </button>
               </form>
             </>
           ) : (
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-4">
-                <Clock className="w-8 h-8 text-amber-600" />
+              <div
+                className="inline-flex items-center justify-center w-14 h-14 rounded-full mb-4"
+                style={{ background: '#fff8e1' }}
+              >
+                <Clock className="w-7 h-7" style={{ color: '#f59e0b' }} />
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Awaiting Payment</h2>
-              <p className="text-gray-500 text-sm mb-6">
-                A payment prompt has been sent to <strong>{phone}</strong>. Enter your PIN to complete the payment.
-                Once confirmed, click the button below.
+              <h2
+                className="text-xl font-semibold mb-2 tracking-tight"
+                style={{ color: '#1d1d1f', letterSpacing: '-0.02em' }}
+              >
+                Awaiting Payment
+              </h2>
+              <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
+                A prompt was sent to <strong style={{ color: '#1d1d1f' }}>{phone}</strong>. Enter your PIN to complete. Then tap the button below.
               </p>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 mb-6">
-                <strong>Note:</strong> It may take up to 30 seconds after paying for the confirmation to come through.
+              <div
+                className="rounded-xl p-3.5 text-sm mb-5"
+                style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}
+              >
+                It may take up to 30 seconds after paying for confirmation.
               </div>
 
               <button
                 onClick={handleCheckStatus}
-                className="btn-primary w-full text-base py-3"
+                className="btn-primary w-full py-3 text-base"
                 disabled={checking}
               >
-                {checking ? 'Checking...' : "I've Paid — Activate My Account"}
+                {checking ? 'Checking…' : "I've Paid — Activate My Account"}
               </button>
 
               <button
                 onClick={() => setPaid(false)}
-                className="mt-3 text-sm text-gray-500 underline block w-full"
+                className="mt-3 text-sm hover:underline block w-full"
+                style={{ color: '#6e6e73' }}
               >
                 Use a different number
               </button>
@@ -156,9 +195,12 @@ export default function ActivatePage() {
           )}
         </div>
 
-        <p className="text-center text-sm text-gray-400 mt-4">
-          Logged in as <strong>{user?.email}</strong> &nbsp;·&nbsp;
-          <button onClick={() => { localStorage.clear(); window.location.href = '/login'; }} className="underline">
+        <p className="text-center text-sm mt-5" style={{ color: '#aeaeb2' }}>
+          Logged in as <strong style={{ color: '#6e6e73' }}>{user?.email}</strong>{' '}·{' '}
+          <button
+            onClick={() => { localStorage.clear(); window.location.href = '/login'; }}
+            className="underline"
+          >
             Sign out
           </button>
         </p>
@@ -166,3 +208,5 @@ export default function ActivatePage() {
     </div>
   );
 }
+
+

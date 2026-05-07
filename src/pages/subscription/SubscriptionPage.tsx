@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore';
 import { formatTZS } from '../../utils/currency';
 import toast from 'react-hot-toast';
 import { Shield, CheckCircle2, AlertTriangle, CreditCard, Phone } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
 
 interface SubscriptionData {
   id: string;
@@ -30,8 +30,7 @@ const PLAN_DETAILS = {
       'Captive portal payments',
       'Dashboard & reports',
     ],
-    color: 'border-blue-200 bg-blue-50',
-    badge: 'bg-blue-100 text-blue-700',
+    accent: '#0071e3',
     recommended: false as const,
   },
   STANDARD: {
@@ -42,8 +41,7 @@ const PLAN_DETAILS = {
       'Captive portal payments',
       'Dashboard & reports',
     ],
-    color: 'border-brand-300 bg-brand-50',
-    badge: 'bg-brand-100 text-brand-700',
+    accent: '#34c759',
     recommended: true as const,
   },
   PREMIUM: {
@@ -54,8 +52,7 @@ const PLAN_DETAILS = {
       'Captive portal payments',
       'Dashboard & reports',
     ],
-    color: 'border-purple-200 bg-purple-50',
-    badge: 'bg-purple-100 text-purple-700',
+    accent: '#af52de',
     recommended: false as const,
   },
 };
@@ -100,60 +97,75 @@ export default function SubscriptionPage() {
   if (loading) {
     return (
       <div className="p-8 flex justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+        <div className="spinner" />
       </div>
     );
   }
 
-  const statusColor =
-    sub?.status === 'ACTIVE'
-      ? 'bg-green-50 border-green-200 text-green-800'
-      : 'bg-red-50 border-red-200 text-red-800';
-
+  const isActive = sub?.status === 'ACTIVE';
   const isExpiringSoon = sub && sub.daysLeft <= 7;
 
   return (
-    <div className="p-6 space-y-6 max-w-3xl">
+    <div className="p-7 space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Subscription</h1>
-        <p className="text-gray-500 mt-0.5">Manage your TRIVA plan</p>
+        <h1
+          className="text-2xl font-bold tracking-tight"
+          style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+        >
+          Subscription
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage your TRIVA plan</p>
       </div>
 
       {/* Current status */}
       {sub && (
-        <div className={`card p-6 border-2 ${statusColor}`}>
+        <div
+          className="card p-6"
+          style={{
+            border: `1.5px solid ${isActive ? '#bbf7d0' : '#fecaca'}`,
+            background: isActive ? '#f0fdf4' : '#fff5f5',
+          }}
+        >
           <div className="flex items-center gap-4">
             <div className="flex-shrink-0">
-              {sub.status === 'ACTIVE' ? (
-                <CheckCircle2 className="w-10 h-10 text-green-500" />
+              {isActive ? (
+                <CheckCircle2 className="w-9 h-9" style={{ color: '#34c759' }} />
               ) : (
-                <AlertTriangle className="w-10 h-10 text-red-500" />
+                <AlertTriangle className="w-9 h-9" style={{ color: '#ef4444' }} />
               )}
             </div>
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-lg font-bold">{PLAN_DETAILS[sub.plan].label} Plan</h2>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PLAN_DETAILS[sub.plan].badge}`}>
+              <div className="flex items-center gap-2 mb-0.5">
+                <h2 className="text-base font-bold" style={{ color: '#1d1d1f' }}>
+                  {PLAN_DETAILS[sub.plan].label} Plan
+                </h2>
+                <span
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style={{
+                    background: isActive ? '#dcfce7' : '#fee2e2',
+                    color: isActive ? '#166534' : '#991b1b',
+                  }}
+                >
                   {sub.status}
                 </span>
               </div>
-              <p className="text-sm">
-                {sub.status === 'ACTIVE'
+              <p className="text-sm" style={{ color: isActive ? '#166534' : '#991b1b' }}>
+                {isActive
                   ? `Active until ${format(new Date(sub.expiresAt), 'MMMM d, yyyy')} · ${sub.daysLeft} days left`
                   : `Expired on ${format(new Date(sub.expiresAt), 'MMMM d, yyyy')}`}
               </p>
             </div>
-            <button
-              className="btn-primary flex-shrink-0"
-              onClick={() => setShowPayForm(true)}
-            >
+            <button className="btn-primary flex-shrink-0" onClick={() => setShowPayForm(true)}>
               <CreditCard className="w-4 h-4" />
               {sub.status === 'EXPIRED' ? 'Reactivate' : 'Renew / Upgrade'}
             </button>
           </div>
 
-          {isExpiringSoon && sub.status !== 'EXPIRED' && (
-            <div className="mt-4 pt-4 border-t border-current/20 flex items-center gap-2 text-sm">
+          {isExpiringSoon && isActive && (
+            <div
+              className="mt-4 pt-4 flex items-center gap-2 text-sm"
+              style={{ borderTop: '1px solid rgba(0,0,0,0.08)', color: '#166534' }}
+            >
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               Your subscription expires soon. Renew now to avoid service interruption.
             </div>
@@ -164,10 +176,10 @@ export default function SubscriptionPage() {
       {/* Plan selection + payment form */}
       {showPayForm && sub && (
         <div className="card p-6 space-y-6">
-          <h2 className="font-semibold text-gray-900 text-lg">Choose a Plan</h2>
+          <h2 className="font-semibold" style={{ color: '#1d1d1f' }}>Choose a Plan</h2>
 
           {/* Plan cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {(Object.keys(PLAN_DETAILS) as Array<keyof typeof PLAN_DETAILS>).map((plan) => {
               const detail = PLAN_DETAILS[plan];
               const isSelected = selectedPlan === plan;
@@ -175,23 +187,29 @@ export default function SubscriptionPage() {
                 <button
                   key={plan}
                   onClick={() => setSelectedPlan(plan)}
-                  className={`text-left rounded-xl border-2 p-4 transition-all ${
-                    isSelected ? detail.color + ' ring-2 ring-brand-400' : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
+                  className="text-left rounded-2xl p-4 transition-all"
+                  style={{
+                    border: isSelected ? `2px solid ${detail.accent}` : '2px solid #f0f0f5',
+                    background: isSelected ? detail.accent + '0d' : 'white',
+                  }}
                 >
                   {detail.recommended && (
-                    <span className="text-xs bg-brand-600 text-white px-2 py-0.5 rounded-full font-medium mb-2 inline-block">
+                    <span
+                      className="text-xs font-semibold px-2 py-0.5 rounded-full mb-2 inline-block text-white"
+                      style={{ background: detail.accent }}
+                    >
                       Recommended
                     </span>
                   )}
-                  <p className="font-bold text-gray-900 mb-0.5">{detail.label}</p>
-                  <p className="text-xl font-bold text-brand-600 mb-3">
-                    {formatTZS(sub.planPrices[plan])}<span className="text-sm font-normal text-gray-500">/mo</span>
+                  <p className="font-bold mb-0.5" style={{ color: '#1d1d1f' }}>{detail.label}</p>
+                  <p className="text-xl font-bold mb-3" style={{ color: detail.accent }}>
+                    {formatTZS(sub.planPrices[plan])}
+                    <span className="text-sm font-normal" style={{ color: '#6e6e73' }}>/mo</span>
                   </p>
                   <ul className="space-y-1">
                     {detail.features.map((f) => (
-                      <li key={f} className="flex items-center gap-1.5 text-xs text-gray-600">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                      <li key={f} className="flex items-center gap-1.5 text-xs" style={{ color: '#3a3a3c' }}>
+                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#34c759' }} />
                         {f}
                       </li>
                     ))}
@@ -202,7 +220,11 @@ export default function SubscriptionPage() {
           </div>
 
           {/* Duration + phone */}
-          <form onSubmit={handlePay} className="space-y-4 pt-2 border-t border-gray-100">
+          <form
+            onSubmit={handlePay}
+            className="space-y-4 pt-4"
+            style={{ borderTop: '1px solid #f0f0f5' }}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="label">Duration</label>
@@ -221,7 +243,7 @@ export default function SubscriptionPage() {
               <div>
                 <label className="label">M-Pesa / Tigo / Airtel Number</label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#aeaeb2' }} />
                   <input
                     type="tel"
                     className="input pl-9"
@@ -234,20 +256,28 @@ export default function SubscriptionPage() {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+            <div
+              className="rounded-2xl p-4 flex items-center justify-between"
+              style={{ background: '#f5f5f7' }}
+            >
               <div>
-                <p className="text-sm text-gray-500">Total to pay</p>
-                <p className="text-2xl font-bold text-gray-900">{formatTZS(totalAmount)}</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs mb-0.5" style={{ color: '#6e6e73' }}>Total to pay</p>
+                <p
+                  className="text-2xl font-bold tracking-tight"
+                  style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+                >
+                  {formatTZS(totalAmount)}
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: '#aeaeb2' }}>
                   {PLAN_DETAILS[selectedPlan].label} · {months} month{months > 1 ? 's' : ''}
                 </p>
               </div>
-              <Shield className="w-10 h-10 text-gray-300" />
+              <Shield className="w-9 h-9" style={{ color: '#d2d2d7' }} />
             </div>
 
             <div className="flex gap-3">
               <button type="submit" className="btn-primary flex-1" disabled={paying}>
-                {paying ? 'Sending prompt...' : `Pay ${formatTZS(totalAmount)}`}
+                {paying ? 'Sending prompt…' : `Pay ${formatTZS(totalAmount)}`}
               </button>
               <button type="button" className="btn-secondary" onClick={() => setShowPayForm(false)}>
                 Cancel
@@ -260,11 +290,13 @@ export default function SubscriptionPage() {
       {/* What's included */}
       {sub && !showPayForm && (
         <div className="card p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Your {PLAN_DETAILS[sub.plan].label} Plan Includes</h2>
-          <ul className="space-y-2">
+          <h2 className="font-semibold mb-4 text-sm" style={{ color: '#1d1d1f' }}>
+            Your {PLAN_DETAILS[sub.plan].label} Plan Includes
+          </h2>
+          <ul className="space-y-2.5">
             {PLAN_DETAILS[sub.plan].features.map((f) => (
-              <li key={f} className="flex items-center gap-2 text-sm text-gray-700">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <li key={f} className="flex items-center gap-2.5 text-sm" style={{ color: '#3a3a3c' }}>
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: '#34c759' }} />
                 {f}
               </li>
             ))}

@@ -65,43 +65,58 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: '#f5f5f7' }}
+    >
+      <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-200">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
+            style={{ background: '#0071e3' }}
+          >
             <Wifi className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">Create Your Shop</h1>
-          <p className="text-gray-500 mt-1">Start your 30-day free trial — no card required</p>
+          <h1
+            className="text-3xl font-bold tracking-tight"
+            style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+          >
+            Create Your Shop
+          </h1>
+          <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>
+            30-day free trial — no card required
+          </p>
         </div>
 
         <div className="card p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Shop info */}
-            <div className="pb-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Shop Details</p>
-              <div className="space-y-4">
-                <div>
-                  <label className="label">Shop / Business Name</label>
-                  <input
-                    className="input"
-                    value={form.shopName}
-                    onChange={set('shopName')}
-                    required
-                    placeholder="Karibu WiFi Shop"
-                    minLength={2}
-                  />
-                </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#aeaeb2' }}>
+                Shop Details
+              </p>
+              <div>
+                <label className="label">Shop / Business Name</label>
+                <input
+                  className="input"
+                  value={form.shopName}
+                  onChange={set('shopName')}
+                  required
+                  placeholder="Karibu WiFi Shop"
+                  minLength={2}
+                />
               </div>
             </div>
 
             {/* Account info */}
-            <div className="border-t border-gray-100 pt-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Your Account</p>
+            <div className="pt-2" style={{ borderTop: '1px solid #f0f0f5' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#aeaeb2' }}>
+                Your Account
+              </p>
               <div className="space-y-4">
                 <div>
-                  <label className="label">Your Full Name</label>
+                  <label className="label">Full Name</label>
                   <input
                     className="input"
                     value={form.merchantName}
@@ -123,7 +138,7 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <label className="label">Phone Number (optional)</label>
+                  <label className="label">Phone <span style={{ color: '#aeaeb2' }}>optional</span></label>
                   <input
                     type="tel"
                     className="input"
@@ -146,7 +161,8 @@ export default function RegisterPage() {
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: '#aeaeb2' }}
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -167,23 +183,24 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <button type="submit" className="btn-primary w-full py-3 text-base" disabled={loading}>
-              {loading ? 'Creating account...' : 'Create Account & Start Trial'}
+            <button type="submit" className="btn-primary w-full py-3 text-base mt-2" disabled={loading}>
+              {loading ? 'Creating account…' : 'Create Account & Start Trial'}
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm mt-5" style={{ color: '#6e6e73' }}>
             Already have an account?{' '}
-            <Link to="/login" className="text-brand-600 font-medium hover:underline">
+            <Link to="/login" className="font-medium hover:underline" style={{ color: '#0071e3' }}>
               Sign in
             </Link>
           </p>
         </div>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          By registering you agree to our Terms of Service. Your 30-day trial starts immediately.
+        <p className="text-center text-xs mt-5" style={{ color: '#aeaeb2' }}>
+          By registering you agree to our Terms of Service.
         </p>
       </div>
     </div>
   );
 }
+

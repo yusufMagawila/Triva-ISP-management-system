@@ -16,7 +16,7 @@ interface Session {
   router: { name: string };
 }
 
-const statusColors: Record<string, string> = {
+const statusBadge: Record<string, string> = {
   ACTIVE: 'badge-green',
   PENDING: 'badge-yellow',
   EXPIRED: 'badge-gray',
@@ -67,10 +67,15 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-7 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Sessions</h1>
-        <p className="text-gray-500 mt-0.5">Monitor all WiFi sessions</p>
+        <h1
+          className="text-2xl font-bold tracking-tight"
+          style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+        >
+          Sessions
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Monitor all WiFi sessions</p>
       </div>
 
       {/* Filters */}
@@ -79,10 +84,13 @@ export default function SessionsPage() {
           <button
             key={s}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              statusFilter === s
-                ? 'bg-brand-600 text-white'
-                : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+              statusFilter === s ? 'text-white' : 'bg-white border hover:bg-gray-50'
             }`}
+            style={
+              statusFilter === s
+                ? { background: '#0071e3', border: '1px solid #0071e3', color: 'white' }
+                : { border: '1px solid #d2d2d7', color: '#3a3a3c' }
+            }
             onClick={() => { setStatusFilter(s); setPage(1); }}
           >
             {s || 'All'}
@@ -93,47 +101,54 @@ export default function SessionsPage() {
       <div className="card">
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+            <div className="spinner" />
           </div>
         ) : sessions.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <Activity className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>No sessions found</p>
+          <div className="p-16 text-center">
+            <Activity className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: '#6e6e73' }} />
+            <p className="text-sm" style={{ color: '#aeaeb2' }}>No sessions found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                  <tr>
-                    <th className="px-5 py-3 text-left">MAC Address</th>
-                    <th className="px-5 py-3 text-left">Plan</th>
-                    <th className="px-5 py-3 text-left">Router</th>
-                    <th className="px-5 py-3 text-left">Started</th>
-                    <th className="px-5 py-3 text-left">Expires</th>
-                    <th className="px-5 py-3 text-left">Status</th>
-                    <th className="px-5 py-3 text-left">Action</th>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>MAC Address</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Plan</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Router</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Started</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Expires</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {sessions.map((s) => (
-                    <tr key={s.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 font-mono text-xs">{s.macAddress}</td>
-                      <td className="px-5 py-3">{s.plan.name}</td>
-                      <td className="px-5 py-3">{s.router.name}</td>
-                      <td className="px-5 py-3 text-xs">
+                    <tr
+                      key={s.id}
+                      className="transition-colors"
+                      style={{ borderBottom: '1px solid #f7f7f9' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+                    >
+                      <td className="px-6 py-3.5 font-mono text-xs" style={{ color: '#3a3a3c' }}>{s.macAddress}</td>
+                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.plan.name}</td>
+                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.router.name}</td>
+                      <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
                         {s.startsAt ? format(new Date(s.startsAt), 'MMM d HH:mm') : '—'}
                       </td>
-                      <td className="px-5 py-3 text-xs">
+                      <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
                         {s.expiresAt ? format(new Date(s.expiresAt), 'MMM d HH:mm') : '—'}
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={statusColors[s.status] ?? 'badge-gray'}>{s.status}</span>
+                      <td className="px-6 py-3.5">
+                        <span className={statusBadge[s.status] ?? 'badge-gray'}>{s.status}</span>
                       </td>
-                      <td className="px-5 py-3">
+                      <td className="px-6 py-3.5">
                         {s.status === 'ACTIVE' && (
                           <button
-                            className="text-red-400 hover:text-red-600 transition-colors"
+                            className="transition-colors hover:text-red-500"
+                            style={{ color: '#aeaeb2' }}
                             onClick={() => handleDisconnect(s.id)}
                             title="Disconnect"
                           >
@@ -147,8 +162,11 @@ export default function SessionsPage() {
               </table>
             </div>
             {total > 20 && (
-              <div className="p-4 flex items-center justify-between border-t border-gray-100">
-                <p className="text-sm text-gray-500">{total} total sessions</p>
+              <div
+                className="px-6 py-4 flex items-center justify-between"
+                style={{ borderTop: '1px solid #f0f0f5' }}
+              >
+                <p className="text-xs" style={{ color: '#6e6e73' }}>{total} total sessions</p>
                 <div className="flex gap-2">
                   <button className="btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button>
                   <button className="btn-secondary btn-sm" disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>Next</button>
@@ -161,3 +179,23 @@ export default function SessionsPage() {
     </div>
   );
 }
+
+
+interface Session {
+  id: string;
+  macAddress: string;
+  ipAddress: string | null;
+  status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'DISCONNECTED';
+  startsAt: string | null;
+  expiresAt: string | null;
+  plan: { name: string };
+  router: { name: string };
+}
+
+const statusColors: Record<string, string> = {
+  ACTIVE: 'badge-green',
+  PENDING: 'badge-yellow',
+  EXPIRED: 'badge-gray',
+  DISCONNECTED: 'badge-red',
+};
+

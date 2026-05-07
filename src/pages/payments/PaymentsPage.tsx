@@ -15,7 +15,7 @@ interface Payment {
   mongikeTxId: string | null;
 }
 
-const statusColors: Record<string, string> = {
+const statusBadge: Record<string, string> = {
   COMPLETED: 'badge-green',
   PENDING: 'badge-yellow',
   FAILED: 'badge-red',
@@ -41,50 +41,63 @@ export default function PaymentsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-7 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Payments</h1>
-        <p className="text-gray-500 mt-0.5">Transaction history</p>
+        <h1
+          className="text-2xl font-bold tracking-tight"
+          style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+        >
+          Payments
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Transaction history</p>
       </div>
 
       <div className="card">
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+            <div className="spinner" />
           </div>
         ) : payments.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>No payments yet</p>
+          <div className="p-16 text-center">
+            <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: '#6e6e73' }} />
+            <p className="text-sm" style={{ color: '#aeaeb2' }}>No payments yet</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                  <tr>
-                    <th className="px-5 py-3 text-left">Date</th>
-                    <th className="px-5 py-3 text-left">Phone</th>
-                    <th className="px-5 py-3 text-left">Plan</th>
-                    <th className="px-5 py-3 text-left">Amount</th>
-                    <th className="px-5 py-3 text-left">Tx ID</th>
-                    <th className="px-5 py-3 text-left">Status</th>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Phone</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Plan</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Tx ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {payments.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-5 py-3 text-xs">{format(new Date(p.createdAt), 'MMM d, HH:mm')}</td>
-                      <td className="px-5 py-3">{p.phone ?? '—'}</td>
-                      <td className="px-5 py-3">{p.plan.name}</td>
-                      <td className="px-5 py-3 font-semibold">
+                    <tr
+                      key={p.id}
+                      className="transition-colors"
+                      style={{ borderBottom: '1px solid #f7f7f9' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+                    >
+                      <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
+                        {format(new Date(p.createdAt), 'MMM d, HH:mm')}
+                      </td>
+                      <td className="px-6 py-3.5" style={{ color: '#3a3a3c' }}>{p.phone ?? '—'}</td>
+                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{p.plan.name}</td>
+                      <td className="px-6 py-3.5 font-semibold" style={{ color: '#1d1d1f' }}>
                         {formatTZS(p.amount)}
                       </td>
-                      <td className="px-5 py-3 font-mono text-xs text-gray-500">
-                        {p.mongikeTxId ? p.mongikeTxId.slice(0, 12) + '...' : '—'}
+                      <td className="px-6 py-3.5 font-mono text-xs" style={{ color: '#aeaeb2' }}>
+                        {p.mongikeTxId ? p.mongikeTxId.slice(0, 12) + '…' : '—'}
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={statusColors[p.status] ?? 'badge-gray'}>{p.status}</span>
+                      <td className="px-6 py-3.5">
+                        <span className={statusBadge[p.status] ?? 'badge-gray'}>{p.status}</span>
                       </td>
                     </tr>
                   ))}
@@ -92,8 +105,11 @@ export default function PaymentsPage() {
               </table>
             </div>
             {total > 20 && (
-              <div className="p-4 flex items-center justify-between border-t border-gray-100">
-                <p className="text-sm text-gray-500">{total} total payments</p>
+              <div
+                className="px-6 py-4 flex items-center justify-between"
+                style={{ borderTop: '1px solid #f0f0f5' }}
+              >
+                <p className="text-xs" style={{ color: '#6e6e73' }}>{total} total payments</p>
                 <div className="flex gap-2">
                   <button className="btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button>
                   <button className="btn-secondary btn-sm" disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>Next</button>
@@ -106,3 +122,4 @@ export default function PaymentsPage() {
     </div>
   );
 }
+

@@ -173,11 +173,11 @@ export default function RoutersPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-7 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Routers</h1>
-          <p className="text-gray-500 mt-0.5">Create zero-touch router assets and let each device self-provision from TRIVA</p>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>Routers</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Create zero-touch router assets and let each device self-provision from TRIVA</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4" /> Add Router
@@ -187,7 +187,7 @@ export default function RoutersPage() {
       {/* Add Router Form */}
       {showForm && (
         <div className="card p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Create Router Asset</h2>
+          <h2 className="font-semibold mb-5" style={{ color: '#1d1d1f' }}>Create Router Asset</h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Router Name</label>
@@ -212,7 +212,7 @@ export default function RoutersPage() {
               <label className="label">Location (optional)</label>
               <input className="input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Shop floor, 2nd floor..." />
             </div>
-            <div className="md:col-span-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            <div className="md:col-span-2 rounded-xl px-4 py-3 text-sm" style={{ background: '#f0f6ff', border: '1px solid #dceeff', color: '#1d4b8a' }}>
               TRIVA now assigns the control-plane IP, API account, and bootstrap identity automatically. The router must reach <span className="font-semibold">{API_BASE}/bootstrap/router</span> on its own; no public Winbox or forwarded API port is assumed.
             </div>
             <div className="md:col-span-2 flex gap-3">
@@ -226,13 +226,13 @@ export default function RoutersPage() {
       {/* Routers grid */}
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+          <div className="spinner" />
         </div>
       ) : routers.length === 0 ? (
-        <div className="card p-12 text-center text-gray-400">
-          <Router className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No router assets yet</p>
-          <p className="text-sm">Create the first router asset, then let the device self-provision from TRIVA</p>
+        <div className="card p-16 text-center">
+          <Router className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: '#6e6e73' }} />
+          <p className="font-medium text-sm" style={{ color: '#3a3a3c' }}>No router assets yet</p>
+          <p className="text-sm mt-1" style={{ color: '#aeaeb2' }}>Create the first router asset, then let the device self-provision from TRIVA</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -240,8 +240,8 @@ export default function RoutersPage() {
             <div key={r.id} className="card p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-semibold text-gray-900">{r.name}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Control plane {r.ipAddress}:{r.apiPort}</p>
+                  <h3 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>{r.name}</h3>
+                  <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Control plane {r.ipAddress}:{r.apiPort}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   {r.status === 'ONLINE' ? (
@@ -256,17 +256,17 @@ export default function RoutersPage() {
               </div>
 
               {r.location && (
-                <p className="text-xs text-gray-500 mb-3">📍 {r.location}</p>
+                <p className="text-xs mb-3" style={{ color: '#6e6e73' }}>📍 {r.location}</p>
               )}
 
-              <div className="mb-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                <p className="font-medium text-gray-800">{r.provisionedAt ? 'Provisioned asset' : 'Awaiting first bootstrap'}</p>
-                <p className="mt-1">Hotspot: {r.hotspotName}</p>
-                <p className="mt-1">Serial: {r.serialNumber ?? 'Will bind on first contact'}</p>
-                <p className="mt-1">MAC: {r.hardwareMac ?? 'Will bind on first contact'}</p>
+              <div className="mb-3 rounded-xl px-3 py-2.5 text-xs" style={{ background: '#f5f5f7' }}>
+                <p className="font-semibold mb-1" style={{ color: '#1d1d1f' }}>{r.provisionedAt ? 'Provisioned asset' : 'Awaiting first bootstrap'}</p>
+                <p className="mt-1" style={{ color: '#3a3a3c' }}>Hotspot: {r.hotspotName}</p>
+                <p className="mt-1" style={{ color: '#3a3a3c' }}>Serial: {r.serialNumber ?? 'Will bind on first contact'}</p>
+                <p className="mt-1" style={{ color: '#3a3a3c' }}>MAC: {r.hardwareMac ?? 'Will bind on first contact'}</p>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-gray-500 mb-4">
+              <div className="flex items-center gap-2 text-xs mb-4" style={{ color: '#6e6e73' }}>
                 <Activity className="w-3.5 h-3.5" />
                 <span>{r._count.sessions} total sessions</span>
                 {(r.lastBootstrapAt || r.lastSeenAt) && (

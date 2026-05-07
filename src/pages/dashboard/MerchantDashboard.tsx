@@ -7,18 +7,8 @@ import {
   Wifi,
   Users,
   CreditCard,
-  Router,
   Activity,
 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { formatTZS } from '../../utils/currency';
 import { format } from 'date-fns';
 
@@ -43,21 +33,27 @@ interface StatCardProps {
   title: string;
   value: string | number;
   icon: React.ElementType;
-  color: string;
+  accent: string;
   sub?: string;
 }
 
-function StatCard({ title, value, icon: Icon, color, sub }: StatCardProps) {
+function StatCard({ title, value, icon: Icon, accent, sub }: StatCardProps) {
   return (
     <div className="card p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>
-          <Icon className="w-6 h-6" />
-        </div>
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+        style={{ background: accent + '18' }}
+      >
+        <Icon className="w-5 h-5" style={{ color: accent }} />
       </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-      <p className="text-sm font-medium text-gray-700 mt-1">{title}</p>
-      {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+      <p
+        className="text-2xl font-bold tracking-tight"
+        style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+      >
+        {value}
+      </p>
+      <p className="text-sm font-medium mt-0.5" style={{ color: '#3a3a3c' }}>{title}</p>
+      {sub && <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>{sub}</p>}
     </div>
   );
 }
@@ -85,12 +81,10 @@ export default function MerchantDashboard() {
     load();
   }, []);
 
-  // Real-time updates
   useEffect(() => {
     if (!socket) return;
 
     const handleSessionActivated = () => {
-      // Refresh active sessions
       api.get<{ data: Session[] }>('/sessions?status=ACTIVE&limit=10').then((res) => {
         setActiveSessions(res.data.data);
         setSummary((prev) =>
@@ -117,7 +111,7 @@ export default function MerchantDashboard() {
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center h-full">
-        <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+        <div className="spinner" />
       </div>
     );
   }
@@ -128,26 +122,33 @@ export default function MerchantDashboard() {
     new Date(sub.expiresAt).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-7 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-0.5">
+        <h1
+          className="text-2xl font-bold tracking-tight"
+          style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+        >
+          Dashboard
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>
           Welcome back, {user?.name} · {user?.tenant?.name}
         </p>
       </div>
 
       {/* Subscription warning */}
       {isTrialOrExpiring && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
-          <Activity className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+        <div
+          className="rounded-2xl p-4 flex items-start gap-3"
+          style={{ background: '#fffbeb', border: '1px solid #fde68a' }}
+        >
+          <Activity className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#d97706' }} />
           <div>
-            <p className="font-medium text-yellow-800">
-              {'Subscription Expiring Soon'}
+            <p className="font-medium text-sm" style={{ color: '#92400e' }}>
+              Subscription Expiring Soon
             </p>
-            <p className="text-sm text-yellow-700">
-              Your subscription expires on {format(new Date(sub.expiresAt), 'MMM d, yyyy')}.
-              Contact admin to renew.
+            <p className="text-sm" style={{ color: '#b45309' }}>
+              Your subscription expires on {format(new Date(sub.expiresAt), 'MMM d, yyyy')}. Contact admin to renew.
             </p>
           </div>
         </div>
@@ -159,62 +160,71 @@ export default function MerchantDashboard() {
           title="Today's Earnings"
           value={formatTZS(summary?.todayEarnings ?? 0)}
           icon={TrendingUp}
-          color="bg-green-100 text-green-600"
+          accent="#34c759"
         />
         <StatCard
           title="This Month"
           value={formatTZS(summary?.monthEarnings ?? 0)}
           icon={CreditCard}
-          color="bg-blue-100 text-blue-600"
+          accent="#0071e3"
         />
         <StatCard
           title="Active Sessions"
           value={summary?.activeSessions ?? 0}
           icon={Wifi}
-          color="bg-purple-100 text-purple-600"
+          accent="#af52de"
           sub="Live connections"
         />
         <StatCard
           title="Total Sessions"
           value={summary?.totalSessions ?? 0}
           icon={Users}
-          color="bg-orange-100 text-orange-600"
+          accent="#ff9500"
         />
       </div>
 
       {/* Active Sessions Table */}
       <div className="card">
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-900">Active Sessions</h2>
+        <div
+          className="px-6 py-4 flex items-center justify-between"
+          style={{ borderBottom: '1px solid #f0f0f5' }}
+        >
+          <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Active Sessions</h2>
           <span className="badge-green">{activeSessions.length} online</span>
         </div>
         {activeSessions.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">
-            <Wifi className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p>No active sessions</p>
+          <div className="p-12 text-center">
+            <Wifi className="w-10 h-10 mx-auto mb-3 opacity-20" style={{ color: '#6e6e73' }} />
+            <p className="text-sm" style={{ color: '#aeaeb2' }}>No active sessions</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                <tr>
-                  <th className="px-5 py-3 text-left">MAC Address</th>
-                  <th className="px-5 py-3 text-left">Plan</th>
-                  <th className="px-5 py-3 text-left">Router</th>
-                  <th className="px-5 py-3 text-left">Expires</th>
-                  <th className="px-5 py-3 text-left">Status</th>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>MAC Address</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Plan</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Router</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Expires</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {activeSessions.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-mono text-xs">{s.macAddress}</td>
-                    <td className="px-5 py-3">{s.plan.name}</td>
-                    <td className="px-5 py-3">{s.router.name}</td>
-                    <td className="px-5 py-3 text-xs">
+                  <tr
+                    key={s.id}
+                    className="transition-colors"
+                    style={{ borderBottom: '1px solid #f7f7f9' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+                  >
+                    <td className="px-6 py-3.5 font-mono text-xs" style={{ color: '#3a3a3c' }}>{s.macAddress}</td>
+                    <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.plan.name}</td>
+                    <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.router.name}</td>
+                    <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
                       {s.expiresAt ? format(new Date(s.expiresAt), 'HH:mm') : '—'}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-6 py-3.5">
                       <span className="badge-green">Active</span>
                     </td>
                   </tr>
@@ -227,3 +237,5 @@ export default function MerchantDashboard() {
     </div>
   );
 }
+
+

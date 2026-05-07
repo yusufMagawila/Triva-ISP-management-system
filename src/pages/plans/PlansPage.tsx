@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { formatTZS } from '../../utils/currency';
-import { CreditCard, Plus, Pencil, Trash2, Clock, Zap } from 'lucide-react';
+import { CreditCard, Plus, Trash2, Clock, Zap } from 'lucide-react';
 
 interface Plan {
   id: string;
@@ -82,11 +82,16 @@ export default function PlansPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-7 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Internet Plans</h1>
-          <p className="text-gray-500 mt-0.5">Manage WiFi plans for your customers</p>
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+          >
+            Internet Plans
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage WiFi plans for your customers</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4" /> New Plan
@@ -95,7 +100,7 @@ export default function PlansPage() {
 
       {showForm && (
         <div className="card p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Create New Plan</h2>
+          <h2 className="font-semibold mb-5" style={{ color: '#1d1d1f' }}>Create New Plan</h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Plan Name</label>
@@ -110,18 +115,18 @@ export default function PlansPage() {
               <input type="number" min="1" className="input" value={form.durationMins} onChange={(e) => setForm({ ...form, durationMins: parseInt(e.target.value) })} required />
             </div>
             <div>
-              <label className="label">Description (optional)</label>
+              <label className="label">Description <span style={{ color: '#aeaeb2' }}>optional</span></label>
               <input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="High speed internet..." />
             </div>
             <div>
-              <label className="label">Download Speed (Kbps, blank = unlimited)</label>
+              <label className="label">Download Speed (Kbps) <span style={{ color: '#aeaeb2' }}>blank = unlimited</span></label>
               <input type="number" min="0" className="input" value={form.downloadKbps} onChange={(e) => setForm({ ...form, downloadKbps: e.target.value })} placeholder="5120" />
             </div>
             <div>
-              <label className="label">Upload Speed (Kbps, blank = unlimited)</label>
+              <label className="label">Upload Speed (Kbps) <span style={{ color: '#aeaeb2' }}>blank = unlimited</span></label>
               <input type="number" min="0" className="input" value={form.uploadKbps} onChange={(e) => setForm({ ...form, uploadKbps: e.target.value })} placeholder="2048" />
             </div>
-            <div className="md:col-span-2 flex gap-3">
+            <div className="md:col-span-2 flex gap-3 pt-2">
               <button type="submit" className="btn-primary">Create Plan</button>
               <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
             </div>
@@ -131,38 +136,52 @@ export default function PlansPage() {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+          <div className="spinner" />
         </div>
       ) : plans.length === 0 ? (
-        <div className="card p-12 text-center text-gray-400">
-          <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>No plans created yet</p>
+        <div className="card p-16 text-center">
+          <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: '#6e6e73' }} />
+          <p className="text-sm" style={{ color: '#aeaeb2' }}>No plans created yet</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {plans.map((p) => (
-            <div key={p.id} className={`card p-5 ${p.status === 'INACTIVE' ? 'opacity-60' : ''}`}>
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-bold text-gray-900 text-lg">{p.name}</h3>
-                <span className="text-xl font-bold text-brand-600">{formatTZS(p.price)}</span>
+            <div
+              key={p.id}
+              className={`card p-6 transition-opacity ${p.status === 'INACTIVE' ? 'opacity-50' : ''}`}
+            >
+              <div className="flex items-start justify-between mb-1">
+                <h3 className="font-bold text-base" style={{ color: '#1d1d1f' }}>{p.name}</h3>
+                <span
+                  className="text-lg font-bold"
+                  style={{ color: '#0071e3' }}
+                >
+                  {formatTZS(p.price)}
+                </span>
               </div>
-              {p.description && <p className="text-sm text-gray-500 mb-3">{p.description}</p>}
+              {p.description && (
+                <p className="text-xs mb-3" style={{ color: '#6e6e73' }}>{p.description}</p>
+              )}
               <div className="space-y-1.5 mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <div className="flex items-center gap-2 text-sm" style={{ color: '#3a3a3c' }}>
+                  <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#aeaeb2' }} />
                   {formatDuration(p.durationMins)}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Zap className="w-3.5 h-3.5 text-gray-400" />
+                <div className="flex items-center gap-2 text-sm" style={{ color: '#3a3a3c' }}>
+                  <Zap className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#aeaeb2' }} />
                   ↓ {formatSpeed(p.downloadKbps)} / ↑ {formatSpeed(p.uploadKbps)}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <span className={p.status === 'ACTIVE' ? 'badge-green' : 'badge-gray'}>
                   {p.status}
                 </span>
                 <div className="ml-auto">
-                  <button className="text-red-400 hover:text-red-600 transition-colors" onClick={() => handleDelete(p.id)}>
+                  <button
+                    className="transition-colors hover:text-red-500"
+                    style={{ color: '#aeaeb2' }}
+                    onClick={() => handleDelete(p.id)}
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -174,3 +193,5 @@ export default function PlansPage() {
     </div>
   );
 }
+
+

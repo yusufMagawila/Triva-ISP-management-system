@@ -70,11 +70,16 @@ export default function TenantsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-7 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tenants</h1>
-          <p className="text-gray-500 mt-0.5">Manage all shops on the platform</p>
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+          >
+            Tenants
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage all shops on the platform</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4" /> New Tenant
@@ -83,7 +88,7 @@ export default function TenantsPage() {
 
       {showForm && (
         <div className="card p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Create New Tenant</h2>
+          <h2 className="font-semibold mb-5" style={{ color: '#1d1d1f' }}>Create New Tenant</h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="label">Shop Name</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
             <div><label className="label">Slug</label><input className="input" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required placeholder="my-shop" /></div>
@@ -100,7 +105,7 @@ export default function TenantsPage() {
                 <option value="PREMIUM">Premium</option>
               </select>
             </div>
-            <div className="md:col-span-2 flex gap-3">
+            <div className="md:col-span-2 flex gap-3 pt-2">
               <button type="submit" className="btn-primary">Create Tenant</button>
               <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
             </div>
@@ -111,36 +116,42 @@ export default function TenantsPage() {
       <div className="card">
         {loading ? (
           <div className="flex justify-center py-16">
-            <div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" />
+            <div className="spinner" />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
-                <tr>
-                  <th className="px-5 py-3 text-left">Shop</th>
-                  <th className="px-5 py-3 text-left">Email</th>
-                  <th className="px-5 py-3 text-left">Plan</th>
-                  <th className="px-5 py-3 text-left">Expires</th>
-                  <th className="px-5 py-3 text-left">Routers</th>
-                  <th className="px-5 py-3 text-left">Status</th>
-                  <th className="px-5 py-3 text-left">Actions</th>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Shop</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Plan</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Expires</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Routers</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {tenants.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-3 font-medium">{t.name}</td>
-                    <td className="px-5 py-3 text-gray-500">{t.email}</td>
-                    <td className="px-5 py-3">{t.subscription?.plan ?? '—'}</td>
-                    <td className="px-5 py-3 text-xs">
+                  <tr
+                    key={t.id}
+                    className="transition-colors"
+                    style={{ borderBottom: '1px solid #f7f7f9' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = '')}
+                  >
+                    <td className="px-6 py-3.5 font-medium" style={{ color: '#1d1d1f' }}>{t.name}</td>
+                    <td className="px-6 py-3.5" style={{ color: '#6e6e73' }}>{t.email}</td>
+                    <td className="px-6 py-3.5" style={{ color: '#3a3a3c' }}>{t.subscription?.plan ?? '—'}</td>
+                    <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
                       {t.subscription ? format(new Date(t.subscription.expiresAt), 'MMM d, yyyy') : '—'}
                     </td>
-                    <td className="px-5 py-3">{t._count.routers}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-6 py-3.5" style={{ color: '#3a3a3c' }}>{t._count.routers}</td>
+                    <td className="px-6 py-3.5">
                       <span className={t.status === 'ACTIVE' ? 'badge-green' : 'badge-red'}>{t.status}</span>
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-6 py-3.5">
                       <div className="flex gap-2">
                         <button className="btn-secondary btn-sm" onClick={() => handleToggleStatus(t)}>
                           <UserCheck className="w-3.5 h-3.5" />
