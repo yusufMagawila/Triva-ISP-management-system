@@ -6,6 +6,22 @@ const api = axios.create({
   timeout: 30_000,
 });
 
+// Request interceptor: attach stored JWT on every request (survives page refresh)
+api.interceptors.request.use((config) => {
+  try {
+    const stored = localStorage.getItem('triva-auth');
+    if (stored) {
+      const { state } = JSON.parse(stored) as { state: { token?: string } };
+      if (state?.token) {
+        config.headers['Authorization'] = `Bearer ${state.token}`;
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return config;
+});
+
 // Response interceptor: unwrap or throw
 api.interceptors.response.use(
   (res) => res,
