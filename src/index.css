@@ -1,12 +1,24 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, system-ui, sans-serif;
+  --color-brand-50: #f0f6ff;
+  --color-brand-100: #dceeff;
+  --color-brand-200: #b3d6ff;
+  --color-brand-300: #80b9ff;
+  --color-brand-400: #4d97ff;
+  --color-brand-500: #1a74ef;
+  --color-brand-600: #0071e3;
+  --color-brand-700: #005cb8;
+  --color-brand-800: #00478d;
+  --color-brand-900: #003268;
+  --tracking-tight: -0.022em;
+}
 
 @layer base {
   * {
-    border-color: theme('colors.gray.100');
+    border-color: var(--color-gray-100);
   }
   body {
     @apply font-sans;
@@ -26,17 +38,17 @@
     @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply btn text-white shadow-sm active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-40;
     background-color: #0071e3;
   }
   .btn-primary:hover {
     background-color: #0077ed;
   }
   .btn-secondary {
-    @apply btn bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-danger {
-    @apply btn bg-red-500 text-white hover:bg-red-600 shadow-sm active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-red-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-red-600 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-sm {
     @apply px-3.5 py-1.5 text-xs;
@@ -70,21 +82,21 @@
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
   .badge-green {
-    @apply badge bg-green-50 text-green-700;
+    @apply inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700;
   }
   .badge-yellow {
-    @apply badge bg-amber-50 text-amber-700;
+    @apply inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700;
   }
   .badge-red {
-    @apply badge bg-red-50 text-red-600;
+    @apply inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-600;
   }
   .badge-blue {
-    @apply badge;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
     background-color: #e8f0fd;
     color: #0071e3;
   }
   .badge-gray {
-    @apply badge bg-gray-100 text-gray-500;
+    @apply inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500;
   }
 
   /* Spinner */

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity, Copy, Info } from 'lucide-react';
 import { format } from 'date-fns';
 
-const PORTAL_BASE = 'https://pandabus.live/captive-portal';
+const PORTAL_BASE = 'https://triva.pandabus.live/captive-portal';
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
 
 interface RouterData {
@@ -61,8 +61,7 @@ export default function RoutersPage() {
     if (!bootstrapUrl) return 'Provisioning key missing. Recreate or migrate this router asset.';
 
     return [
-      `:local bootstrapUrl "${bootstrapUrl}"`,
-      '/tool fetch mode=https url=$bootstrapUrl dst-path="triva-bootstrap.rsc" keep-result=yes check-certificate=no',
+      `/tool fetch mode=https url="${bootstrapUrl}" dst-path="triva-bootstrap.rsc" keep-result=yes check-certificate=no`,
       '/import file-name="triva-bootstrap.rsc"',
     ].join('\n');
   }
@@ -172,6 +171,8 @@ export default function RoutersPage() {
     }
   }
 
+  const selectedRouter = showSetup ? routers.find((router) => router.id === showSetup) ?? null : null;
+
   return (
     <div className="p-7 space-y-6">
       <div className="flex items-center justify-between">
@@ -235,15 +236,16 @@ export default function RoutersPage() {
           <p className="text-sm mt-1" style={{ color: '#aeaeb2' }}>Create the first router asset, then let the device self-provision from TRIVA</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {routers.map((r) => (
-            <div key={r.id} className="card p-5">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>{r.name}</h3>
-                  <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Control plane {r.ipAddress}:{r.apiPort}</p>
-                </div>
-                <div className="flex items-center gap-1">
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {routers.map((r) => (
+              <div key={r.id} className="card p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>{r.name}</h3>
+                    <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Control plane {r.ipAddress}:{r.apiPort}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
                   {r.status === 'ONLINE' ? (
                     <Wifi className="w-4 h-4 text-green-500" />
                   ) : (
@@ -298,163 +300,132 @@ export default function RoutersPage() {
                 </button>
               </div>
 
-              {/* Zero-touch provisioning details */}
-              {showSetup === r.id && (
-                <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
-                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5 text-brand-500" />
-                    Zero-Touch Provisioning
-                  </p>
-
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
-                    <p className="text-xs font-semibold text-green-800">Bootstrap Identity</p>
-                    <div className="flex items-center gap-2 bg-white/80 border border-green-200 rounded-lg px-3 py-2">
-                      <code className="text-xs text-gray-700 break-all flex-1">
-                        {r.provisioningKey ?? 'Legacy router record without provisioning key'}
-                      </code>
-                      {r.provisioningKey && (
-                        <button
-                          className="flex-shrink-0 text-gray-400 hover:text-brand-600"
-                          onClick={() => copyText(r.provisioningKey!, 'Provisioning key')}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-xs text-green-700">
-                      This key is the router asset identity. The device must contact TRIVA with this identity instead of depending on a reachable LAN or public API address.
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Bootstrap endpoint for the router:</p>
-                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                      <code className="text-xs text-gray-700 break-all flex-1">
-                        {r.provisioningKey ? getBootstrapScriptUrl(r) : 'Provisioning key missing. Recreate or migrate this router asset.'}
-                      </code>
-                      {r.provisioningKey && (
-                        <button
-                          className="flex-shrink-0 text-gray-400 hover:text-brand-600"
-                          onClick={() => copyText(getBootstrapScriptUrl(r), 'Bootstrap URL')}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-gray-600 space-y-1 bg-blue-50 border border-blue-100 rounded-lg p-3">
-                    <p className="font-semibold text-blue-800 mb-1.5">What the bootstrap stage installs:</p>
-                    <p>① The TRIVA-managed API account on the router</p>
-                    <p>② A recurring heartbeat to keep this asset online in the dashboard</p>
-                    <p>③ A recurring session-sync job so paid sessions go live without inbound NAT reachability</p>
-                    <p>④ The TRIVA captive portal files when the hotspot directory exists</p>
-                    <p>⑤ The hotspot allow-list for pandabus.live, triva.pandabus.live, mongike.com, and *.mongike.com</p>
-                    <p className="text-blue-700 mt-2">This is the supported onboarding path now. The dashboard no longer distributes per-router installer or manual packs.</p>
-                  </div>
-
-                  <div className="text-xs text-gray-600 space-y-1 bg-slate-50 border border-slate-200 rounded-lg p-3">
-                    <p className="font-semibold text-slate-800 mb-1.5">Complete setup flow (follow in order):</p>
-                    <p>① Prepare the router internet and DNS first (router must reach the public internet over HTTPS).</p>
-                    <p>② Create the hotspot server on MikroTik first using <strong>/ip hotspot setup</strong> if not already present.</p>
-                    <p>③ Make sure the hotspot name on MikroTik matches this asset: <strong>{r.hotspotName}</strong>.</p>
-                    <p>④ Run the preflight block below to confirm hotspot, route, DNS, and bootstrap reachability.</p>
-                    <p>⑤ Run the bootstrap install commands once.</p>
-                    <p>⑥ Run verification commands and confirm triva-heartbeat + triva-sync exist and are scheduled.</p>
-                    <p>⑦ Connect a client, open portal, make a payment, and confirm session turns ACTIVE after sync.</p>
-                  </div>
-
-                  <div className="text-xs text-gray-600 space-y-1 bg-amber-50 border border-amber-100 rounded-lg p-3">
-                    <p className="font-semibold text-amber-800 mb-1.5">Provisioning notes:</p>
-                    <p>① Assigned control-plane IP: <strong>{r.ipAddress}</strong></p>
-                    <p>② Hotspot server stored for this asset: <strong>{r.hotspotName}</strong></p>
-                    <p>③ Router runtime info endpoint: <strong>{r.provisioningKey ? getBootstrapInfoUrl(r) : 'Unavailable'}</strong></p>
-                    <p>④ TRIVA only needs outbound internet from the router. No port-forwarded API is assumed.</p>
-                    <p>⑤ If hotspot name does not match, sync will not apply users to the right hotspot server.</p>
-                    <p>⑥ If the captive portal opens but shows Service Unavailable or Network Error, re-import bootstrap and verify the hotspot allow-list below.</p>
-                    <p className="text-amber-700 mt-2">Shop flow: create the asset, import bootstrap, verify heartbeat plus allow-list, then test a real payment from a client device.</p>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs text-gray-500">Step 1: Preflight checks before bootstrap import:</p>
-                      <button
-                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
-                        onClick={() => copyText(getHotspotPreflightCommands(r), 'Preflight commands')}
-                      >
-                        Copy commands
-                      </button>
-                    </div>
-                    <pre className="bg-gray-950 text-gray-100 text-[11px] leading-5 rounded-lg px-3 py-3 overflow-x-auto whitespace-pre-wrap">{getHotspotPreflightCommands(r)}</pre>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs text-gray-500">Step 2: Run bootstrap import commands on MikroTik terminal:</p>
-                      <button
-                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
-                        onClick={() => copyText(getBootstrapInstallCommands(r), 'Bootstrap commands')}
-                      >
-                        Copy commands
-                      </button>
-                    </div>
-                    <pre className="bg-gray-950 text-gray-100 text-[11px] leading-5 rounded-lg px-3 py-3 overflow-x-auto whitespace-pre-wrap">{getBootstrapInstallCommands(r)}</pre>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs text-gray-500">Step 3: Verify scheduler + scripts after import:</p>
-                      <button
-                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
-                        onClick={() => copyText(getBootstrapVerificationCommands(), 'Verification commands')}
-                      >
-                        Copy commands
-                      </button>
-                    </div>
-                    <pre className="bg-gray-950 text-gray-100 text-[11px] leading-5 rounded-lg px-3 py-3 overflow-x-auto whitespace-pre-wrap">{getBootstrapVerificationCommands()}</pre>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <p className="text-xs text-gray-500">Step 4: Recovery commands if portal is up but flow is broken:</p>
-                      <button
-                        className="text-xs font-medium text-brand-600 hover:text-brand-700"
-                        onClick={() => copyText(getBootstrapRecoveryCommands(r), 'Recovery commands')}
-                      >
-                        Copy commands
-                      </button>
-                    </div>
-                    <pre className="bg-gray-950 text-gray-100 text-[11px] leading-5 rounded-lg px-3 py-3 overflow-x-auto whitespace-pre-wrap">{getBootstrapRecoveryCommands(r)}</pre>
-                  </div>
-
-                  <div className="text-xs text-gray-600 space-y-1 bg-rose-50 border border-rose-100 rounded-lg p-3">
-                    <p className="font-semibold text-rose-800 mb-1.5">Critical buy-flow hosts that must stay reachable before login:</p>
-                    <p>① pandabus.live</p>
-                    <p>② triva.pandabus.live</p>
-                    <p>③ mongike.com</p>
-                    <p>④ *.mongike.com</p>
-                    <p className="text-rose-700 mt-2">Bootstrap now installs these rules automatically so the portal UI can load plans, start payments, and keep the paid-session flow alive.</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">Portal URL for your custom HotSpot redirect page:</p>
-                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                      <code className="text-xs text-gray-700 break-all flex-1">
-                        {`${PORTAL_BASE}/?router=${r.id}`}
-                      </code>
-                      <button
-                        className="flex-shrink-0 text-gray-400 hover:text-brand-600"
-                        onClick={() => copyText(`${PORTAL_BASE}/?router=${r.id}`, 'Portal URL')}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>
+
+        {selectedRouter && (
+          <div className="card p-6 space-y-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: '#6e6e73' }}>Zero-Touch Provisioning</p>
+                <h2 className="text-xl font-semibold mt-1" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>{selectedRouter.name} setup</h2>
+                <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>Full-width Winbox commands and portal details for this router asset.</p>
+              </div>
+              <button className="btn-secondary btn-sm" onClick={() => setShowSetup(null)}>Close</button>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
+                <p className="text-xs font-semibold text-green-800">Bootstrap Identity</p>
+                <div className="flex items-center gap-2 bg-white/80 border border-green-200 rounded-lg px-3 py-2">
+                  <code className="text-xs text-gray-700 break-all flex-1">
+                    {selectedRouter.provisioningKey ?? 'Legacy router record without provisioning key'}
+                  </code>
+                  {selectedRouter.provisioningKey && (
+                    <button
+                      className="flex-shrink-0 text-gray-400 hover:text-brand-600"
+                      onClick={() => copyText(selectedRouter.provisioningKey!, 'Provisioning key')}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-green-700">
+                  This key is the router asset identity. The device must contact TRIVA with this identity instead of depending on a reachable LAN or public API address.
+                </p>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-1 text-xs text-gray-600">
+                <p className="font-semibold text-amber-800 mb-1.5">Provisioning notes</p>
+                <p>① Assigned control-plane IP: <strong>{selectedRouter.ipAddress}</strong></p>
+                <p>② Hotspot server stored for this asset: <strong>{selectedRouter.hotspotName}</strong></p>
+                <p>③ Router runtime info endpoint: <strong>{selectedRouter.provisioningKey ? getBootstrapInfoUrl(selectedRouter) : 'Unavailable'}</strong></p>
+                <p>④ TRIVA only needs outbound internet from the router. No port-forwarded API is assumed.</p>
+                <p>⑤ If hotspot name does not match, sync will not apply users to the right hotspot server.</p>
+                <p>⑥ If the captive portal opens but shows Service Unavailable or Network Error, re-import bootstrap and verify the hotspot allow-list below.</p>
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-600 space-y-1 bg-blue-50 border border-blue-100 rounded-xl p-4">
+              <p className="font-semibold text-blue-800 mb-1.5">What the bootstrap stage installs</p>
+              <p>① The TRIVA-managed API account on the router</p>
+              <p>② A recurring heartbeat to keep this asset online in the dashboard</p>
+              <p>③ A recurring session-sync job so paid sessions go live without inbound NAT reachability</p>
+              <p>④ The TRIVA captive portal files when the hotspot directory exists</p>
+              <p>⑤ The hotspot allow-list for pandabus.live, triva.pandabus.live, mongike.com, and *.mongike.com</p>
+            </div>
+
+            <div className="text-xs text-gray-600 space-y-1 bg-slate-50 border border-slate-200 rounded-xl p-4">
+              <p className="font-semibold text-slate-800 mb-1.5">Complete setup flow</p>
+              <p>① Prepare the router internet and DNS first (router must reach the public internet over HTTPS).</p>
+              <p>② Create the hotspot server on MikroTik first using <strong>/ip hotspot setup</strong> if not already present.</p>
+              <p>③ Make sure the hotspot name on MikroTik matches this asset: <strong>{selectedRouter.hotspotName}</strong>.</p>
+              <p>④ Run the preflight block below to confirm hotspot, route, DNS, and bootstrap reachability.</p>
+              <p>⑤ Run the bootstrap import commands once.</p>
+              <p>⑥ Run verification commands and confirm triva-heartbeat + triva-sync exist and are scheduled.</p>
+              <p>⑦ Connect a client, open portal, make a payment, and confirm session turns ACTIVE after sync.</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-xs" style={{ color: '#6e6e73' }}>Step 1: Preflight checks before bootstrap import</p>
+                  <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => copyText(getHotspotPreflightCommands(selectedRouter), 'Preflight commands')}>Copy commands</button>
+                </div>
+                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#111111', color: '#f5f5f7' }}>{getHotspotPreflightCommands(selectedRouter)}</pre>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-xs" style={{ color: '#6e6e73' }}>Step 2: Run bootstrap import commands on MikroTik terminal</p>
+                  <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => copyText(getBootstrapInstallCommands(selectedRouter), 'Bootstrap commands')}>Copy commands</button>
+                </div>
+                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#111111', color: '#f5f5f7' }}>{getBootstrapInstallCommands(selectedRouter)}</pre>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-xs" style={{ color: '#6e6e73' }}>Step 3: Verify scheduler + scripts after import</p>
+                  <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => copyText(getBootstrapVerificationCommands(), 'Verification commands')}>Copy commands</button>
+                </div>
+                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#111111', color: '#f5f5f7' }}>{getBootstrapVerificationCommands()}</pre>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <p className="text-xs" style={{ color: '#6e6e73' }}>Step 4: Recovery commands if portal is up but flow is broken</p>
+                  <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => copyText(getBootstrapRecoveryCommands(selectedRouter), 'Recovery commands')}>Copy commands</button>
+                </div>
+                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#111111', color: '#f5f5f7' }}>{getBootstrapRecoveryCommands(selectedRouter)}</pre>
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-600 space-y-1 bg-rose-50 border border-rose-100 rounded-xl p-4">
+              <p className="font-semibold text-rose-800 mb-1.5">Critical buy-flow hosts that must stay reachable before login</p>
+              <p>① pandabus.live</p>
+              <p>② triva.pandabus.live</p>
+              <p>③ mongike.com</p>
+              <p>④ *.mongike.com</p>
+            </div>
+
+            <div>
+              <p className="text-xs mb-2" style={{ color: '#6e6e73' }}>Portal URL for your custom HotSpot redirect page</p>
+              <div className="flex items-center gap-2 rounded-xl px-3 py-3" style={{ background: '#f5f5f7', border: '1px solid #e8e8ed' }}>
+                <code className="text-xs break-all flex-1" style={{ color: '#1d1d1f' }}>
+                  {`${PORTAL_BASE}/?router=${selectedRouter.id}`}
+                </code>
+                <button
+                  className="flex-shrink-0 text-gray-400 hover:text-brand-600"
+                  onClick={() => copyText(`${PORTAL_BASE}/?router=${selectedRouter.id}`, 'Portal URL')}
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );
