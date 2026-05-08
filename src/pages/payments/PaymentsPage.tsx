@@ -89,7 +89,7 @@ export default function PaymentsPage() {
                         {format(new Date(p.createdAt), 'MMM d, HH:mm')}
                       </td>
                       <td className="px-6 py-3.5" style={{ color: '#3a3a3c' }}>{p.phone ?? '—'}</td>
-                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{p.plan.name}</td>
+                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{p.plan?.name ?? '—'}</td>
                       <td className="px-6 py-3.5 font-semibold" style={{ color: '#1d1d1f' }}>
                         {formatTZS(p.amount)}
                       </td>
