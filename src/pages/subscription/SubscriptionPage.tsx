@@ -73,6 +73,9 @@ export default function SubscriptionPage() {
       .then((r) => {
         setSub(r.data.data);
         setSelectedPlan(r.data.data.plan);
+        if (r.data.data.status === 'EXPIRED') {
+          setShowPayForm(true);
+        }
       })
       .finally(() => setLoading(false));
   }, []);

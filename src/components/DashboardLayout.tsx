@@ -12,7 +12,9 @@ import {
   LogOut,
   Building2,
   Shield,
+  AlertTriangle,
 } from 'lucide-react';
+import { useEffect } from 'react';
 
 const merchantNav = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -33,9 +35,22 @@ const adminNav = [
 ];
 
 export default function DashboardLayout() {
-  const { user, logout } = useAuthStore();
-  const { connected } = useSocketStore();
+  const { user, logout, fetchMe } = useAuthStore();
+  const { connected, socket } = useSocketStore();
   const navigate = useNavigate();
+
+  const sub = user?.tenant?.subscription ?? null;
+  const isExpired = sub?.status === 'EXPIRED' || (sub ? new Date() > new Date(sub.expiresAt) : false);
+  const daysLeft = sub ? Math.max(0, Math.ceil((new Date(sub.expiresAt).getTime() - Date.now()) / 86_400_000)) : 0;
+  const isExpiringSoon = !isExpired && sub?.status === 'ACTIVE' && daysLeft <= 7;
+  const showBanner = user?.role === 'MERCHANT' && (isExpired || isExpiringSoon);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = () => { fetchMe(); };
+    socket.on('subscription:expired', handler);
+    return () => { socket.off('subscription:expired', handler); };
+  }, [socket, fetchMe]);
 
   const nav = user?.role === 'SUPER_ADMIN' ? adminNav : merchantNav;
 
@@ -135,8 +150,32 @@ export default function DashboardLayout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <Outlet />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {showBanner && (
+          <div
+            className="flex items-center justify-between gap-4 px-5 py-3 text-sm flex-shrink-0"
+            style={{ background: isExpired ? '#dc2626' : '#d97706' }}
+          >
+            <div className="flex items-center gap-2 text-white min-w-0">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">
+                {isExpired
+                  ? 'Your subscription has expired — your hotspot is suspended for new users.'
+                  : `Your subscription expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''} — renew now to avoid service interruption.`}
+              </span>
+            </div>
+            <button
+              onClick={() => navigate('/subscription')}
+              className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg"
+              style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}
+            >
+              {isExpired ? 'Reactivate Now →' : 'Renew →'}
+            </button>
+          </div>
+        )}
+        <div className="flex-1 overflow-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
