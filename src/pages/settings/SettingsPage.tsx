@@ -2,26 +2,48 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
-import { Settings, KeyRound, CreditCard, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Settings, KeyRound, CreditCard, Eye, EyeOff, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
+
+type Provider = 'MONGIKE' | 'ANYPAY';
+
+interface PaymentSettingsData {
+  paymentProvider: Provider;
+  mongikApiKey: string | null;
+  anypayApiKey: string | null;
+  anypayToken: string | null;
+  mongikReady: boolean;
+  anypayReady: boolean;
+}
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
   const [saving, setSaving] = useState(false);
 
-  const [mongikApiKey, setMongikApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [apiKeySet, setApiKeySet] = useState(false);
+  const [settings, setSettings] = useState<PaymentSettingsData | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<Provider>('MONGIKE');
+  const [mongikKey, setMongikKey] = useState('');
+  const [anypayKey, setAnypayKey] = useState('');
+  const [anypayToken, setAnypayToken] = useState('');
+  const [showKeys, setShowKeys] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
+  const [testing, setTesting] = useState(false);
 
   const isMerchant = user?.role === 'MERCHANT';
 
   useEffect(() => {
     if (!isMerchant) return;
-    api.get('/auth/settings').then((r: { data: { data: { mongikApiKeySet: boolean } } }) => {
-      setApiKeySet(r.data.data.mongikApiKeySet);
-    }).catch(() => {});
+    api.get<{ data: PaymentSettingsData }>('/payment-settings')
+      .then((r) => {
+        setSettings(r.data.data);
+        setSelectedProvider(r.data.data.paymentProvider);
+      })
+      .catch(() => {});
   }, [isMerchant]);
+
+  const isReady = settings
+    ? (selectedProvider === 'MONGIKE' ? settings.mongikReady : settings.anypayReady)
+    : false;
 
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
@@ -31,10 +53,7 @@ export default function SettingsPage() {
     }
     setSaving(true);
     try {
-      await api.post('/auth/change-password', {
-        currentPassword: passwords.current,
-        newPassword: passwords.next,
-      });
+      await api.post('/auth/change-password', { currentPassword: passwords.current, newPassword: passwords.next });
       toast.success('Password changed successfully');
       setPasswords({ current: '', next: '', confirm: '' });
     } catch (err) {
@@ -44,40 +63,50 @@ export default function SettingsPage() {
     }
   }
 
-  async function handlePaymentSettings(e: React.FormEvent) {
+  async function handleSavePaymentSettings(e: React.FormEvent) {
     e.preventDefault();
-    if (!mongikApiKey) {
-      toast.error('Enter a Mongike API key');
-      return;
-    }
     setSavingPayment(true);
     try {
-      await api.patch('/auth/settings', {
-        ...(mongikApiKey ? { mongikApiKey: mongikApiKey.trim() } : {}),
-      });
+      const payload: Record<string, string | undefined> = { paymentProvider: selectedProvider };
+      if (mongikKey) payload.mongikApiKey = mongikKey.trim();
+      if (anypayKey) payload.anypayApiKey = anypayKey.trim();
+      if (anypayToken) payload.anypayToken = anypayToken.trim();
+
+      await api.put('/payment-settings', payload);
       toast.success('Payment settings saved');
-      setMongikApiKey('');
-      if (mongikApiKey) setApiKeySet(true);
+
+      const r = await api.get<{ data: PaymentSettingsData }>('/payment-settings');
+      setSettings(r.data.data);
+      setMongikKey(''); setAnypayKey(''); setAnypayToken('');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save payment settings');
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setSavingPayment(false);
+    }
+  }
+
+  async function handleTestGateway() {
+    setTesting(true);
+    try {
+      const r = await api.post<{ success: boolean; message: string }>('/payment-settings/test', {});
+      toast.success(r.data.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Connection test failed');
+    } finally {
+      setTesting(false);
     }
   }
 
   return (
     <div className="p-7 space-y-6 max-w-2xl">
       <div>
-        <h1
-          className="text-2xl font-bold tracking-tight"
-          style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
-        >
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>
           Settings
         </h1>
         <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage your account</p>
       </div>
 
-      {/* Profile */}
+      {/* Account Info */}
       <div className="card p-6">
         <div className="flex items-center gap-3 mb-5">
           <Settings className="w-4 h-4" style={{ color: '#aeaeb2' }} />
@@ -98,73 +127,156 @@ export default function SettingsPage() {
         </dl>
       </div>
 
-      {/* Payment Settings */}
+      {/* Payment Gateway */}
       {isMerchant && (
         <div className="card p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <CreditCard className="w-4 h-4" style={{ color: '#aeaeb2' }} />
-            <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Payment Settings (Mongike)</h2>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <CreditCard className="w-4 h-4" style={{ color: '#aeaeb2' }} />
+              <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Payment Gateway</h2>
+            </div>
+            {isReady && (
+              <button
+                type="button"
+                onClick={handleTestGateway}
+                disabled={testing}
+                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                style={{ background: '#f4f4f5', color: '#1d1d1f' }}
+              >
+                <Zap className="w-3.5 h-3.5" />
+                {testing ? 'Testing…' : 'Test Connection'}
+              </button>
+            )}
           </div>
-          <p className="text-sm mb-4" style={{ color: '#6e6e73' }}>
-            Configure your Mongike API key so WiFi payments are deposited directly into your account.
+          <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
+            Choose which payment gateway collects WiFi payments into your account.
           </p>
 
-          {!apiKeySet && (
-            <div
-              className="flex items-start gap-2 rounded-xl p-3.5 mb-5 text-sm"
-              style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}
-            >
+          {/* Status badge */}
+          {!isReady ? (
+            <div className="flex items-start gap-2 rounded-xl p-3.5 mb-5 text-sm"
+              style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}>
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+              <span><strong>Payments not configured.</strong> Customers cannot pay until you add your gateway credentials.</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 mb-5 text-sm rounded-xl p-3.5"
+              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }}>
+              <CheckCircle className="w-4 h-4 shrink-0" />
               <span>
-                <strong>Payments are not configured.</strong> Customers cannot pay until you add your Mongike API key.
+                <strong>{settings?.paymentProvider === 'ANYPAY' ? 'AnyPay Tanzania' : 'Mongike'}</strong> is active — payments go directly to your account.
               </span>
             </div>
           )}
 
-          {apiKeySet && (
-            <div
-              className="flex items-center gap-2 mb-5 text-sm rounded-xl p-3.5"
-              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }}
-            >
-              <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-              Mongike API key is configured. Payments go to your account.
-            </div>
-          )}
-
-          <form onSubmit={handlePaymentSettings} className="space-y-4">
+          <form onSubmit={handleSavePaymentSettings} className="space-y-5">
+            {/* Provider selector */}
             <div>
-              <label className="label">
-                Mongike API Key{' '}
-                {apiKeySet && (
-                  <span className="text-xs ml-1" style={{ color: '#34c759' }}>
-                    (already set — enter new value to update)
-                  </span>
-                )}
-              </label>
-              <div className="relative">
-                <input
-                  type={showApiKey ? 'text' : 'password'}
-                  className="input pr-10"
-                  placeholder={apiKeySet ? 'Enter new key to replace' : 'mk_...'}
-                  value={mongikApiKey}
-                  onChange={(e) => setMongikApiKey(e.target.value)}
-                  autoComplete="off"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                  style={{ color: '#aeaeb2' }}
-                >
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+              <label className="label mb-2">Active Gateway</label>
+              <div className="grid grid-cols-2 gap-3">
+                {(['MONGIKE', 'ANYPAY'] as Provider[]).map((p) => {
+                  const active = selectedProvider === p;
+                  const ready = settings ? (p === 'MONGIKE' ? settings.mongikReady : settings.anypayReady) : false;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setSelectedProvider(p)}
+                      className="flex flex-col items-start gap-1 rounded-xl px-4 py-3 text-sm transition-all border"
+                      style={{
+                        borderColor: active ? '#007aff' : '#e5e5ea',
+                        background: active ? '#eff6ff' : '#fafafa',
+                        color: '#1d1d1f',
+                      }}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="font-semibold">{p === 'MONGIKE' ? 'Mongike' : 'AnyPay Tanzania'}</span>
+                        {ready && <span className="w-2 h-2 rounded-full bg-green-500" />}
+                      </div>
+                      <span className="text-xs" style={{ color: '#6e6e73' }}>
+                        {p === 'MONGIKE' ? 'mongike.com' : 'anypaytanzania.com'}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-              <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>
-                Found in your Mongike dashboard under API Keys.
-              </p>
             </div>
+
+            {/* Mongike fields */}
+            {selectedProvider === 'MONGIKE' && (
+              <div>
+                <label className="label">
+                  Mongike API Key{' '}
+                  {settings?.mongikReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showKeys ? 'text' : 'password'}
+                    className="input pr-10"
+                    placeholder={settings?.mongikReady ? settings.mongikApiKey ?? 'mk_…' : 'mk_…'}
+                    value={mongikKey}
+                    onChange={(e) => setMongikKey(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <button type="button" onClick={() => setShowKeys((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
+                    {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Found in your Mongike dashboard → API Keys.</p>
+              </div>
+            )}
+
+            {/* AnyPay fields */}
+            {selectedProvider === 'ANYPAY' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="label">
+                    API Key{' '}
+                    {settings?.anypayReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showKeys ? 'text' : 'password'}
+                      className="input pr-10"
+                      placeholder={settings?.anypayApiKey ?? 'Your AnyPay API key'}
+                      value={anypayKey}
+                      onChange={(e) => setAnypayKey(e.target.value)}
+                      autoComplete="off"
+                    />
+                    <button type="button" onClick={() => setShowKeys((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
+                      {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>From anypaytanzania.com → API Keys (API-Key header).</p>
+                </div>
+                <div>
+                  <label className="label">
+                    Access Token{' '}
+                    {settings?.anypayReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showKeys ? 'text' : 'password'}
+                      className="input pr-10"
+                      placeholder={settings?.anypayToken ?? 'Bearer token'}
+                      value={anypayToken}
+                      onChange={(e) => setAnypayToken(e.target.value)}
+                      autoComplete="off"
+                    />
+                    <button type="button" onClick={() => setShowKeys((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
+                      {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>From anypaytanzania.com → API Keys (Bearer token).</p>
+                </div>
+              </div>
+            )}
+
             <button type="submit" className="btn-primary" disabled={savingPayment}>
-              {savingPayment ? 'Saving…' : 'Save Payment Settings'}
+              {savingPayment ? 'Saving…' : 'Save Gateway Settings'}
             </button>
           </form>
         </div>
