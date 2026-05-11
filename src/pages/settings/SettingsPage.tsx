@@ -10,7 +10,6 @@ interface PaymentSettingsData {
   paymentProvider: Provider;
   mongikApiKey: string | null;
   anypayApiKey: string | null;
-  anypayToken: string | null;
   mongikReady: boolean;
   anypayReady: boolean;
 }
@@ -24,7 +23,6 @@ export default function SettingsPage() {
   const [selectedProvider, setSelectedProvider] = useState<Provider>('MONGIKE');
   const [mongikKey, setMongikKey] = useState('');
   const [anypayKey, setAnypayKey] = useState('');
-  const [anypayToken, setAnypayToken] = useState('');
   const [showKeys, setShowKeys] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -70,14 +68,12 @@ export default function SettingsPage() {
       const payload: Record<string, string | undefined> = { paymentProvider: selectedProvider };
       if (mongikKey) payload.mongikApiKey = mongikKey.trim();
       if (anypayKey) payload.anypayApiKey = anypayKey.trim();
-      if (anypayToken) payload.anypayToken = anypayToken.trim();
-
       await api.put('/payment-settings', payload);
       toast.success('Payment settings saved');
 
       const r = await api.get<{ data: PaymentSettingsData }>('/payment-settings');
       setSettings(r.data.data);
-      setMongikKey(''); setAnypayKey(''); setAnypayToken('');
+      setMongikKey(''); setAnypayKey('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -250,27 +246,6 @@ export default function SettingsPage() {
                     </button>
                   </div>
                   <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>From anypaytanzania.com → API Keys (API-Key header).</p>
-                </div>
-                <div>
-                  <label className="label">
-                    Access Token{' '}
-                    {settings?.anypayReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showKeys ? 'text' : 'password'}
-                      className="input pr-10"
-                      placeholder={settings?.anypayToken ?? 'Bearer token'}
-                      value={anypayToken}
-                      onChange={(e) => setAnypayToken(e.target.value)}
-                      autoComplete="off"
-                    />
-                    <button type="button" onClick={() => setShowKeys((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
-                      {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>From anypaytanzania.com → API Keys (Bearer token).</p>
                 </div>
               </div>
             )}
