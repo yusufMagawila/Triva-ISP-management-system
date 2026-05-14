@@ -17,6 +17,14 @@ interface PaymentSettingsData {
   zenopayReady: boolean;
 }
 
+interface PortalNoticeSettingsData {
+  portalNoticeName: string | null;
+  portalNoticeMessage: string | null;
+  portalNoticeColor: string;
+}
+
+const DEFAULT_PORTAL_NOTICE_COLOR = '#2563eb';
+
 export default function SettingsPage() {
   const { user } = useAuthStore();
   const [passwords, setPasswords] = useState({ current: '', next: '', confirm: '' });
@@ -31,6 +39,10 @@ export default function SettingsPage() {
   const [showKeys, setShowKeys] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [portalNoticeName, setPortalNoticeName] = useState('');
+  const [portalNoticeMessage, setPortalNoticeMessage] = useState('');
+  const [portalNoticeColor, setPortalNoticeColor] = useState(DEFAULT_PORTAL_NOTICE_COLOR);
+  const [savingPortalNotice, setSavingPortalNotice] = useState(false);
 
   const isMerchant = user?.role === 'MERCHANT';
 
@@ -40,6 +52,18 @@ export default function SettingsPage() {
       .then((r) => {
         setSettings(r.data.data);
         setSelectedProvider(r.data.data.paymentProvider);
+      })
+      .catch(() => {});
+  }, [isMerchant]);
+
+  useEffect(() => {
+    if (!isMerchant) return;
+    api.get<{ data: PortalNoticeSettingsData }>('/portal-settings')
+      .then((r) => {
+        const portalSettings = r.data.data;
+        setPortalNoticeName(portalSettings.portalNoticeName ?? '');
+        setPortalNoticeMessage(portalSettings.portalNoticeMessage ?? '');
+        setPortalNoticeColor(portalSettings.portalNoticeColor ?? DEFAULT_PORTAL_NOTICE_COLOR);
       })
       .catch(() => {});
   }, [isMerchant]);
@@ -97,6 +121,28 @@ export default function SettingsPage() {
       toast.error(err instanceof Error ? err.message : 'Connection test failed');
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function handleSavePortalNotice(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingPortalNotice(true);
+    try {
+      const payload = {
+        portalNoticeName: portalNoticeName.trim(),
+        portalNoticeMessage: portalNoticeMessage.trim(),
+        portalNoticeColor,
+      };
+
+      const response = await api.put<{ message: string; data: PortalNoticeSettingsData }>('/portal-settings', payload);
+      setPortalNoticeName(response.data.data.portalNoticeName ?? '');
+      setPortalNoticeMessage(response.data.data.portalNoticeMessage ?? '');
+      setPortalNoticeColor(response.data.data.portalNoticeColor ?? DEFAULT_PORTAL_NOTICE_COLOR);
+      toast.success(response.data.message);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save portal notice');
+    } finally {
+      setSavingPortalNotice(false);
     }
   }
 
@@ -310,6 +356,85 @@ export default function SettingsPage() {
 
             <button type="submit" className="btn-primary" disabled={savingPayment}>
               {savingPayment ? 'Saving…' : 'Save Gateway Settings'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {isMerchant && (
+        <div className="card p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Settings className="w-4 h-4" style={{ color: '#aeaeb2' }} />
+            <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Captive Portal Notice</h2>
+          </div>
+          <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
+            Add a support message, contact number, or operator note that appears on all of your router captive portals.
+          </p>
+
+          <form onSubmit={handleSavePortalNotice} className="space-y-5">
+            <div>
+              <label className="label">Display Name</label>
+              <input
+                type="text"
+                className="input"
+                value={portalNoticeName}
+                onChange={(e) => setPortalNoticeName(e.target.value)}
+                maxLength={60}
+                placeholder="Support Desk"
+              />
+              <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>
+                Appears as the sender name above the notice.
+              </p>
+            </div>
+
+            <div>
+              <label className="label">Message</label>
+              <textarea
+                className="input min-h-[112px] resize-y"
+                value={portalNoticeMessage}
+                onChange={(e) => setPortalNoticeMessage(e.target.value)}
+                maxLength={280}
+                placeholder="Need help? Call 07XXXXXXXX or visit the counter near the entrance."
+              />
+              <div className="mt-1.5 flex items-center justify-between text-xs" style={{ color: '#aeaeb2' }}>
+                <span>Leave empty to hide the notice from the portal.</span>
+                <span>{portalNoticeMessage.trim().length}/280</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Accent Color</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={portalNoticeColor}
+                  onChange={(e) => setPortalNoticeColor(e.target.value)}
+                  className="h-11 w-14 rounded-lg border cursor-pointer"
+                  style={{ borderColor: '#e5e5ea', background: '#ffffff' }}
+                />
+                <div className="flex-1 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: '#e5e5ea', color: '#1d1d1f' }}>
+                  {portalNoticeColor.toUpperCase()}
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="rounded-2xl border px-4 py-4"
+              style={{
+                borderColor: `${portalNoticeColor}33`,
+                background: `linear-gradient(135deg, ${portalNoticeColor}14, #f8fafc)`,
+              }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: portalNoticeColor }}>
+                {portalNoticeName.trim() || 'Portal Notice Preview'}
+              </p>
+              <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#1d1d1f' }}>
+                {portalNoticeMessage.trim() || 'Your support or announcement message will preview here.'}
+              </p>
+            </div>
+
+            <button type="submit" className="btn-primary" disabled={savingPortalNotice}>
+              {savingPortalNotice ? 'Saving…' : 'Save Portal Notice'}
             </button>
           </form>
         </div>
