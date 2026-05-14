@@ -4,15 +4,17 @@ import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { Settings, KeyRound, CreditCard, Eye, EyeOff, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 
-type Provider = 'MONGIKE' | 'ANYPAY';
+type Provider = 'MONGIKE' | 'ANYPAY' | 'ZENOPAY_MOBILE';
 
 interface PaymentSettingsData {
   paymentProvider: Provider;
   mongikApiKey: string | null;
   anypayApiKey: string | null;
   anypayAccessToken: string | null;
+  zenopayApiKey: string | null;
   mongikReady: boolean;
   anypayReady: boolean;
+  zenopayReady: boolean;
 }
 
 export default function SettingsPage() {
@@ -25,6 +27,7 @@ export default function SettingsPage() {
   const [mongikKey, setMongikKey] = useState('');
   const [anypayKey, setAnypayKey] = useState('');
   const [anypayAccessToken, setAnypayAccessToken] = useState('');
+  const [zenopayKey, setZenopayKey] = useState('');
   const [showKeys, setShowKeys] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -42,7 +45,7 @@ export default function SettingsPage() {
   }, [isMerchant]);
 
   const isReady = settings
-    ? (selectedProvider === 'MONGIKE' ? settings.mongikReady : settings.anypayReady)
+    ? (selectedProvider === 'MONGIKE' ? settings.mongikReady : selectedProvider === 'ANYPAY' ? settings.anypayReady : settings.zenopayReady)
     : false;
 
   async function handlePasswordChange(e: React.FormEvent) {
@@ -71,12 +74,13 @@ export default function SettingsPage() {
       if (mongikKey) payload.mongikApiKey = mongikKey.trim();
       if (anypayKey) payload.anypayApiKey = anypayKey.trim();
       if (anypayAccessToken) payload.anypayAccessToken = anypayAccessToken.trim();
+      if (zenopayKey) payload.zenopayApiKey = zenopayKey.trim();
       await api.put('/payment-settings', payload);
       toast.success('Payment settings saved');
 
       const r = await api.get<{ data: PaymentSettingsData }>('/payment-settings');
       setSettings(r.data.data);
-      setMongikKey(''); setAnypayKey(''); setAnypayAccessToken('');
+      setMongikKey(''); setAnypayKey(''); setAnypayAccessToken(''); setZenopayKey('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -163,7 +167,9 @@ export default function SettingsPage() {
               style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }}>
               <CheckCircle className="w-4 h-4 shrink-0" />
               <span>
-                <strong>{settings?.paymentProvider === 'ANYPAY' ? 'AnyPay Tanzania' : 'Mongike'}</strong> is active — payments go directly to your account.
+                <strong>
+                  {settings?.paymentProvider === 'ANYPAY' ? 'AnyPay Tanzania' : settings?.paymentProvider === 'ZENOPAY_MOBILE' ? 'ZenoPayMobile' : 'Mongike'}
+                </strong> is active — payments go directly to your account.
               </span>
             </div>
           )}
@@ -172,10 +178,10 @@ export default function SettingsPage() {
             {/* Provider selector */}
             <div>
               <label className="label mb-2">Active Gateway</label>
-              <div className="grid grid-cols-2 gap-3">
-                {(['MONGIKE', 'ANYPAY'] as Provider[]).map((p) => {
+              <div className="grid grid-cols-3 gap-3">
+                {(['MONGIKE', 'ANYPAY', 'ZENOPAY_MOBILE'] as Provider[]).map((p) => {
                   const active = selectedProvider === p;
-                  const ready = settings ? (p === 'MONGIKE' ? settings.mongikReady : settings.anypayReady) : false;
+                  const ready = settings ? (p === 'MONGIKE' ? settings.mongikReady : p === 'ANYPAY' ? settings.anypayReady : settings.zenopayReady) : false;
                   return (
                     <button
                       key={p}
@@ -189,11 +195,13 @@ export default function SettingsPage() {
                       }}
                     >
                       <div className="flex items-center justify-between w-full">
-                        <span className="font-semibold">{p === 'MONGIKE' ? 'Mongike' : 'AnyPay Tanzania'}</span>
+                        <span className="font-semibold">
+                          {p === 'MONGIKE' ? 'Mongike' : p === 'ANYPAY' ? 'AnyPay Tanzania' : 'ZenoPayMobile'}
+                        </span>
                         {ready && <span className="w-2 h-2 rounded-full bg-green-500" />}
                       </div>
                       <span className="text-xs" style={{ color: '#6e6e73' }}>
-                        {p === 'MONGIKE' ? 'mongike.com' : 'anypaytanzania.com'}
+                        {p === 'MONGIKE' ? 'mongike.com' : p === 'ANYPAY' ? 'anypaytanzania.com' : 'zenopaymobile.com'}
                       </span>
                     </button>
                   );
@@ -272,6 +280,31 @@ export default function SettingsPage() {
                   </div>
                   <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Required. From anypaytanzania.com → API Keys (API-Key header).</p>
                 </div>
+              </div>
+            )}
+
+            {/* ZenoPayMobile fields */}
+            {selectedProvider === 'ZENOPAY_MOBILE' && (
+              <div>
+                <label className="label">
+                  ZenoPayMobile API Key{' '}
+                  {settings?.zenopayReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showKeys ? 'text' : 'password'}
+                    className="input pr-10"
+                    placeholder={settings?.zenopayReady ? settings.zenopayApiKey ?? 'zpay_…' : 'zpay_…'}
+                    value={zenopayKey}
+                    onChange={(e) => setZenopayKey(e.target.value)}
+                    autoComplete="off"
+                  />
+                  <button type="button" onClick={() => setShowKeys((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
+                    {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Found in your ZenoPayMobile dashboard → API Keys. Supports M-Pesa, Airtel Money, Tigo Pesa, and Halopesa.</p>
               </div>
             )}
 
