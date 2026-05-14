@@ -15,6 +15,7 @@ import PaymentsPage from './pages/payments/PaymentsPage';
 import TenantsPage from './pages/admin/TenantsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import SubscriptionPage from './pages/subscription/SubscriptionPage';
+import VouchersPage from './pages/vouchers/VouchersPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
@@ -87,6 +88,7 @@ export default function App() {
         <Route path="plans" element={<PlansPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="payments" element={<PaymentsPage />} />
+        <Route path="vouchers" element={<VouchersPage />} />
         <Route path="subscription" element={<SubscriptionPage />} />
         <Route
           path="tenants"

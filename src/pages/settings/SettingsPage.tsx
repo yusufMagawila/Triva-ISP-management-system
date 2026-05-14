@@ -10,6 +10,7 @@ interface PaymentSettingsData {
   paymentProvider: Provider;
   mongikApiKey: string | null;
   anypayApiKey: string | null;
+  anypayAccessToken: string | null;
   mongikReady: boolean;
   anypayReady: boolean;
 }
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [selectedProvider, setSelectedProvider] = useState<Provider>('MONGIKE');
   const [mongikKey, setMongikKey] = useState('');
   const [anypayKey, setAnypayKey] = useState('');
+  const [anypayAccessToken, setAnypayAccessToken] = useState('');
   const [showKeys, setShowKeys] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -68,12 +70,13 @@ export default function SettingsPage() {
       const payload: Record<string, string | undefined> = { paymentProvider: selectedProvider };
       if (mongikKey) payload.mongikApiKey = mongikKey.trim();
       if (anypayKey) payload.anypayApiKey = anypayKey.trim();
+      if (anypayAccessToken) payload.anypayAccessToken = anypayAccessToken.trim();
       await api.put('/payment-settings', payload);
       toast.success('Payment settings saved');
 
       const r = await api.get<{ data: PaymentSettingsData }>('/payment-settings');
       setSettings(r.data.data);
-      setMongikKey(''); setAnypayKey('');
+      setMongikKey(''); setAnypayKey(''); setAnypayAccessToken('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -228,6 +231,28 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div>
                   <label className="label">
+                    Access Token{' '}
+                    {settings?.anypayReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showKeys ? 'text' : 'password'}
+                      className="input pr-10"
+                      placeholder={settings?.anypayAccessToken ?? 'Your AnyPay access token'}
+                      value={anypayAccessToken}
+                      onChange={(e) => setAnypayAccessToken(e.target.value)}
+                      autoComplete="off"
+                    />
+                    <button type="button" onClick={() => setShowKeys((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
+                      {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Bearer token used in the Authorization header.</p>
+                </div>
+
+                <div>
+                  <label className="label">
                     API Key{' '}
                     {settings?.anypayReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
                   </label>
@@ -245,7 +270,7 @@ export default function SettingsPage() {
                       {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>From anypaytanzania.com → API Keys (API-Key header).</p>
+                  <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Required. From anypaytanzania.com → API Keys (API-Key header).</p>
                 </div>
               </div>
             )}

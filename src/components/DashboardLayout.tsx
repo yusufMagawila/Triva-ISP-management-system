@@ -13,6 +13,7 @@ import {
   Building2,
   Shield,
   AlertTriangle,
+  Ticket,
 } from 'lucide-react';
 import { useEffect } from 'react';
 
@@ -22,6 +23,7 @@ const merchantNav = [
   { to: '/plans', label: 'Plans', icon: CreditCard },
   { to: '/sessions', label: 'Sessions', icon: Activity },
   { to: '/payments', label: 'Payments', icon: CreditCard },
+  { to: '/vouchers', label: 'Vouchers', icon: Ticket },
   { to: '/subscription', label: 'Subscription', icon: Shield },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
