@@ -19,7 +19,7 @@ export default function ActivatePage() {
     try {
       await api.post('/auth/activate-payment', { phone: phone.trim() });
       setPaid(true);
-      toast.success('Payment request sent! Check your phone.');
+      toast.success('Payment request sent via meseji.co.tz');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Payment initiation failed');
     } finally {
@@ -166,7 +166,7 @@ export default function ActivatePage() {
                 Awaiting Payment
               </h2>
               <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
-                A prompt was sent to <strong style={{ color: '#1d1d1f' }}>{phone}</strong>. Enter your PIN to complete. Then tap the button below.
+                A prompt was sent via meseji.co.tz to <strong style={{ color: '#1d1d1f' }}>{phone}</strong>. Enter your PIN to complete. Then tap the button below.
               </p>
 
               <div

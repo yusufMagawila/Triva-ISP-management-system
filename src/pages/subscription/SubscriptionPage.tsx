@@ -88,7 +88,7 @@ export default function SubscriptionPage() {
     setPaying(true);
     try {
       await api.post('/subscription/pay', { plan: selectedPlan, months, phone });
-      toast.success('Payment prompt sent! Check your phone and enter PIN to complete.');
+      toast.success('Payment prompt sent via meseji.co.tz — enter PIN to complete.');
       setShowPayForm(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to initiate payment');

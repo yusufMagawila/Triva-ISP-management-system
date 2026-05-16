@@ -203,16 +203,16 @@ export default function TenantsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
                 <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
-                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Shop</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Plan</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Expires</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Routers</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Actions</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Shop</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Email</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Plan</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Expires</th>
+                  <th className="px-3 py-2 text-center text-xs font-medium" style={{ color: '#aeaeb2' }}>Routers</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,33 +224,33 @@ export default function TenantsPage() {
                     onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                   >
-                    <td className="px-6 py-3.5 font-medium" style={{ color: '#1d1d1f' }}>{t.name}</td>
-                    <td className="px-6 py-3.5" style={{ color: '#6e6e73' }}>{t.email}</td>
-                    <td className="px-6 py-3.5" style={{ color: '#3a3a3c' }}>{t.subscription?.plan ?? '—'}</td>
-                    <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
-                      {t.subscription ? format(new Date(t.subscription.expiresAt), 'MMM d, yyyy') : '—'}
+                    <td className="px-3 py-2.5 font-medium" style={{ color: '#1d1d1f' }}>{t.name}</td>
+                    <td className="px-3 py-2.5 text-xs" style={{ color: '#6e6e73' }}>{t.email}</td>
+                    <td className="px-3 py-2.5 text-xs" style={{ color: '#3a3a3c' }}>{t.subscription?.plan ?? '—'}</td>
+                    <td className="px-3 py-2.5 text-xs" style={{ color: '#6e6e73' }}>
+                      {t.subscription ? format(new Date(t.subscription.expiresAt), 'MMM d') : '—'}
                     </td>
-                    <td className="px-6 py-3.5" style={{ color: '#3a3a3c' }}>{t._count.routers}</td>
-                    <td className="px-6 py-3.5">
+                    <td className="px-3 py-2.5 text-center text-xs" style={{ color: '#3a3a3c' }}>{t._count.routers}</td>
+                    <td className="px-3 py-2.5">
                       <span className={t.status === 'ACTIVE' ? 'badge-green' : 'badge-red'}>{t.status}</span>
                     </td>
-                    <td className="px-6 py-3.5">
-                      <div className="flex gap-2">
-                        <button className="btn-secondary btn-sm" onClick={() => handleToggleStatus(t)}>
-                          <UserCheck className="w-3.5 h-3.5" />
+                    <td className="px-3 py-2.5">
+                      <div className="flex gap-1.5">
+                        <button className="btn-secondary btn-sm text-xs" onClick={() => handleToggleStatus(t)}>
+                          <UserCheck className="w-3 h-3" />
                           {t.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
                         </button>
-                        <button className="btn-secondary btn-sm" onClick={() => handleRenew(t.id)}>
-                          <RefreshCw className="w-3.5 h-3.5" /> Renew
+                        <button className="btn-secondary btn-sm text-xs" onClick={() => handleRenew(t.id)}>
+                          <RefreshCw className="w-3 h-3" /> Renew
                         </button>
                         <button
-                          className="btn-secondary btn-sm"
+                          className="btn-secondary btn-sm text-xs"
                           onClick={() => {
                             setPasswordTenant(t);
                             setPasswordForm({ next: '', confirm: '' });
                           }}
                         >
-                          <KeyRound className="w-3.5 h-3.5" /> Password
+                          <KeyRound className="w-3 h-3" /> Password
                         </button>
                       </div>
                     </td>
