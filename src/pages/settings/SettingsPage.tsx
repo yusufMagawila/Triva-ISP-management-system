@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { Settings, KeyRound, CreditCard, Eye, EyeOff, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 
 type Provider = 'MONGIKE' | 'ANYPAY' | 'ZENOPAY_MOBILE';
+type VisibleProvider = Exclude<Provider, 'ANYPAY'>;
 
 interface PaymentSettingsData {
   paymentProvider: Provider;
@@ -31,10 +32,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const [settings, setSettings] = useState<PaymentSettingsData | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<Provider>('MONGIKE');
+  const [selectedProvider, setSelectedProvider] = useState<VisibleProvider>('MONGIKE');
   const [mongikKey, setMongikKey] = useState('');
-  const [anypayKey, setAnypayKey] = useState('');
-  const [anypayAccessToken, setAnypayAccessToken] = useState('');
   const [zenopayKey, setZenopayKey] = useState('');
   const [showKeys, setShowKeys] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
@@ -51,7 +50,7 @@ export default function SettingsPage() {
     api.get<{ data: PaymentSettingsData }>('/payment-settings')
       .then((r) => {
         setSettings(r.data.data);
-        setSelectedProvider(r.data.data.paymentProvider);
+        setSelectedProvider(r.data.data.paymentProvider === 'ZENOPAY_MOBILE' ? 'ZENOPAY_MOBILE' : 'MONGIKE');
       })
       .catch(() => {});
   }, [isMerchant]);
@@ -69,8 +68,13 @@ export default function SettingsPage() {
   }, [isMerchant]);
 
   const isReady = settings
-    ? (selectedProvider === 'MONGIKE' ? settings.mongikReady : selectedProvider === 'ANYPAY' ? settings.anypayReady : settings.zenopayReady)
+    ? (selectedProvider === 'MONGIKE' ? settings.mongikReady : settings.zenopayReady)
     : false;
+
+  function providerLabel(provider?: Provider): string {
+    if (provider === 'ZENOPAY_MOBILE') return 'ZenoPayMobile';
+    return 'Mongike';
+  }
 
   async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
@@ -96,15 +100,13 @@ export default function SettingsPage() {
     try {
       const payload: Record<string, string | undefined> = { paymentProvider: selectedProvider };
       if (mongikKey) payload.mongikApiKey = mongikKey.trim();
-      if (anypayKey) payload.anypayApiKey = anypayKey.trim();
-      if (anypayAccessToken) payload.anypayAccessToken = anypayAccessToken.trim();
       if (zenopayKey) payload.zenopayApiKey = zenopayKey.trim();
       await api.put('/payment-settings', payload);
       toast.success('Payment settings saved');
 
       const r = await api.get<{ data: PaymentSettingsData }>('/payment-settings');
       setSettings(r.data.data);
-      setMongikKey(''); setAnypayKey(''); setAnypayAccessToken(''); setZenopayKey('');
+      setMongikKey(''); setZenopayKey('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
@@ -214,7 +216,7 @@ export default function SettingsPage() {
               <CheckCircle className="w-4 h-4 shrink-0" />
               <span>
                 <strong>
-                  {settings?.paymentProvider === 'ANYPAY' ? 'AnyPay Tanzania' : settings?.paymentProvider === 'ZENOPAY_MOBILE' ? 'ZenoPayMobile' : 'Mongike'}
+                  {providerLabel(settings?.paymentProvider)}
                 </strong> is active — payments go directly to your account.
               </span>
             </div>
@@ -224,10 +226,10 @@ export default function SettingsPage() {
             {/* Provider selector */}
             <div>
               <label className="label mb-2">Active Gateway</label>
-              <div className="grid grid-cols-3 gap-3">
-                {(['MONGIKE', 'ANYPAY', 'ZENOPAY_MOBILE'] as Provider[]).map((p) => {
+              <div className="grid grid-cols-2 gap-3">
+                {(['MONGIKE', 'ZENOPAY_MOBILE'] as VisibleProvider[]).map((p) => {
                   const active = selectedProvider === p;
-                  const ready = settings ? (p === 'MONGIKE' ? settings.mongikReady : p === 'ANYPAY' ? settings.anypayReady : settings.zenopayReady) : false;
+                  const ready = settings ? (p === 'MONGIKE' ? settings.mongikReady : settings.zenopayReady) : false;
                   return (
                     <button
                       key={p}
@@ -242,12 +244,12 @@ export default function SettingsPage() {
                     >
                       <div className="flex items-center justify-between w-full">
                         <span className="font-semibold">
-                          {p === 'MONGIKE' ? 'Mongike' : p === 'ANYPAY' ? 'AnyPay Tanzania' : 'ZenoPayMobile'}
+                          {p === 'MONGIKE' ? 'Mongike' : 'ZenoPayMobile'}
                         </span>
                         {ready && <span className="w-2 h-2 rounded-full bg-green-500" />}
                       </div>
                       <span className="text-xs" style={{ color: '#6e6e73' }}>
-                        {p === 'MONGIKE' ? 'mongike.com' : p === 'ANYPAY' ? 'anypaytanzania.com' : 'zenopaymobile.com'}
+                        {p === 'MONGIKE' ? 'mongike.com' : 'zenopaymobile.com'}
                       </span>
                     </button>
                   );
@@ -277,55 +279,6 @@ export default function SettingsPage() {
                   </button>
                 </div>
                 <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Found in your Mongike dashboard → API Keys.</p>
-              </div>
-            )}
-
-            {/* AnyPay fields */}
-            {selectedProvider === 'ANYPAY' && (
-              <div className="space-y-4">
-                <div>
-                  <label className="label">
-                    Access Token{' '}
-                    {settings?.anypayReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showKeys ? 'text' : 'password'}
-                      className="input pr-10"
-                      placeholder={settings?.anypayAccessToken ?? 'Your AnyPay access token'}
-                      value={anypayAccessToken}
-                      onChange={(e) => setAnypayAccessToken(e.target.value)}
-                      autoComplete="off"
-                    />
-                    <button type="button" onClick={() => setShowKeys((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
-                      {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Bearer token used in the Authorization header.</p>
-                </div>
-
-                <div>
-                  <label className="label">
-                    API Key{' '}
-                    {settings?.anypayReady && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showKeys ? 'text' : 'password'}
-                      className="input pr-10"
-                      placeholder={settings?.anypayApiKey ?? 'Your AnyPay API key'}
-                      value={anypayKey}
-                      onChange={(e) => setAnypayKey(e.target.value)}
-                      autoComplete="off"
-                    />
-                    <button type="button" onClick={() => setShowKeys((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
-                      {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Required. From anypaytanzania.com → API Keys (API-Key header).</p>
-                </div>
               </div>
             )}
 

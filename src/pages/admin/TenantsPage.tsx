@@ -203,16 +203,14 @@ export default function TenantsPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full table-fixed text-xs">
               <thead>
                 <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
-                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Shop</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Email</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Plan</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Expires</th>
-                  <th className="px-3 py-2 text-center text-xs font-medium" style={{ color: '#aeaeb2' }}>Routers</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Actions</th>
+                  <th className="w-[34%] px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Shop</th>
+                  <th className="w-[22%] px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Subscription</th>
+                  <th className="w-[10%] px-3 py-2 text-center text-xs font-medium" style={{ color: '#aeaeb2' }}>Routers</th>
+                  <th className="w-[14%] px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
+                  <th className="w-[20%] px-3 py-2 text-right text-xs font-medium" style={{ color: '#aeaeb2' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,33 +222,56 @@ export default function TenantsPage() {
                     onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                   >
-                    <td className="px-3 py-2.5 font-medium" style={{ color: '#1d1d1f' }}>{t.name}</td>
-                    <td className="px-3 py-2.5 text-xs" style={{ color: '#6e6e73' }}>{t.email}</td>
-                    <td className="px-3 py-2.5 text-xs" style={{ color: '#3a3a3c' }}>{t.subscription?.plan ?? '—'}</td>
-                    <td className="px-3 py-2.5 text-xs" style={{ color: '#6e6e73' }}>
-                      {t.subscription ? format(new Date(t.subscription.expiresAt), 'MMM d') : '—'}
+                    <td className="px-3 py-3 align-top">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium" style={{ color: '#1d1d1f' }} title={t.name}>
+                          {t.name}
+                        </p>
+                        <p className="mt-0.5 truncate text-[11px]" style={{ color: '#6e6e73' }} title={t.email}>
+                          {t.email}
+                        </p>
+                      </div>
                     </td>
-                    <td className="px-3 py-2.5 text-center text-xs" style={{ color: '#3a3a3c' }}>{t._count.routers}</td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-3 align-top">
+                      <div className="min-w-0">
+                        <p className="font-medium text-xs" style={{ color: '#3a3a3c' }}>
+                          {t.subscription?.plan ?? 'No plan'}
+                        </p>
+                        <p className="mt-0.5 text-[11px]" style={{ color: '#6e6e73' }}>
+                          {t.subscription ? `Expires ${format(new Date(t.subscription.expiresAt), 'MMM d')}` : 'Not subscribed'}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 align-top text-center text-xs" style={{ color: '#3a3a3c' }}>{t._count.routers}</td>
+                    <td className="px-3 py-3 align-top">
                       <span className={t.status === 'ACTIVE' ? 'badge-green' : 'badge-red'}>{t.status}</span>
                     </td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex gap-1.5">
-                        <button className="btn-secondary btn-sm text-xs" onClick={() => handleToggleStatus(t)}>
+                    <td className="px-3 py-3 align-top">
+                      <div className="flex flex-wrap justify-end gap-1.5">
+                        <button
+                          className="btn-secondary btn-sm whitespace-nowrap px-2 text-xs"
+                          onClick={() => handleToggleStatus(t)}
+                          title={t.status === 'ACTIVE' ? 'Suspend tenant' : 'Activate tenant'}
+                        >
                           <UserCheck className="w-3 h-3" />
-                          {t.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
+                          {t.status === 'ACTIVE' ? 'Pause' : 'Enable'}
                         </button>
-                        <button className="btn-secondary btn-sm text-xs" onClick={() => handleRenew(t.id)}>
+                        <button
+                          className="btn-secondary btn-sm whitespace-nowrap px-2 text-xs"
+                          onClick={() => handleRenew(t.id)}
+                          title="Renew subscription"
+                        >
                           <RefreshCw className="w-3 h-3" /> Renew
                         </button>
                         <button
-                          className="btn-secondary btn-sm text-xs"
+                          className="btn-secondary btn-sm whitespace-nowrap px-2 text-xs"
                           onClick={() => {
                             setPasswordTenant(t);
                             setPasswordForm({ next: '', confirm: '' });
                           }}
+                          title="Reset tenant password"
                         >
-                          <KeyRound className="w-3 h-3" /> Password
+                          <KeyRound className="w-3 h-3" /> Reset
                         </button>
                       </div>
                     </td>
