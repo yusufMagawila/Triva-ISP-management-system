@@ -3,9 +3,12 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity, Copy, Info } from 'lucide-react';
 import { format } from 'date-fns';
+import TpLinkRoutersPage from './TpLinkRoutersPage';
 
 const PORTAL_BASE = 'https://triva.pandabus.live/captive-portal';
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
+
+type VendorTab = 'mikrotik' | 'tplink';
 
 interface RouterData {
   id: string;
@@ -24,7 +27,7 @@ interface RouterData {
   _count: { sessions: number };
 }
 
-export default function RoutersPage() {
+function MikrotikRoutersTab() {
   const [routers, setRouters] = useState<RouterData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -174,14 +177,11 @@ export default function RoutersPage() {
   const selectedRouter = showSetup ? routers.find((router) => router.id === showSetup) ?? null : null;
 
   return (
-    <div className="p-7 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>Routers</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Create zero-touch router assets and let each device self-provision from TRIVA</p>
-        </div>
+        <p className="text-sm" style={{ color: '#6e6e73' }}>Create zero-touch MikroTik router assets and let each device self-provision from TRIVA</p>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
-          <Plus className="w-4 h-4" /> Add Router
+          <Plus className="w-4 h-4" /> Add MikroTik Router
         </button>
       </div>
 
@@ -427,6 +427,40 @@ export default function RoutersPage() {
         )}
         </>
       )}
+    </div>
+  );
+}
+
+export default function RoutersPage() {
+  const [tab, setTab] = useState<VendorTab>('mikrotik');
+
+  return (
+    <div className="p-7 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>Routers</h1>
+        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage router assets by vendor. Each device self-provisions from TRIVA.</p>
+      </div>
+
+      <div className="flex gap-1 border-b" style={{ borderColor: '#e8e8ed' }}>
+        <button
+          className={`px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 ${
+            tab === 'mikrotik' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => setTab('mikrotik')}
+        >
+          MikroTik
+        </button>
+        <button
+          className={`px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 ${
+            tab === 'tplink' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => setTab('tplink')}
+        >
+          TP-Link (OpenWrt)
+        </button>
+      </div>
+
+      {tab === 'mikrotik' ? <MikrotikRoutersTab /> : <TpLinkRoutersPage />}
     </div>
   );
 }
