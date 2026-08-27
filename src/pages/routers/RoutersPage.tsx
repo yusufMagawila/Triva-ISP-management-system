@@ -4,11 +4,12 @@ import toast from 'react-hot-toast';
 import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity, Copy, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import TpLinkRoutersPage from './TpLinkRoutersPage';
+import OmadaSitesPage from './OmadaSitesPage';
 
 const PORTAL_BASE = 'https://triva.pandabus.live/captive-portal';
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
 
-type VendorTab = 'mikrotik' | 'tplink';
+type VendorTab = 'mikrotik' | 'tplink' | 'omada';
 
 interface RouterData {
   id: string;
@@ -458,9 +459,17 @@ export default function RoutersPage() {
         >
           TP-Link (OpenWrt)
         </button>
+        <button
+          className={`px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 ${
+            tab === 'omada' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => setTab('omada')}
+        >
+          TP-Link Omada
+        </button>
       </div>
 
-      {tab === 'mikrotik' ? <MikrotikRoutersTab /> : <TpLinkRoutersPage />}
+      {tab === 'mikrotik' ? <MikrotikRoutersTab /> : tab === 'tplink' ? <TpLinkRoutersPage /> : <OmadaSitesPage />}
     </div>
   );
 }
