@@ -13,7 +13,9 @@ interface Session {
   startsAt: string | null;
   expiresAt: string | null;
   plan: { name: string };
-  router: { name: string };
+  router: { name: string } | null;
+  tplinkRouter?: { name: string } | null;
+  omadaSite?: { name: string } | null;
 }
 
 const statusBadge: Record<string, string> = {
@@ -134,7 +136,7 @@ export default function SessionsPage() {
                     >
                       <td className="px-6 py-3.5 font-mono text-xs" style={{ color: '#3a3a3c' }}>{s.macAddress}</td>
                       <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.plan.name}</td>
-                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.router.name}</td>
+                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.router?.name ?? s.tplinkRouter?.name ?? s.omadaSite?.name ?? 'N/A'}</td>
                       <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
                         {s.startsAt ? format(new Date(s.startsAt), 'MMM d HH:mm') : '—'}
                       </td>
@@ -189,7 +191,9 @@ interface Session {
   startsAt: string | null;
   expiresAt: string | null;
   plan: { name: string };
-  router: { name: string };
+  router: { name: string } | null;
+  tplinkRouter?: { name: string } | null;
+  omadaSite?: { name: string } | null;
 }
 
 const statusColors: Record<string, string> = {

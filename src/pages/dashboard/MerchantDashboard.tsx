@@ -24,7 +24,9 @@ interface Session {
   macAddress: string;
   status: string;
   plan: { name: string };
-  router: { name: string };
+  router: { name: string } | null;
+  tplinkRouter?: { name: string } | null;
+  omadaSite?: { name: string } | null;
   startsAt: string;
   expiresAt: string;
 }
@@ -220,7 +222,7 @@ export default function MerchantDashboard() {
                   >
                     <td className="px-6 py-3.5 font-mono text-xs" style={{ color: '#3a3a3c' }}>{s.macAddress}</td>
                     <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.plan.name}</td>
-                    <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.router.name}</td>
+                    <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.router?.name ?? s.tplinkRouter?.name ?? s.omadaSite?.name ?? 'N/A'}</td>
                     <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
                       {s.expiresAt ? format(new Date(s.expiresAt), 'HH:mm') : '—'}
                     </td>
