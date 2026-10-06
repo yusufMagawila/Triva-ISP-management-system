@@ -41,7 +41,7 @@ services:
 
   backend:
     build:
-      context: ./new-infra/backend/source
+      context: ./backend/source
       dockerfile: ../Dockerfile
     container_name: triva-backend
     restart: unless-stopped

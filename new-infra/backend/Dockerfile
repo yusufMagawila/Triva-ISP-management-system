@@ -37,4 +37,8 @@ EXPOSE 4000
 HEALTHCHECK --interval=15s --timeout=10s --start-period=30s --retries=3 \
   CMD curl -fsS http://localhost:4000/health/db || exit 1
 
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "dist/index.js"]
