@@ -145,22 +145,6 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: _prisma_migrations; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public._prisma_migrations (
-    id character varying(36) NOT NULL,
-    checksum character varying(64) NOT NULL,
-    finished_at timestamp with time zone,
-    migration_name character varying(255) NOT NULL,
-    logs text,
-    rolled_back_at timestamp with time zone,
-    started_at timestamp with time zone DEFAULT now() NOT NULL,
-    applied_steps_count integer DEFAULT 0 NOT NULL
-);
-
-
---
 -- Name: nas; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -457,14 +441,6 @@ CREATE TABLE public.vouchers (
 --
 
 ALTER TABLE ONLY public.nas ALTER COLUMN id SET DEFAULT nextval('public.nas_id_seq'::regclass);
-
-
---
--- Name: _prisma_migrations _prisma_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public._prisma_migrations
-    ADD CONSTRAINT _prisma_migrations_pkey PRIMARY KEY (id);
 
 
 --
