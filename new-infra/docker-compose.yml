@@ -41,9 +41,8 @@ services:
 
   backend:
     build:
-      # In Dokploy this is usually a linked Git repo; adjust context accordingly.
-      context: ../current-backend
-      dockerfile: ../../new-infra/backend/Dockerfile
+      context: ./new-infra/backend/source
+      dockerfile: ../Dockerfile
     container_name: triva-backend
     restart: unless-stopped
     depends_on:
@@ -87,30 +86,30 @@ services:
         env: "NODE_ENV"
 
   # Optional: use this nginx only if Dokploy is not managing TLS/routing.
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: triva-nginx
-    restart: unless-stopped
-    depends_on:
-      - backend
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ../current-captive-portal/dist:/usr/share/nginx/html/captive-portal:ro
-      - certbot-certs:/etc/letsencrypt:ro
-    networks:
-      - triva
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: "5"
+  # nginx:
+  #   image: nginx:1.27-alpine
+  #   container_name: triva-nginx
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - backend
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./captive-portal/dist:/usr/share/nginx/html/captive-portal:ro
+  #     - certbot-certs:/etc/letsencrypt:ro
+  #   networks:
+  #     - triva
+  #   logging:
+  #     driver: json-file
+  #     options:
+  #       max-size: 10m
+  #       max-file: "5"
 
 volumes:
   triva_pgdata:
-  certbot-certs:
+  # certbot-certs:
 
 networks:
   triva:
