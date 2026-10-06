@@ -1,0 +1,61 @@
+diff --git a/src/services/mikrotik.service.ts b/src/services/mikrotik.service.ts
+--- a/src/services/mikrotik.service.ts
++++ b/src/services/mikrotik.service.ts
+@@ -1,5 +1,6 @@
+ // node-routeros uses CommonJS exports — use require to avoid ESM interop issues
+ // eslint-disable-next-line @typescript-eslint/no-require-imports
+ const { RouterOSAPI } = require('node-routeros');
++import { decryptRouterCredential } from '../lib/crypto';
+ import { MikroTikConfig, HotspotUser, HotspotActive, RouterOSResponse } from '../types';
+ import { logger } from '../config/logger';
+@@ -220,12 +221,15 @@ export class MikroTikService {
+ export function createMikroTikService(router: {
+   ipAddress: string;
+   apiPort: number;
+   username: string;
+-  passwordHash: string; // stored plain for router credentials (not user passwords)
++  passwordHash: string;
++  passwordEnc?: string | null;
+ }): MikroTikService {
++  const password = router.passwordEnc
++    ? decryptRouterCredential(router.passwordEnc)
++    : router.passwordHash;
+   return new MikroTikService({
+     host: router.ipAddress,
+     port: router.apiPort,
+     user: router.username,
+-    password: router.passwordHash,
++    password,
+   });
+ }
+
+diff --git a/src/services/tplink.service.ts b/src/services/tplink.service.ts
+--- a/src/services/tplink.service.ts
++++ b/src/services/tplink.service.ts
+@@ -1,5 +1,6 @@
+ // ssh2 uses CommonJS exports — use require to avoid ESM interop issues
+ // eslint-disable-next-line @typescript-eslint/no-require-imports
+ const { Client } = require('ssh2');
++import { decryptRouterCredential } from '../lib/crypto';
+ import { HotspotUser, HotspotActive, TpLinkConfig } from '../types';
+ import { logger } from '../config/logger';
+@@ -143,12 +144,15 @@ export class TpLinkService {
+ export function createTpLinkService(router: {
+   ipAddress: string;
+   sshPort: number;
+   username: string;
+-  passwordHash: string; // stored plain for router credentials (not user passwords)
++  passwordHash: string;
++  passwordEnc?: string | null;
+ }): TpLinkService {
++  const password = router.passwordEnc
++    ? decryptRouterCredential(router.passwordEnc)
++    : router.passwordHash;
+   return new TpLinkService({
+     host: router.ipAddress,
+     port: router.sshPort,
+     user: router.username,
+-    password: router.passwordHash,
++    password,
+   });
+ }

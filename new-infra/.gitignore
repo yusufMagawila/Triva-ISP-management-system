@@ -1,0 +1,41 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json?replace
+
+# Build artifacts
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Prisma
+prisma/migrations/*/migration.sql.bak
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+._*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup directories
+*.bak
+src.bak-*/
+backend/source/backend/
+backend/source/src.bak-*/

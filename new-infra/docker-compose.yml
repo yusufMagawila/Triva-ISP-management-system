@@ -1,0 +1,117 @@
+# Triva WiFi — Target Docker Compose (Dokploy-compatible)
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose -f docker-compose.yml up -d
+#
+# Notes:
+# - This stack runs a single backend container that handles both API and
+#   background jobs. Horizontal scaling of jobs requires extracting them
+#   to a separate worker service.
+# - TLS termination is handled by Dokploy's built-in reverse proxy OR by
+#   the included nginx service. Choose one and remove the other.
+# - All secrets must be provided via environment variables / Dokploy secrets.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: triva-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-triva_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-triva_db}
+    volumes:
+      - triva_pgdata:/var/lib/postgresql/data
+      - ./backend/prisma/migrations:/docker-entrypoint-initdb.d/migrations:ro
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-triva_user} -d ${DB_NAME:-triva_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - triva
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  backend:
+    build:
+      # In Dokploy this is usually a linked Git repo; adjust context accordingly.
+      context: ../current-backend
+      dockerfile: ../../new-infra/backend/Dockerfile
+    container_name: triva-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgres://${DB_USER:-triva_user}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-triva_db}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      FRONTEND_URL: ${FRONTEND_URL}
+      PORTAL_URL: ${PORTAL_URL}
+      APP_URL: ${APP_URL}
+      MONGIKE_API_URL: ${MONGIKE_API_URL:-https://mongike.com}
+      MONGIKE_API_KEY: ${MONGIKE_API_KEY}
+      ROUTER_CREDENTIALS_KEY: ${ROUTER_CREDENTIALS_KEY}
+      TENANT_KEYS_ENCRYPTION_KEY: ${TENANT_KEYS_ENCRYPTION_KEY}
+    expose:
+      - "4000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:4000/health/db"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - triva
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+        labels: "service,environment"
+        env: "NODE_ENV"
+
+  # Optional: use this nginx only if Dokploy is not managing TLS/routing.
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: triva-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../current-captive-portal/dist:/usr/share/nginx/html/captive-portal:ro
+      - certbot-certs:/etc/letsencrypt:ro
+    networks:
+      - triva
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
+volumes:
+  triva_pgdata:
+  certbot-certs:
+
+networks:
+  triva:
+    driver: bridge

@@ -1,0 +1,49 @@
+diff --git a/src/controllers/omada-site.controller.ts b/src/controllers/omada-site.controller.ts
+--- a/src/controllers/omada-site.controller.ts
++++ b/src/controllers/omada-site.controller.ts
+@@ -1,5 +1,6 @@
+ import { Request, Response, NextFunction } from 'express';
++import { encryptRouterCredential, decryptRouterCredential } from '../lib/crypto';
+ import { prisma } from '../config/prisma';
+ import { AuthRequest } from '../types';
+ import { logger } from '../config/logger';
+@@ -27,7 +28,9 @@ async function generateRadiusSecret(): Promise<string> {
+ async function upsertNasClient(
+   siteId: string,
+   controllerIp: string | null | undefined,
+-  radiusSecret: string,
++  radiusSecretEnc: string | null,
+   siteName: string
+ ): Promise<void> {
++  const radiusSecret = radiusSecretEnc
++    ? decryptRouterCredential(radiusSecretEnc)
++    : '';
+   if (!controllerIp || !radiusSecret) return;
+   const nasname = controllerIp;
+   await prisma.$queryRaw`
+@@ -76,7 +79,7 @@ export async function listOmadaSites(...) {
+       select: {
+         ...,
+-        radiusSecret: undefined, // Don't expose secret in list view
++        radiusSecretEnc: undefined, // Don't expose secret in list view
+       },
+     });
+   ...
+@@ -185,7 +188,7 @@ export async function createOmadaSite(...) {
+     const site = await prisma.omadaSite.create({
+       data: {
+         ...,
+-        radiusSecret,
++        radiusSecretEnc: encryptRouterCredential(radiusSecret),
+         ...,
+       },
+     });
+@@ -200,7 +203,7 @@ export async function createOmadaSite(...) {
+-    await upsertNasClient(site.id, site.controllerIp, site.radiusSecret, site.name).catch(...)
++    await upsertNasClient(site.id, site.controllerIp, site.radiusSecretEnc, site.name).catch(...)
+ 
+ export async function updateOmadaSite(...) {
+   ...
+-    await upsertNasClient(updated.id, updated.controllerIp, updated.radiusSecret, updated.name).catch(...)
++    await upsertNasClient(updated.id, updated.controllerIp, updated.radiusSecretEnc, updated.name).catch(...)
+ }

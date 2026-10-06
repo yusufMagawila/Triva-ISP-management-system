@@ -1,0 +1,77 @@
+diff --git a/src/services/gateways/factory.ts b/src/services/gateways/factory.ts
+--- a/src/services/gateways/factory.ts
++++ b/src/services/gateways/factory.ts
+@@ -1,24 +1,40 @@
+ import { PaymentGateway } from './gateway.interface';
++import { decryptTenantKey } from '../lib/crypto';
+ import { MongikeGateway } from './mongike.gateway';
+ import { AnypayGateway } from './anypay.gateway';
+ import { ZenoPayMobileGateway } from './zenopay-mobile.gateway';
+ 
+ interface TenantGatewayConfig {
+   paymentProvider: string;
+-  mongikApiKey?: string | null;
+-  anypayApiKey?: string | null;
+-  zenopayApiKey?: string | null;
++  mongikApiKeyEnc?: string | null;
++  mongikApiKey?: string | null;     // legacy plaintext, remove after migration
++  anypayApiKeyEnc?: string | null;
++  anypayApiKey?: string | null;     // legacy plaintext, remove after migration
++  zenopayApiKeyEnc?: string | null;
++  zenopayApiKey?: string | null;    // legacy plaintext, remove after migration
+ }
+ 
++function resolveKey(enc?: string | null, plain?: string | null): string {
++  if (enc) return decryptTenantKey(enc);
++  if (plain) return plain;
++  throw new Error('Payment key not configured');
++}
++
+ export function createGateway(tenant: TenantGatewayConfig): PaymentGateway {
+   if (tenant.paymentProvider === 'ANYPAY') {
+-    if (!tenant.anypayApiKey) throw new Error('AnyPay API key is not configured for this tenant.');
+-    return new AnypayGateway(tenant.anypayApiKey);
++    const key = resolveKey(tenant.anypayApiKeyEnc, tenant.anypayApiKey);
++    return new AnypayGateway(key);
+   }
+ 
+   if (tenant.paymentProvider === 'ZENOPAY_MOBILE') {
+-    if (!tenant.zenopayApiKey) throw new Error('ZenoPayMobile API key is not configured for this tenant.');
+-    return new ZenoPayMobileGateway(tenant.zenopayApiKey);
++    const key = resolveKey(tenant.zenopayApiKeyEnc, tenant.zenopayApiKey);
++    return new ZenoPayMobileGateway(key);
+   }
+ 
+-  return new MongikeGateway(tenant.mongikApiKey ?? undefined);
++  const key = tenant.mongikApiKeyEnc
++    ? decryptTenantKey(tenant.mongikApiKeyEnc)
++    : (tenant.mongikApiKey ?? undefined);
++  return new MongikeGateway(key);
+ }
+
+diff --git a/src/controllers/auth.controller.ts b/src/controllers/auth.controller.ts
+--- a/src/controllers/auth.controller.ts
++++ b/src/controllers/auth.controller.ts
+@@ -1,5 +1,6 @@
+ import { Response, NextFunction } from 'express';
+ import bcrypt from 'bcryptjs';
++import { encryptTenantKey } from '../lib/crypto';
+ import jwt from 'jsonwebtoken';
+ import { prisma } from '../config/prisma';
+ import { env } from '../config/env';
+@@ -327,7 +328,11 @@ export async function updateSettings(
+     const { mongikApiKey, logoUrl } = req.body as {
+       mongikApiKey?: string;
+       logoUrl?: string;
+     };
+ 
+     const data: Record<string, string | undefined> = {};
+-    if (mongikApiKey !== undefined) data.mongikApiKey = mongikApiKey || undefined;
++    if (mongikApiKey !== undefined) {
++      data.mongikApiKeyEnc = mongikApiKey ? encryptTenantKey(mongikApiKey) : undefined;
++      // Optionally clear the legacy plaintext field
++      data.mongikApiKey = mongikApiKey ? undefined : null;
++    }
+     if (logoUrl !== undefined) data.logoUrl = logoUrl || undefined;
+ 
+     const tenant = await prisma.tenant.update({

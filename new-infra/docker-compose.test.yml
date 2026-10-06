@@ -1,0 +1,51 @@
+# Triva WiFi — Isolated test environment
+# Spins up a PostgreSQL test database and runs backend tests.
+#
+# Usage:
+#   cp backend/source/.env.test backend/source/.env
+#   docker compose -f docker-compose.test.yml up --abort-on-container-exit
+
+services:
+  postgres_test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: triva_user
+      POSTGRES_PASSWORD: test-password
+      POSTGRES_DB: triva_db_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U triva_user -d triva_db_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks:
+      - triva_test
+
+  backend_test:
+    build:
+      context: backend/source
+      dockerfile: ../../backend/Dockerfile
+      target: builder
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgres://triva_user:test-password@postgres_test:5432/triva_db_test
+      JWT_SECRET: 0000000000000000000000000000000000000000000000000000000000000000
+      JWT_EXPIRES_IN: 7d
+      FRONTEND_URL: http://localhost:5173
+      PORTAL_URL: http://localhost:5173
+      APP_URL: http://localhost:4000
+      MONGIKE_API_URL: https://mongike.com
+      MONGIKE_API_KEY: test-mongike-key
+      ROUTER_CREDENTIALS_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      TENANT_KEYS_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    depends_on:
+      postgres_test:
+        condition: service_healthy
+    command: ["npm", "test"]
+    networks:
+      - triva_test
+
+networks:
+  triva_test:
+    driver: bridge

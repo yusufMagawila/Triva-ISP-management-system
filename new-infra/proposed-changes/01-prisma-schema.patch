@@ -1,0 +1,42 @@
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -95,10 +95,14 @@ model Tenant {
+   portalNoticeColor String?   @default("#2563eb")
+   mongikApiKey    String?      // Tenant's own Mongike API key — payments go to their account
++  mongikApiKeyEnc String?      // Encrypted tenant payment key
+   mongikWebhookToken String?   // Deprecated: no longer used by the active Mongike integration
+   paymentProvider PaymentProvider @default(MONGIKE)
+   anypayApiKey    String?      // AnyPay Tanzania API key
++  anypayApiKeyEnc String?      // Encrypted tenant payment key
+   zenopayApiKey   String?      // ZenoPayMobile Tanzania API key
++  zenopayApiKeyEnc String?     // Encrypted tenant payment key
+   status          TenantStatus @default(ACTIVE)
+   subscription Subscription?
+   routers      Router[]
+@@ -138,7 +142,9 @@ model Router {
+   ipAddress    String
+   apiPort      Int          @default(8728)
+   username     String
+   passwordHash String
++  passwordEnc  String?      // Encrypted router password; passwordHash to be removed after migration
+   provisioningKey String?   @unique
+   serialNumber   String?    @unique
+   hardwareMac    String?    @unique
+@@ -158,7 +164,9 @@ model TpLinkRouter {
+   ipAddress       String
+   sshPort         Int          @default(22)
+   username        String
+   passwordHash    String
++  passwordEnc     String?      // Encrypted router password; passwordHash to be removed after migration
+   provisioningKey String?      @unique
+   serialNumber    String?      @unique
+   hardwareMac     String?      @unique
+@@ -188,7 +196,9 @@ model OmadaSite {
+   controllerUrl   String?      // Omada Controller URL (e.g. https://192.168.1.100:443)
+   controllerIp    String?      // Controller IP for RADIUS client config
+   radiusSecret    String       // Shared secret for FreeRADIUS (generated per-site)
++  radiusSecretEnc String?      // Encrypted shared secret; radiusSecret to be removed after migration
+   ssidName        String?      // WiFi SSID name (for reference)
+   hotspotName     String       @default("omada1")
+   location        String?
