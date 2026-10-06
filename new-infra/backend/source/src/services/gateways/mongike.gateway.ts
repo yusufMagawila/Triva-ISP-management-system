@@ -31,8 +31,13 @@ export class MongikeGateway implements PaymentGateway {
       );
       logger.info('Mongike payment initiated', { orderId: req.orderId, status: 'success' });
       return response.data;
-    } catch (err) {
-      logger.error('Mongike payment initiation failed', { orderId: req.orderId, err });
+    } catch (err: any) {
+      // Never log the raw axios error — err.config.headers carries x-api-key.
+      logger.error('Mongike payment initiation failed', {
+        orderId: req.orderId,
+        status: err?.response?.status,
+        message: err?.message,
+      });
       throw new Error('Payment initiation failed. Please try again.');
     }
   }
@@ -49,7 +54,11 @@ export class MongikeGateway implements PaymentGateway {
         logger.warn('Mongike order not found (404)', { orderId });
         return { status: 'NOT_FOUND' };
       }
-      logger.error('Mongike transaction status query failed', { orderId, err });
+      logger.error('Mongike transaction status query failed', {
+        orderId,
+        status: err?.response?.status,
+        message: err?.message,
+      });
       return null;
     }
   }

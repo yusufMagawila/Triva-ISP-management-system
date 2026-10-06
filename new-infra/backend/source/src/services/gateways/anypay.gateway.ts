@@ -87,8 +87,13 @@ export class AnypayGateway implements PaymentGateway {
       });
       logger.info('AnyPay payment initiated', { orderId: req.orderId, status: 'success' });
       return { order_id: response.data?.order_id ?? req.orderId };
-    } catch (err) {
-      logger.error('AnyPay payment initiation failed', { orderId: req.orderId, err });
+    } catch (err: any) {
+      // Never log the raw axios error — err.config.headers carries API-Key/Authorization.
+      logger.error('AnyPay payment initiation failed', {
+        orderId: req.orderId,
+        status: err?.response?.status,
+        message: err?.message,
+      });
       throw new Error('Payment initiation failed. Please try again.');
     }
   }
@@ -110,7 +115,11 @@ export class AnypayGateway implements PaymentGateway {
         logger.warn('AnyPay order not found', { orderId });
         return { status: 'NOT_FOUND' };
       }
-      logger.error('AnyPay transaction status query failed', { orderId, err });
+      logger.error('AnyPay transaction status query failed', {
+        orderId,
+        status: err?.response?.status,
+        message: err?.message,
+      });
       return null;
     }
   }
