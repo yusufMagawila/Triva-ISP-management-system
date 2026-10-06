@@ -2,27 +2,20 @@
 set -e
 
 # Apply database migrations before starting the application.
-# For isolated test environments, MIGRATION_RESET=1 drops the public schema
-# (not the whole database, so no superuser is required) and reapplies migrations.
+# For isolated test environments, MIGRATION_RESET=1 uses prisma db push to create
+# the schema from scratch (safe for throwaway validation only).
+# For production, MIGRATION_RESET must be unset/0 and prisma migrate deploy is used.
 if [ "$MIGRATION_RESET" = "1" ]; then
-  echo "Dropping public schema for isolated test reset (MIGRATION_RESET=1)..."
-  set +e
-  npx prisma db execute --file /dev/stdin <<'SQL'
-DROP SCHEMA IF EXISTS public CASCADE;
-CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO CURRENT_USER;
-SQL
-  DROP_SCHEMA_STATUS=$?
-  set -e
-  if [ "$DROP_SCHEMA_STATUS" -ne 0 ]; then
-    echo "Failed to drop public schema; refusing to start." >&2
+  echo "Using prisma db push for isolated test reset (MIGRATION_RESET=1)..."
+  npx prisma db push --accept-data-loss --skip-generate || {
+    echo "Database push failed; refusing to start." >&2
     exit 1
-  fi
+  }
+else
+  npx prisma migrate deploy || {
+    echo "Database migration failed; refusing to start." >&2
+    exit 1
+  }
 fi
-
-npx prisma migrate deploy || {
-  echo "Database migration failed; refusing to start." >&2
-  exit 1
-}
 
 exec "$@"
