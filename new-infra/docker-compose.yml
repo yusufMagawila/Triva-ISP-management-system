@@ -23,7 +23,6 @@ services:
       POSTGRES_DB: ${DB_NAME:-triva_db}
     volumes:
       - triva_pgdata:/var/lib/postgresql/data
-      - ./backend/prisma/migrations:/docker-entrypoint-initdb.d/migrations:ro
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-triva_user} -d ${DB_NAME:-triva_db}"]
