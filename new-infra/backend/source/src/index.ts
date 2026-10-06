@@ -70,9 +70,8 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      // Omada custom portal pages are served from controller IPs and call
-      // stateless public endpoints; they do not rely on CORS credentials.
-      callback(new Error('CORS origin not allowed'));
+      // Reject gracefully so Express error handlers don't return 500.
+      callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
