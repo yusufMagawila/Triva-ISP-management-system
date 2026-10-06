@@ -94,3 +94,15 @@ export function encryptTenantKey(plaintext: string): string {
 export function decryptTenantKey(ciphertext: string): string {
   return decryptValue(ciphertext, loadKey('TENANT_KEYS_ENCRYPTION_KEY'));
 }
+
+/**
+ * Generate a high-entropy webhook secret suitable for use as a URL path token.
+ * 32 bytes encoded URL-safe base64 => ~43 chars.
+ */
+export function generateWebhookSecret(): string {
+  return randomBytes(32)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}

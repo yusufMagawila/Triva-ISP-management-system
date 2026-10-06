@@ -97,7 +97,8 @@ model Tenant {
   portalNoticeColor String?   @default("#2563eb")
   mongikApiKey    String?      // Tenant's own Mongike API key — payments go to their account (legacy plaintext)
   mongikApiKeyEnc String?      // Encrypted tenant payment key
-  mongikWebhookToken String?   // Deprecated: no longer used by the active Mongike integration
+  mongikWebhookToken String?   // Deprecated: legacy field retained for backward compatibility
+  webhookSecret   String?      @unique // Per-tenant webhook token used to authenticate provider callbacks
   paymentProvider PaymentProvider @default(MONGIKE)
   anypayApiKey    String?      // AnyPay Tanzania API key (legacy plaintext)
   anypayApiKeyEnc String?      // Encrypted tenant payment key

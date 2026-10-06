@@ -122,7 +122,8 @@ export async function initiatePortalPayment(
     // Initiate payment using the tenant's configured gateway
     const isAnypay = tenant.paymentProvider === 'ANYPAY';
     const isZenopay = tenant.paymentProvider === 'ZENOPAY_MOBILE';
-    const webhookUrl = `${env.APP_URL}/api/payments/webhook/${isZenopay ? 'zenopaymobile' : isAnypay ? 'anypay' : 'mongike'}`;
+    const providerPath = isZenopay ? 'zenopaymobile' : isAnypay ? 'anypay' : 'mongike';
+    const webhookUrl = `${env.APP_URL}/api/payments/webhook/${providerPath}/${tenant.webhookSecret}`;
     const gateway = createGateway(tenant);
     const mongikePushResponse = await gateway.initiatePayment({
       orderId: payment.id,
@@ -183,8 +184,10 @@ export async function handleMongikeWebhook(
 
     const { order_id, reference } = body;
 
-    // Log raw webhook body for debugging (redact nothing — payment data only)
-    logger.info('Mongike webhook received', { body });
+    logger.info('Mongike webhook received', {
+      orderId: order_id,
+      tenantId: (req as any).webhookTenantId,
+    });
 
     if (!order_id) {
       res.status(400).json({ success: false, error: 'Missing order_id' });
@@ -232,8 +235,10 @@ export async function handleZenoPayMobileWebhook(
 
     const { order_id } = body;
 
-    // Log raw webhook body for debugging
-    logger.info('ZenoPayMobile webhook received', { body });
+    logger.info('ZenoPayMobile webhook received', {
+      orderId: order_id,
+      tenantId: (req as any).webhookTenantId,
+    });
 
     if (!order_id) {
       res.status(400).json({ success: false, error: 'Missing order_id' });

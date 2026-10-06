@@ -7,11 +7,12 @@ import {
 } from '../controllers/subscription.controller';
 import { authenticate, requireRole } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { validateActivationWebhookToken } from '../middleware/webhook-auth';
 
 const router = Router();
 
-// Public webhook (no auth)
-router.post('/webhook', handleSubscriptionWebhook as any);
+// Public webhook (authenticated by platform activation webhook secret)
+router.post('/webhook/:token', validateActivationWebhookToken, handleSubscriptionWebhook as any);
 
 // Authenticated routes
 router.use(authenticate, requireRole('MERCHANT'));

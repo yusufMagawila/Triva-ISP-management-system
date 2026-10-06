@@ -21,7 +21,10 @@ export async function handleAnypayWebhook(
       reference?: string;
     };
 
-    logger.info('AnyPay webhook received', { body });
+    logger.info('AnyPay webhook received', {
+      orderId: body.order_id,
+      tenantId: (req as any).webhookTenantId,
+    });
 
     const order_id = body.order_id;
     if (!order_id) {

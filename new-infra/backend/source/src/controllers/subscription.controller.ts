@@ -69,7 +69,7 @@ export async function initiateSubscriptionPayment(
     // Subscription payments use the PLATFORM key (the platform collects subscription fees from merchants)
     // so we use the platform key here, not the tenant's key
     const orderId = `sub_${tenantId}_${Date.now()}`;
-    const webhookUrl = `${env.APP_URL}/api/subscription/webhook`;
+    const webhookUrl = `${env.APP_URL}/api/subscription/webhook/${env.ACTIVATION_WEBHOOK_SECRET}`;
 
     await mongikeService.initiatePayment({
       orderId,

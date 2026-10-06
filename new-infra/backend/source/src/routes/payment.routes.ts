@@ -10,6 +10,7 @@ import {
 import { handleAnypayWebhook } from '../controllers/anypay-webhook.controller';
 import { authenticate, requireTenant, validateTenantAccess } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { validateWebhookToken } from '../middleware/webhook-auth';
 
 const router = Router();
 
@@ -27,10 +28,10 @@ router.post(
   initiatePortalPayment
 );
 
-// Payment gateway webhooks (public)
-router.post('/webhook/mongike', handleMongikeWebhook);
-router.post('/webhook/anypay', handleAnypayWebhook);
-router.post('/webhook/zenopaymobile', handleZenoPayMobileWebhook);
+// Payment gateway webhooks (public but authenticated by tenant webhook token)
+router.post('/webhook/mongike/:token', validateWebhookToken, handleMongikeWebhook);
+router.post('/webhook/anypay/:token', validateWebhookToken, handleAnypayWebhook);
+router.post('/webhook/zenopaymobile/:token', validateWebhookToken, handleZenoPayMobileWebhook);
 
 // Dashboard routes (authenticated)
 router.get('/earnings', authenticate, requireTenant, validateTenantAccess, getEarningsSummary);

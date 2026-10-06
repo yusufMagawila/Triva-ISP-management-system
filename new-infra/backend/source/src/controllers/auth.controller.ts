@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
-import { encryptTenantKey } from '../lib/crypto';
+import { encryptTenantKey, generateWebhookSecret } from '../lib/crypto';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/prisma';
 import { env } from '../config/env';
@@ -50,6 +50,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
         email: email.toLowerCase().trim(),
         phone,
         status: 'PENDING',
+        webhookSecret: generateWebhookSecret(),
         users: {
           create: {
             email: email.toLowerCase().trim(),
@@ -133,7 +134,7 @@ export async function initiateActivationPayment(
     }
 
     const orderId = `act_${tenantId}_${Date.now()}`;
-    const webhookUrl = `${env.APP_URL}/api/auth/activation-webhook`;
+    const webhookUrl = `${env.APP_URL}/api/auth/activation-webhook/${env.ACTIVATION_WEBHOOK_SECRET}`;
 
     // Platform key — activation fee comes to the platform
     const svc = new MongikeService();

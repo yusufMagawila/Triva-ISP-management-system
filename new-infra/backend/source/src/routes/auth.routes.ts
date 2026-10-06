@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import { login, me, changePassword, register, updateSettings, getSettings, initiateActivationPayment, handleActivationWebhook } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth';
 import { validate } from '../middleware/validate';
+import { validateActivationWebhookToken } from '../middleware/webhook-auth';
 
 const router = Router();
 
@@ -46,6 +47,6 @@ router.patch('/settings', authenticate, updateSettings);
 
 // Account activation — pay 35,000 TZS one-time fee
 router.post('/activate-payment', authenticate, [body('phone').notEmpty()], validate, initiateActivationPayment);
-router.post('/activation-webhook', handleActivationWebhook); // public — called by Mongike
+router.post('/activation-webhook/:token', validateActivationWebhookToken, handleActivationWebhook); // public — called by Mongike
 
 export default router;

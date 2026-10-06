@@ -17,6 +17,8 @@ const envSchema = z.object({
   MONGIKE_API_URL: z.string().url().default('https://mongike.com'),
   // Backend public URL (used for webhook registration)
   APP_URL: z.string().url(),
+  // Platform webhook shared secret (activation/subscription callbacks)
+  ACTIVATION_WEBHOOK_SECRET: z.string().min(32, 'ACTIVATION_WEBHOOK_SECRET must be at least 32 characters'),
 });
 
 const parsed = envSchema.safeParse(process.env);
