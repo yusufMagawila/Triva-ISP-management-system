@@ -182,15 +182,8 @@ export async function handleMongikeWebhook(
   next: NextFunction
 ): Promise<void> {
   try {
-    const body = req.body as {
-      order_id: string;
-      event?: string;
-      status?: string;
-      reference?: string;
-      transaction_id?: string;
-    };
-
-    const { order_id, reference } = body;
+    const body = req.body as { order_id: string };
+    const { order_id } = body;
 
     logger.info('Mongike webhook received', {
       orderId: order_id,
@@ -202,21 +195,10 @@ export async function handleMongikeWebhook(
       return;
     }
 
-    // Normalize status: Mongike sends "COMPLETED" but internally we use "SUCCESS"
-    let normalizedStatus: 'SUCCESS' | 'FAILED' | 'CANCELLED' | undefined;
-    const rawStatus = body.status?.toUpperCase();
-    if (rawStatus === 'SUCCESS' || rawStatus === 'COMPLETED' || body.event === 'payment_completed') {
-      normalizedStatus = 'SUCCESS';
-    } else if (rawStatus === 'FAILED') {
-      normalizedStatus = 'FAILED';
-    } else if (rawStatus === 'CANCELLED') {
-      normalizedStatus = 'CANCELLED';
-    }
-
-    // Mongike uses "reference" as the transaction ID field
-    const transaction_id = body.transaction_id ?? reference;
-
-    await reconcileMongikeOrder(order_id, { status: normalizedStatus, transaction_id });
+    // The callback is only a trigger: Mongike has an authoritative order-status
+    // endpoint, so the claimed status in the body is never trusted —
+    // reconcileMongikeOrder queries the provider API itself before completing.
+    await reconcileMongikeOrder(order_id);
 
     res.status(200).json({ received: true });
   } catch (err) {

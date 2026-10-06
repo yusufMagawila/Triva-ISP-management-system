@@ -116,11 +116,7 @@ export async function handleSubscriptionWebhook(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { order_id, status, transaction_id } = req.body as {
-      order_id: string;
-      status?: 'SUCCESS' | 'FAILED' | 'CANCELLED';
-      transaction_id?: string;
-    };
+    const { order_id } = req.body as { order_id: string };
 
     if (!order_id) {
       res.status(400).json({ success: false, error: 'Missing order_id' });
@@ -133,7 +129,9 @@ export async function handleSubscriptionWebhook(
       return;
     }
 
-    await reconcileMongikeOrder(order_id, { status, transaction_id });
+    // Trigger only — reconcileMongikeOrder verifies status with Mongike's API
+    // before renewing the subscription; the callback's claimed status is untrusted.
+    await reconcileMongikeOrder(order_id);
 
     res.status(200).json({ received: true });
   } catch (err) {

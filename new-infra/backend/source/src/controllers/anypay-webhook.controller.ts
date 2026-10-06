@@ -32,20 +32,10 @@ export async function handleAnypayWebhook(
       return;
     }
 
-    // Normalize: AnyPay uses COMPLETED/FAILED/PENDING
-    const rawStatus = (body.status ?? body.selcom_payment_status ?? '').toUpperCase();
-    let normalizedStatus: 'SUCCESS' | 'FAILED' | 'CANCELLED' | undefined;
-    if (rawStatus === 'COMPLETED' || rawStatus === 'SUCCESS') {
-      normalizedStatus = 'SUCCESS';
-    } else if (rawStatus === 'FAILED') {
-      normalizedStatus = 'FAILED';
-    } else if (rawStatus === 'CANCELLED') {
-      normalizedStatus = 'CANCELLED';
-    }
-
-    const transaction_id = body.transid ?? body.payment_reference ?? body.reference;
-
-    await reconcileMongikeOrder(order_id, { status: normalizedStatus, transaction_id });
+    // The callback is only a trigger: AnyPay provides an authoritative
+    // order-status endpoint, so the claimed status in the body is never
+    // trusted — reconcileMongikeOrder queries check-order-status itself.
+    await reconcileMongikeOrder(order_id);
 
     res.status(200).json({ received: true });
   } catch (err) {
