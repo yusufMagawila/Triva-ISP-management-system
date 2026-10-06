@@ -63,6 +63,8 @@ services:
       TENANT_KEYS_ENCRYPTION_KEY: ${TENANT_KEYS_ENCRYPTION_KEY}
     expose:
       - "4000"
+    ports:
+      - "4000:4000"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:4000/health/db"]
       interval: 15s
