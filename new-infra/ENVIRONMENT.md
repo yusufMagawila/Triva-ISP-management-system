@@ -35,9 +35,16 @@ This document separates public configuration from secrets for the new Dokploy/Co
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
+## Test-only variable
+
+| Variable | Purpose | Required |
+|---|---|---|
+| `MIGRATION_RESET` | Set to `1` in isolated test environments to reset the database schema via `prisma db push`. Must be **unset** for production cutover so `prisma migrate deploy` is used. | no |
+
 ## Important rules
 
 - Never commit `.env` or any secret to Git.
 - Never log secrets or webhook payloads.
 - Use different keys for `ROUTER_CREDENTIALS_KEY` and `TENANT_KEYS_ENCRYPTION_KEY`.
 - Rotate keys only through a controlled re-encryption migration.
+- Remove `MIGRATION_RESET` and any test secrets before production deployment.
