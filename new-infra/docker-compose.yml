@@ -110,8 +110,35 @@ services:
   #       max-size: 10m
   #       max-file: "5"
 
+  # Optional backup service — run manually or via cron
+  backup:
+    image: postgres:16-alpine
+    container_name: triva-backup
+    restart: "no"
+    profiles:
+      - backup
+    environment:
+      DB_HOST: postgres
+      DB_USER: ${DB_USER:-triva_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-triva_db}
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: ${RETENTION_DAYS:-14}
+      BACKUP_REMOTE: ${BACKUP_REMOTE:-}
+      GPG_RECIPIENT: ${GPG_RECIPIENT:-}
+    volumes:
+      - triva_backups:/backups
+      - ./scripts:/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - triva
+    entrypoint: ["/bin/sh", "/scripts/backup.sh"]
+
 volumes:
   triva_pgdata:
+  triva_backups:
   # certbot-certs:
 
 networks:

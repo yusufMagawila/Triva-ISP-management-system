@@ -33,9 +33,9 @@ SUMMARY_FILE="${BACKUP_DIR}/triva-db-${DATE}.summary"
 
 export PGPASSWORD="$DB_PASSWORD"
 
-# Run a single-transaction dump for consistency without long locks.
+# pg_dump already runs inside a consistent snapshot transaction; it does not
+# accept --single-transaction (that flag belongs to pg_restore).
 pg_dump -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" \
-  --single-transaction \
   --no-owner \
   --no-privileges \
   --no-comments \

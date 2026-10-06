@@ -101,13 +101,13 @@ app.use(
   })
 );
 
-// Stricter rate limiter for payment endpoints — skip the Mongike webhook since
-// it is called by Mongike servers and must never be blocked.
+// Stricter rate limiter for payment endpoints. Webhooks are intentionally
+// included: the per-tenant token in the URL must be protected from brute-force,
+// and legitimate providers send far fewer than 30 callbacks/min per source IP.
 const paymentLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10,
+  max: 30,
   message: { success: false, error: 'Too many payment requests' },
-  skip: (req) => req.path === '/webhook/mongike' || req.path === '/webhook/anypay',
 });
 
 // ─── Routes ───────────────────────────────────────────────────────────────────

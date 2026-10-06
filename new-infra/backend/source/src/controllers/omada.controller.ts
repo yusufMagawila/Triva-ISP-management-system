@@ -247,7 +247,16 @@ export async function initiateOmadaPayment(
     const { createGateway } = await import('../services/gateways/factory');
     const isAnypay = tenant.paymentProvider === 'ANYPAY';
     const isZenopay = tenant.paymentProvider === 'ZENOPAY_MOBILE';
-    const webhookUrl = `${env.APP_URL}/api/payments/webhook/${isZenopay ? 'zenopaymobile' : isAnypay ? 'anypay' : 'mongike'}`;
+    const providerPath = isZenopay ? 'zenopaymobile' : isAnypay ? 'anypay' : 'mongike';
+
+    // Lazy backfill: tenants created before webhook secrets existed get one here.
+    let webhookSecret = tenant.webhookSecret;
+    if (!webhookSecret) {
+      const { generateWebhookSecret } = await import('../lib/crypto');
+      webhookSecret = generateWebhookSecret();
+      await prisma.tenant.update({ where: { id: tenant.id }, data: { webhookSecret } });
+    }
+    const webhookUrl = `${env.APP_URL}/api/payments/webhook/${providerPath}/${webhookSecret}`;
     const gateway = createGateway(tenant);
     const pushResponse = await gateway.initiatePayment({
       orderId: payment.id,

@@ -6,6 +6,7 @@ import { env } from '../config/env';
 import { AuthRequest } from '../types';
 import { logger } from '../config/logger';
 import { reconcileMongikeOrder } from '../services/mongike-reconciliation.service';
+import { generateWebhookSecret } from '../lib/crypto';
 
 /**
  * Portal-facing: initiate payment for internet access.
@@ -123,7 +124,14 @@ export async function initiatePortalPayment(
     const isAnypay = tenant.paymentProvider === 'ANYPAY';
     const isZenopay = tenant.paymentProvider === 'ZENOPAY_MOBILE';
     const providerPath = isZenopay ? 'zenopaymobile' : isAnypay ? 'anypay' : 'mongike';
-    const webhookUrl = `${env.APP_URL}/api/payments/webhook/${providerPath}/${tenant.webhookSecret}`;
+
+    // Lazy backfill: tenants created before webhook secrets existed get one here.
+    let webhookSecret = tenant.webhookSecret;
+    if (!webhookSecret) {
+      webhookSecret = generateWebhookSecret();
+      await prisma.tenant.update({ where: { id: tenant.id }, data: { webhookSecret } });
+    }
+    const webhookUrl = `${env.APP_URL}/api/payments/webhook/${providerPath}/${webhookSecret}`;
     const gateway = createGateway(tenant);
     const mongikePushResponse = await gateway.initiatePayment({
       orderId: payment.id,
