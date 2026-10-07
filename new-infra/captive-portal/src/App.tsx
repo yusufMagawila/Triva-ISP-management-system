@@ -359,7 +359,7 @@ export default function App() {
         {screen === 'success' && (
           <SuccessScreen
             plan={successSession?.plan ?? selected}
-            amount={successSession ? undefined : selected?.price}
+            amount={successSession || !selected ? undefined : Number(selected.price)}
             expiresAt={successSession?.expiresAt ?? info?.activeSession?.expiresAt ?? null}
             vendor={params.vendor ?? 'generic'}
             connecting={connecting}
