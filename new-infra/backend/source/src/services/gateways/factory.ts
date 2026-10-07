@@ -1,6 +1,13 @@
 import { AnypayGateway } from './anypay.gateway';
 import { decryptTenantKey } from '../../lib/crypto';
 
+export class GatewayNotConfiguredError extends Error {
+  constructor() {
+    super('AnyPay is not configured for this tenant');
+    this.name = 'GatewayNotConfiguredError';
+  }
+}
+
 interface TenantGatewayConfig {
   anypayApiKeyEnc?: string | null;
   anypayApiKey?: string | null;    // legacy plaintext, remove after migration
@@ -10,7 +17,7 @@ interface TenantGatewayConfig {
 export function resolveTenantAnypayBundle(tenant: TenantGatewayConfig): string {
   if (tenant.anypayApiKeyEnc) return decryptTenantKey(tenant.anypayApiKeyEnc);
   if (tenant.anypayApiKey) return tenant.anypayApiKey;
-  throw new Error('AnyPay is not configured for this tenant');
+  throw new GatewayNotConfiguredError();
 }
 
 /**

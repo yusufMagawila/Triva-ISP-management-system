@@ -1,7 +1,7 @@
 import { prisma } from '../config/prisma';
 import { PLANS } from '../config/plans';
 import { logger } from '../config/logger';
-import { createGateway } from './gateways/factory';
+import { createGateway, GatewayNotConfiguredError } from './gateways/factory';
 import { getPlatformGateway } from './platform-settings.service';
 import { sessionService } from './session.service';
 import { radiusService } from './radius.service';
@@ -272,7 +272,15 @@ export async function reconcilePaymentOrder(orderId: string): Promise<ReconcileR
       logger.warn('Skipping reconciliation — AnyPay disabled for tenant', { orderId });
       return 'pending';
     }
-    gateway = createGateway((payment as any).tenant);
+    try {
+      gateway = createGateway((payment as any).tenant);
+    } catch (err) {
+      if (err instanceof GatewayNotConfiguredError) {
+        logger.warn('Skipping reconciliation — AnyPay not configured for tenant', { orderId });
+        return 'pending';
+      }
+      throw err;
+    }
   }
 
   if (!gateway) {
