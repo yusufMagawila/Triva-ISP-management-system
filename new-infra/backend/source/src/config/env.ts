@@ -12,9 +12,6 @@ const envSchema = z.object({
   // Cors
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   PORTAL_URL: z.string().default('http://localhost:5174'),
-  // Mongike payment gateway
-  MONGIKE_API_KEY: z.string().min(1, 'MONGIKE_API_KEY is required'),
-  MONGIKE_API_URL: z.string().url().default('https://mongike.com'),
   // Backend public URL (used for webhook registration)
   APP_URL: z.string().url(),
   // Platform webhook shared secret (activation/subscription callbacks)

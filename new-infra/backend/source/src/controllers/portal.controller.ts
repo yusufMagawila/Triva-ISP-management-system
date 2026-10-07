@@ -116,7 +116,7 @@ function buildRouterHotspotSyncScript(
     hotspotUsername: string;
   }>
 ): string {
-  const apiUrl = process.env.APP_URL ?? 'https://triva.pandabus.live';
+  const apiUrl = env.APP_URL;
   const lines = [
     '# TRIVA HOTSPOT LIVE SYNC',
     `# Router: ${router.name}`,
@@ -210,6 +210,9 @@ export async function getPortalInfo(
           name: true,
           logoUrl: true,
           status: true,
+          portalNoticeName: true,
+          portalNoticeMessage: true,
+          portalNoticeColor: true,
           subscription: {
             select: { status: true, expiresAt: true },
           },
@@ -264,7 +267,14 @@ export async function getPortalInfo(
       success: true,
       data: {
         router: { id: router.id, name: router.name },
-        tenant: { id: router.tenant.id, name: router.tenant.name, logoUrl: router.tenant.logoUrl },
+        tenant: {
+          id: router.tenant.id,
+          name: router.tenant.name,
+          logoUrl: router.tenant.logoUrl,
+          portalNoticeName: router.tenant.portalNoticeName,
+          portalNoticeMessage: router.tenant.portalNoticeMessage,
+          portalNoticeColor: router.tenant.portalNoticeColor,
+        },
         plans,
         activeSession: activeSession
           ? {
@@ -273,6 +283,164 @@ export async function getPortalInfo(
               plan: activeSession.plan,
             }
           : null,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Public portal endpoint: redeem a prepaid voucher for MikroTik/TP-Link portals.
+ * Creates the session, records a zero-amount VOUCHER payment so downstream
+ * activation/sync treats it like a confirmed payment, and activates access.
+ */
+export async function redeemPortalVoucher(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { routerId, macAddress, ipAddress, code } = req.body as {
+      routerId: string;
+      macAddress: string;
+      ipAddress?: string;
+      code: string;
+    };
+
+    if (!routerId || !macAddress || !code) {
+      res.status(400).json({ success: false, error: 'Missing required fields' });
+      return;
+    }
+
+    const router =
+      (await prisma.router.findUnique({
+        where: { id: routerId },
+        select: { id: true, tenantId: true },
+      })) ??
+      (await prisma.tpLinkRouter.findUnique({
+        where: { id: routerId },
+        select: { id: true, tenantId: true },
+      }));
+
+    if (!router) {
+      res.status(404).json({ success: false, error: 'Hotspot not available' });
+      return;
+    }
+
+    const tenant = await prisma.tenant.findFirst({
+      where: { id: router.tenantId },
+      select: { id: true, status: true, subscription: { select: { status: true, expiresAt: true } } },
+    });
+
+    if (!tenant || tenant.status !== 'ACTIVE') {
+      res.status(403).json({ success: false, error: 'Service unavailable' });
+      return;
+    }
+
+    if (tenant.subscription?.status === 'EXPIRED' ||
+        (tenant.subscription && new Date() > tenant.subscription.expiresAt)) {
+      res.status(402).json({ success: false, error: 'This hotspot is currently unavailable.' });
+      return;
+    }
+
+    const normalizedCode = code.trim().toUpperCase();
+
+    const existing = await sessionService.getActiveSessionByMac(macAddress, tenant.id);
+    if (existing) {
+      res.json({
+        success: true,
+        data: { sessionId: existing.id, alreadyActive: true, expiresAt: existing.expiresAt },
+      });
+      return;
+    }
+
+    const voucher = await prisma.voucher.findFirst({
+      where: { code: normalizedCode, tenantId: tenant.id },
+      include: { plan: true },
+    });
+
+    if (!voucher || voucher.status === 'CANCELLED') {
+      res.status(404).json({ success: false, error: 'Invalid voucher code' });
+      return;
+    }
+
+    if (voucher.status === 'REDEEMED') {
+      res.status(409).json({ success: false, error: 'This voucher has already been used' });
+      return;
+    }
+
+    if (voucher.status !== 'ACTIVE' || (voucher.expiresAt && new Date() > voucher.expiresAt)) {
+      res.status(410).json({ success: false, error: 'This voucher has expired' });
+      return;
+    }
+
+    // Create the session (PENDING until the router confirms the hotspot user)
+    let session;
+    try {
+      ({ session } = await sessionService.createPendingSession(
+        tenant.id,
+        routerId,
+        voucher.planId,
+        macAddress,
+        ipAddress
+      ));
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      if (e.code === 'SESSION_LIMIT_REACHED') {
+        res.status(429).json({ success: false, error: 'This hotspot is currently unavailable.' });
+        return;
+      }
+      throw err;
+    }
+
+    // Record a zero-amount VOUCHER payment so activation and router pull-sync
+    // treat the session exactly like a confirmed payment, without inflating
+    // revenue statistics.
+    await prisma.payment.create({
+      data: {
+        tenantId: tenant.id,
+        sessionId: session.id,
+        planId: voucher.planId,
+        amount: 0,
+        currency: 'TZS',
+        status: 'COMPLETED',
+        provider: 'VOUCHER',
+        metadata: { voucherId: voucher.id, voucherCode: normalizedCode },
+      },
+    });
+
+    // Mark voucher redeemed (guarded by status so concurrent use can't double-redeem)
+    const redeemed = await prisma.voucher.updateMany({
+      where: { id: voucher.id, status: 'ACTIVE' },
+      data: {
+        status: 'REDEEMED',
+        redeemedAt: new Date(),
+        redeemedMac: macAddress,
+        sessionId: session.id,
+      },
+    });
+
+    if (redeemed.count === 0) {
+      res.status(409).json({ success: false, error: 'This voucher has already been used' });
+      return;
+    }
+
+    await sessionService.activateSession(session.id);
+
+    const updated = await prisma.session.findUnique({
+      where: { id: session.id },
+      select: { id: true, status: true, expiresAt: true },
+    });
+
+    logger.info('Voucher redeemed via portal', { sessionId: session.id, voucherId: voucher.id });
+
+    res.json({
+      success: true,
+      data: {
+        sessionId: session.id,
+        expiresAt: updated?.expiresAt ?? null,
+        plan: { name: voucher.plan.name, durationMins: voucher.plan.durationMins },
       },
     });
   } catch (err) {

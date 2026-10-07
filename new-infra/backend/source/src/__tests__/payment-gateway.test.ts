@@ -1,7 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { MongikeGateway } from '../services/gateways/mongike.gateway';
 import { AnypayGateway } from '../services/gateways/anypay.gateway';
-import { ZenoPayMobileGateway } from '../services/gateways/zenopay-mobile.gateway';
 import { parseAnypayCredentialBundle } from '../services/gateways/anypay.gateway';
 import axios from 'axios';
 
@@ -24,12 +22,6 @@ describe('Payment gateway parsing and status mapping', () => {
     });
   });
 
-  it('returns PENDING for ZenoPayMobile status check', async () => {
-    const gateway = new ZenoPayMobileGateway('test-key');
-    const status = await gateway.getTransactionStatus('order-123');
-    expect(status?.status).toBe('PENDING');
-  });
-
   it('maps AnyPay completed status', async () => {
     mockedAxios.create.mockReturnValue({
       get: jest.fn().mockResolvedValue({
@@ -40,5 +32,17 @@ describe('Payment gateway parsing and status mapping', () => {
     const status = await gateway.getTransactionStatus('order-123');
     expect(status?.status).toBe('SUCCESS');
     expect(status?.transaction_id).toBe('txn-1');
+  });
+
+  it('maps AnyPay failed/cancelled/pending statuses', async () => {
+    const get = jest.fn()
+      .mockResolvedValueOnce({ data: { data: { selcom_payment_status: 'FAILED' } } })
+      .mockResolvedValueOnce({ data: { data: { selcom_payment_status: 'CANCELLED' } } })
+      .mockResolvedValueOnce({ data: { data: { selcom_payment_status: 'PENDING' } } });
+    mockedAxios.create.mockReturnValue({ get } as any);
+    const gateway = new AnypayGateway('access::apikey');
+    expect((await gateway.getTransactionStatus('o1'))?.status).toBe('FAILED');
+    expect((await gateway.getTransactionStatus('o2'))?.status).toBe('CANCELLED');
+    expect((await gateway.getTransactionStatus('o3'))?.status).toBe('PENDING');
   });
 });

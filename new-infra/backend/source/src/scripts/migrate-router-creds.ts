@@ -66,34 +66,20 @@ async function main() {
     migratedOmada += 1;
   }
 
-  // Tenant payment keys
+  // Tenant payment keys (AnyPay)
   const tenants = await prisma.tenant.findMany({
-    where: {
-      OR: [
-        { mongikApiKeyEnc: null, mongikApiKey: { not: null } },
-        { anypayApiKeyEnc: null, anypayApiKey: { not: null } },
-        { zenopayApiKeyEnc: null, zenopayApiKey: { not: null } },
-      ],
-    },
+    where: { anypayApiKeyEnc: null, anypayApiKey: { not: null } },
     select: {
       id: true,
-      mongikApiKey: true,
       anypayApiKey: true,
-      zenopayApiKey: true,
     },
   });
   for (const tenant of tenants) {
     await prisma.tenant.update({
       where: { id: tenant.id },
       data: {
-        mongikApiKeyEnc: tenant.mongikApiKey
-          ? encryptTenantKey(tenant.mongikApiKey)
-          : null,
         anypayApiKeyEnc: tenant.anypayApiKey
           ? encryptTenantKey(tenant.anypayApiKey)
-          : null,
-        zenopayApiKeyEnc: tenant.zenopayApiKey
-          ? encryptTenantKey(tenant.zenopayApiKey)
           : null,
       },
     });

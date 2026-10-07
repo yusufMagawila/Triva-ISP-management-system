@@ -35,8 +35,7 @@ services:
       FRONTEND_URL: http://localhost:5173
       PORTAL_URL: http://localhost:5173
       APP_URL: http://localhost:4000
-      MONGIKE_API_URL: https://mongike.com
-      MONGIKE_API_KEY: test-mongike-key
+      ACTIVATION_WEBHOOK_SECRET: test-activation-webhook-secret-0000000000000000
       ROUTER_CREDENTIALS_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       TENANT_KEYS_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
     depends_on:

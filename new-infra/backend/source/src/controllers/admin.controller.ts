@@ -2,7 +2,13 @@ import { Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../config/prisma';
 import { subscriptionService } from '../services/subscription.service';
+import {
+  getPlatformPaymentConfigView,
+  updatePlatformPaymentConfig,
+  getPlatformGateway,
+} from '../services/platform-settings.service';
 import { AuthRequest } from '../types';
+import { logger } from '../config/logger';
 
 export async function getDashboardStats(
   req: AuthRequest,
@@ -177,6 +183,95 @@ export async function renewTenantSubscription(
 
     const updated = await subscriptionService.renewSubscription(id, plan, months ?? 1);
     res.json({ success: true, data: updated });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/admin/payment-config
+ * Platform-level AnyPay configuration (collects activation + subscription
+ * fees). Secrets are masked — plaintext is never returned.
+ */
+export async function getPlatformPaymentConfig(
+  _req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    res.json({ success: true, data: await getPlatformPaymentConfigView() });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * PUT /api/admin/payment-config
+ * Updates the platform AnyPay configuration. Empty secret fields are left
+ * unchanged.
+ */
+export async function updatePlatformPaymentConfigHandler(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { apiKey, accessToken, baseUrl, enabled } = req.body as {
+      apiKey?: string;
+      accessToken?: string;
+      baseUrl?: string;
+      enabled?: boolean;
+    };
+
+    if (baseUrl !== undefined && baseUrl.trim()) {
+      try {
+        const parsed = new URL(baseUrl.trim());
+        if (parsed.protocol !== 'https:') {
+          res.status(400).json({ success: false, error: 'Base URL must use https://' });
+          return;
+        }
+      } catch {
+        res.status(400).json({ success: false, error: 'Base URL must be a valid URL' });
+        return;
+      }
+    }
+
+    await updatePlatformPaymentConfig({ apiKey, accessToken, baseUrl, enabled });
+    logger.info('Platform payment config updated', { adminUserId: req.user!.userId });
+
+    res.json({
+      success: true,
+      message: 'Platform payment configuration saved.',
+      data: await getPlatformPaymentConfigView(),
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/admin/payment-config/test
+ * Verifies the platform AnyPay credentials with a lightweight status call.
+ */
+export async function testPlatformPaymentConfig(
+  _req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const gateway = await getPlatformGateway();
+    if (!gateway) {
+      res.status(400).json({ success: false, error: 'Platform AnyPay is not configured or is disabled' });
+      return;
+    }
+    const result = await gateway.getTransactionStatus('TEST_PING_' + Date.now());
+    const reachable = result !== null;
+    res.json({
+      success: reachable,
+      message: reachable
+        ? 'Platform AnyPay connection test completed.'
+        : 'Could not reach AnyPay — check the credentials and base URL.',
+    });
   } catch (err) {
     next(err);
   }

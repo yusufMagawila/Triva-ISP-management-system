@@ -12,7 +12,7 @@ interface Payment {
   status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
   plan: { name: string };
   createdAt: string;
-  mongikeTxId: string | null;
+  providerTxId: string | null;
 }
 
 const statusBadge: Record<string, string> = {
@@ -94,7 +94,7 @@ export default function PaymentsPage() {
                         {formatTZS(p.amount)}
                       </td>
                       <td className="px-6 py-3.5 font-mono text-xs" style={{ color: '#aeaeb2' }}>
-                        {p.mongikeTxId ? p.mongikeTxId.slice(0, 12) + '…' : '—'}
+                        {p.providerTxId ? p.providerTxId.slice(0, 12) + '…' : '—'}
                       </td>
                       <td className="px-6 py-3.5">
                         <span className={statusBadge[p.status] ?? 'badge-gray'}>{p.status}</span>

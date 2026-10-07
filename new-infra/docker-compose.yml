@@ -56,8 +56,6 @@ services:
       FRONTEND_URL: ${FRONTEND_URL}
       PORTAL_URL: ${PORTAL_URL}
       APP_URL: ${APP_URL}
-      MONGIKE_API_URL: ${MONGIKE_API_URL:-https://mongike.com}
-      MONGIKE_API_KEY: ${MONGIKE_API_KEY}
       ACTIVATION_WEBHOOK_SECRET: ${ACTIVATION_WEBHOOK_SECRET}
       ROUTER_CREDENTIALS_KEY: ${ROUTER_CREDENTIALS_KEY}
       TENANT_KEYS_ENCRYPTION_KEY: ${TENANT_KEYS_ENCRYPTION_KEY}
@@ -87,6 +85,34 @@ services:
         max-file: "5"
         labels: "service,environment"
         env: "NODE_ENV"
+
+  # Customer-facing captive portal (MikroTik/TP-Link/Omada buy flow).
+  # Served at PORTAL_URL (e.g. https://portal.trivaconnect.site); /api and
+  # /socket.io are proxied to the backend so captive clients need only the
+  # portal host in the walled garden.
+  portal:
+    build:
+      context: ./captive-portal
+      dockerfile: Dockerfile
+    container_name: triva-portal
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "80"
+    networks:
+      - triva
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
 
   # Optional: use this nginx only if Dokploy is not managing TLS/routing.
   # nginx:

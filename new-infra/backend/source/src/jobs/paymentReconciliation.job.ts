@@ -1,5 +1,5 @@
 import { logger } from '../config/logger';
-import { reconcilePendingMongikePayments } from '../services/mongike-reconciliation.service';
+import { reconcilePendingPayments } from '../services/payment-reconciliation.service';
 
 export function startPaymentReconciliationJob(): void {
   // Run every 15 seconds using setInterval (cron minimum granularity is 1 minute).
@@ -8,7 +8,7 @@ export function startPaymentReconciliationJob(): void {
     if (running) return; // skip if previous run is still in progress
     running = true;
     try {
-      const resolved = await reconcilePendingMongikePayments();
+      const resolved = await reconcilePendingPayments();
       if (resolved > 0) {
         logger.info(`Payment reconciliation resolved ${resolved} pending payment(s)`);
       }

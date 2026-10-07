@@ -4,6 +4,7 @@ import { encryptRouterCredential, decryptRouterCredential } from '../lib/crypto'
 import { prisma } from '../config/prisma';
 import { logger } from '../config/logger';
 import { getPlanConfig } from '../config/plans';
+import { env } from '../config/env';
 import { AuthRequest } from '../types';
 
 /**
@@ -426,6 +427,8 @@ export async function downloadPortalPage(
  * to manually edit any files.
  */
 function generatePortalJs(siteId: string, tenantId: string, tenantName: string): string {
+  const portalBaseUrl = env.PORTAL_URL.replace(/\/+$/, '');
+  const apiBaseUrl = env.APP_URL.replace(/\/+$/, '');
   return `/**
  * TRIVA Omada Custom Portal Page
  * Auto-generated for: ${tenantName}
@@ -438,8 +441,8 @@ function generatePortalJs(siteId: string, tenantId: string, tenantName: string):
 (function () {
   'use strict';
 
-  var TRIVA_PORTAL_URL = 'https://triva.pandabus.live/captive-portal-omada/';
-  var TRIVA_CREDENTIALS_API = 'https://triva.pandabus.live/api/portal/omada/credentials';
+  var TRIVA_PORTAL_URL = '${portalBaseUrl}/captive-portal-omada/';
+  var TRIVA_CREDENTIALS_API = '${apiBaseUrl}/api/portal/omada/credentials';
   var TRIVA_TENANT_ID = '${tenantId}';
   var TRIVA_SITE_ID = '${siteId}';
 

@@ -382,16 +382,16 @@ function buildRouterSetupInstaller(
 }
 
 /ip hotspot walled-garden remove [find where comment="${installerComment}"]
-/ip hotspot walled-garden add action=allow disabled=no dst-host="pandabus.live" comment="${installerComment}"
-/ip hotspot walled-garden add action=allow disabled=no dst-host="triva.pandabus.live" comment="${installerComment}"
-/ip hotspot walled-garden add action=allow disabled=no dst-host="mongike.com" comment="${installerComment}"
-/ip hotspot walled-garden add action=allow disabled=no dst-host="*.mongike.com" comment="${installerComment}"
+/ip hotspot walled-garden add action=allow disabled=no dst-host="trivaconnect.site" comment="${installerComment}"
+/ip hotspot walled-garden add action=allow disabled=no dst-host="*.trivaconnect.site" comment="${installerComment}"
+/ip hotspot walled-garden add action=allow disabled=no dst-host="anypaytanzania.com" comment="${installerComment}"
+/ip hotspot walled-garden add action=allow disabled=no dst-host="*.anypaytanzania.com" comment="${installerComment}"
 
 /ip hotspot walled-garden ip remove [find where comment="${installerComment}"]
-/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="pandabus.live" dst-port=443 comment="${installerComment}"
-/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="triva.pandabus.live" dst-port=443 comment="${installerComment}"
-/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="mongike.com" dst-port=443 comment="${installerComment}"
-/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="*.mongike.com" dst-port=443 comment="${installerComment}"
+/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="trivaconnect.site" dst-port=443 comment="${installerComment}"
+/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="*.trivaconnect.site" dst-port=443 comment="${installerComment}"
+/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="anypaytanzania.com" dst-port=443 comment="${installerComment}"
+/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="*.anypaytanzania.com" dst-port=443 comment="${installerComment}"
 
 /system script remove [find where name="${syncJobName}"]
 /system script add name="${syncJobName}" policy=read,write,test,policy source={
@@ -615,10 +615,10 @@ If fetch does not work, open the URL in a browser, save the HTML file, and uploa
 Part 7. Add TRIVA walled garden rules
 -------------------------------------
 Allow these hosts before login:
-- pandabus.live
-- triva.pandabus.live
-- mongike.com
-- *.mongike.com
+- trivaconnect.site
+- *.trivaconnect.site
+- anypaytanzania.com
+- *.anypaytanzania.com
 
 In Winbox/WebFig:
 1. Go to IP > Hotspot > Walled Garden

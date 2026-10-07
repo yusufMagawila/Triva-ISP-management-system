@@ -4,8 +4,6 @@ import { createGateway } from '../services/gateways/factory';
 import { sessionService } from '../services/session.service';
 import { env } from '../config/env';
 import { AuthRequest } from '../types';
-import { logger } from '../config/logger';
-import { reconcileMongikeOrder } from '../services/mongike-reconciliation.service';
 import { generateWebhookSecret } from '../lib/crypto';
 
 /**
@@ -50,10 +48,7 @@ export async function initiatePortalPayment(
       return;
     }
 
-    const isMongikeReady = tenant.paymentProvider === 'MONGIKE' && !!(tenant as any).mongikApiKeyEnc || tenant.mongikApiKey;
-    const isAnypayReady = tenant.paymentProvider === 'ANYPAY' && !!(tenant as any).anypayApiKeyEnc || tenant.anypayApiKey;
-    const isZenopayReady = tenant.paymentProvider === 'ZENOPAY_MOBILE' && !!(tenant as any).zenopayApiKeyEnc || tenant.zenopayApiKey;
-    if (!isMongikeReady && !isAnypayReady && !isZenopayReady) {
+    if (!tenant.anypayEnabled || (!tenant.anypayApiKeyEnc && !tenant.anypayApiKey)) {
       res.status(503).json({ success: false, error: 'Payments not configured for this hotspot. Contact operator.' });
       return;
     }
@@ -108,7 +103,8 @@ export async function initiatePortalPayment(
       throw err;
     }
 
-    // Create payment record
+    // Create payment record — amount always comes from the authoritative plan,
+    // never from the client.
     const payment = await prisma.payment.create({
       data: {
         tenantId,
@@ -120,42 +116,31 @@ export async function initiatePortalPayment(
       },
     });
 
-    // Initiate payment using the tenant's configured gateway
-    const isAnypay = tenant.paymentProvider === 'ANYPAY';
-    const isZenopay = tenant.paymentProvider === 'ZENOPAY_MOBILE';
-    const providerPath = isZenopay ? 'zenopaymobile' : isAnypay ? 'anypay' : 'mongike';
-
     // Lazy backfill: tenants created before webhook secrets existed get one here.
     let webhookSecret = tenant.webhookSecret;
     if (!webhookSecret) {
       webhookSecret = generateWebhookSecret();
       await prisma.tenant.update({ where: { id: tenant.id }, data: { webhookSecret } });
     }
-    const webhookUrl = `${env.APP_URL}/api/payments/webhook/${providerPath}/${webhookSecret}`;
+    const webhookUrl = `${env.APP_URL}/api/payments/webhook/anypay/${webhookSecret}`;
     const gateway = createGateway(tenant);
-    const mongikePushResponse = await gateway.initiatePayment({
+    const pushResponse = await gateway.initiatePayment({
       orderId: payment.id,
       amount: Number(plan.price),
       buyerPhone: phone.replace(/^\+/, ''), // strip leading + if present
       webhookUrl,
     });
 
-    // Only store a real Mongike-generated reference. If Mongike echoes back our own
-    // payment.id, keep mongikeTxId null so expireStalePendingPayments can expire it
-    // after 15 min and the polling job doesn't flood Mongike with pointless 404 queries.
-    const mongikeTxId = (mongikePushResponse.order_id && mongikePushResponse.order_id !== payment.id)
-      ? mongikePushResponse.order_id
-      : null;
+    // Store our order id — AnyPay's status API accepts it as the lookup key. If
+    // AnyPay returned a different reference, keep that instead.
+    const providerTxId =
+      pushResponse.order_id && pushResponse.order_id !== payment.id
+        ? pushResponse.order_id
+        : payment.id;
 
-    // Update payment with provider + gateway reference
     await prisma.payment.update({
       where: { id: payment.id },
-      data: {
-        provider: tenant.paymentProvider,
-        // For AnyPay: store our order_id (their status API accepts it for polling)
-        // For Mongike: only store if Mongike returned a different reference
-        mongikeTxId: isAnypay ? payment.id : mongikeTxId,
-      },
+      data: { provider: 'ANYPAY', providerTxId },
     });
 
     res.status(201).json({
@@ -168,90 +153,6 @@ export async function initiatePortalPayment(
         message: 'Check your phone for payment prompt',
       },
     });
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * Mongike webhook handler — called when payment status changes.
- */
-export async function handleMongikeWebhook(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    const body = req.body as { order_id: string };
-    const { order_id } = body;
-
-    logger.info('Mongike webhook received', {
-      orderId: order_id,
-      tenantId: (req as any).webhookTenantId,
-    });
-
-    if (!order_id) {
-      res.status(400).json({ success: false, error: 'Missing order_id' });
-      return;
-    }
-
-    // The callback is only a trigger: Mongike has an authoritative order-status
-    // endpoint, so the claimed status in the body is never trusted —
-    // reconcileMongikeOrder queries the provider API itself before completing.
-    await reconcileMongikeOrder(order_id);
-
-    res.status(200).json({ received: true });
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * ZenoPayMobile webhook handler.
- * ZenoPayMobile is webhook-only (no status polling endpoint), so this is the
- * authoritative signal that a payment completed.
- */
-export async function handleZenoPayMobileWebhook(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    const body = req.body as {
-      order_id: string;
-      status?: string;
-      payment_status?: string;
-    };
-
-    const { order_id } = body;
-
-    logger.info('ZenoPayMobile webhook received', {
-      orderId: order_id,
-      tenantId: (req as any).webhookTenantId,
-    });
-
-    if (!order_id) {
-      res.status(400).json({ success: false, error: 'Missing order_id' });
-      return;
-    }
-
-    // Normalize status: ZenoPayMobile sends various status formats
-    let normalizedStatus: 'SUCCESS' | 'FAILED' | 'CANCELLED' | undefined;
-    const rawStatus = (body.status || body.payment_status)?.toUpperCase();
-    if (rawStatus === 'SUCCESS' || rawStatus === 'COMPLETED') {
-      normalizedStatus = 'SUCCESS';
-    } else if (rawStatus === 'FAILED') {
-      normalizedStatus = 'FAILED';
-    } else if (rawStatus === 'CANCELLED') {
-      normalizedStatus = 'CANCELLED';
-    }
-
-    // ZenoPayMobile uses order_id as the transaction reference
-    const transaction_id = order_id;
-
-    await reconcileMongikeOrder(order_id, { status: normalizedStatus, transaction_id });
-
-    res.status(200).json({ received: true });
   } catch (err) {
     next(err);
   }

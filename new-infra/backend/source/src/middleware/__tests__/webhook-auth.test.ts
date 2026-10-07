@@ -17,7 +17,7 @@ describe('Webhook authentication middleware', () => {
   let next: jest.Mock;
 
   beforeEach(() => {
-    req = { params: {}, body: {}, ip: '127.0.0.1', path: '/api/payments/webhook/mongike/xxx' };
+    req = { params: {}, body: {}, ip: '127.0.0.1', path: '/api/payments/webhook/anypay/xxx' };
     res = { status: jest.fn().mockReturnThis(), json: jest.fn().mockReturnThis() };
     next = jest.fn();
     jest.clearAllMocks();

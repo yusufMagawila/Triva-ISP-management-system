@@ -78,30 +78,6 @@ export interface RouterOSResponse {
   [key: string]: string | undefined;
 }
 
-// ─── Mongike ──────────────────────────────────────────────────────────────────
-
-export interface MongikePushRequest {
-  orderId: string;       // Our payment record ID
-  amount: number;
-  buyerPhone: string;    // Format: 255XXXXXXXXX
-  webhookUrl: string;
-}
-
-export interface MongikePushResponse {
-  success: boolean;
-  status: string;
-  order_id?: string;
-  message?: string;
-}
-
-export interface MongikeWebhookPayload {
-  order_id: string;      // Matches our payment ID
-  status: 'SUCCESS' | 'FAILED' | 'CANCELLED';
-  amount: number;
-  buyer_phone: string;
-  transaction_id?: string;
-}
-
 // ─── Socket Events ────────────────────────────────────────────────────────────
 
 export interface SocketEvents {

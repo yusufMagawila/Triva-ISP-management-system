@@ -265,8 +265,8 @@ export default function OmadaSitesPage() {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Server IP</p>
                       <div className="flex items-center gap-2 bg-white/80 border border-green-200 rounded-lg px-3 py-2">
-                        <code className="text-xs text-gray-700 break-all flex-1">triva.pandabus.live</code>
-                        <button className="flex-shrink-0 text-gray-400 hover:text-brand-600" onClick={() => copyText('triva.pandabus.live', 'Server IP')}>
+                        <code className="text-xs text-gray-700 break-all flex-1">api.trivaconnect.site</code>
+                        <button className="flex-shrink-0 text-gray-400 hover:text-brand-600" onClick={() => copyText('api.trivaconnect.site', 'Server IP')}>
                           <Copy className="w-4 h-4" />
                         </button>
                       </div>
@@ -350,11 +350,11 @@ export default function OmadaSitesPage() {
                 <p className="text-xs mb-2" style={{ color: '#6e6e73' }}>Captive Portal URL for this site</p>
                 <div className="flex items-center gap-2 rounded-xl px-3 py-3" style={{ background: '#f5f5f7', border: '1px solid #e8e8ed' }}>
                   <code className="text-xs break-all flex-1" style={{ color: '#1d1d1f' }}>
-                    {`https://triva.pandabus.live/captive-portal-omada/?siteId=${selectedSite.id}`}
+                    {`https://portal.trivaconnect.site/captive-portal-omada/?siteId=${selectedSite.id}`}
                   </code>
                   <button
                     className="flex-shrink-0 text-gray-400 hover:text-brand-600"
-                    onClick={() => copyText(`https://triva.pandabus.live/captive-portal-omada/?siteId=${selectedSite.id}`, 'Portal URL')}
+                    onClick={() => copyText(`https://portal.trivaconnect.site/captive-portal-omada/?siteId=${selectedSite.id}`, 'Portal URL')}
                   >
                     <Copy className="w-4 h-4" />
                   </button>
@@ -375,8 +375,9 @@ export default function OmadaSitesPage() {
               {/* Critical hosts */}
               <div className="text-xs text-gray-600 space-y-1 bg-rose-50 border border-rose-100 rounded-xl p-4">
                 <p className="font-semibold text-rose-800 mb-1.5">Critical hosts that must be reachable</p>
-                <p>① triva.pandabus.live (TRIVA backend + captive portal + RADIUS)</p>
-                <p>② mongike.com / *.mongike.com (payment gateway — if using Mongike)</p>
+                <p>① api.trivaconnect.site (TRIVA backend + RADIUS)</p>
+                <p>② portal.trivaconnect.site (captive portal)</p>
+                <p>③ anypaytanzania.com / *.anypaytanzania.com (AnyPay payment gateway)</p>
               </div>
             </div>
           )}

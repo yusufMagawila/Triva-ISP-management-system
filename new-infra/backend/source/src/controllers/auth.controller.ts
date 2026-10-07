@@ -1,13 +1,13 @@
 import { Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
-import { encryptTenantKey, generateWebhookSecret } from '../lib/crypto';
+import { generateWebhookSecret } from '../lib/crypto';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/prisma';
 import { env } from '../config/env';
 import { AuthRequest, AuthPayload } from '../types';
 import { Request } from 'express';
-import { MongikeService } from '../services/mongike.service';
-import { reconcileMongikeOrder } from '../services/mongike-reconciliation.service';
+import { getPlatformGateway } from '../services/platform-settings.service';
+import { reconcilePaymentOrder } from '../services/payment-reconciliation.service';
 
 const ACTIVATION_FEE_TZS = 35_000;
 
@@ -98,7 +98,7 @@ export async function register(req: Request, res: Response, next: NextFunction):
 /**
  * POST /api/auth/activate-payment
  * Merchant pays the one-time 35,000 TZS activation fee.
- * Uses the PLATFORM Mongike key (activation money goes to platform, not merchant).
+ * Uses the PLATFORM AnyPay account (activation money goes to the platform).
  */
 export async function initiateActivationPayment(
   req: AuthRequest,
@@ -126,19 +126,26 @@ export async function initiateActivationPayment(
 
     // Check no pending activation payment already
     const existing = await prisma.payment.findFirst({
-      where: { tenantId, mongikeTxId: { startsWith: 'act_' }, status: 'PENDING' },
+      where: { tenantId, providerTxId: { startsWith: 'act_' }, status: 'PENDING' },
     });
     if (existing) {
       res.status(400).json({ success: false, error: 'Activation payment already pending. Check your phone.' });
       return;
     }
 
+    const gateway = await getPlatformGateway();
+    if (!gateway) {
+      res.status(503).json({
+        success: false,
+        error: 'Payments are temporarily unavailable. Please try again later or contact support.',
+      });
+      return;
+    }
+
     const orderId = `act_${tenantId}_${Date.now()}`;
     const webhookUrl = `${env.APP_URL}/api/auth/activation-webhook/${env.ACTIVATION_WEBHOOK_SECRET}`;
 
-    // Platform key — activation fee comes to the platform
-    const svc = new MongikeService();
-    await svc.initiatePayment({
+    await gateway.initiatePayment({
       orderId,
       amount: ACTIVATION_FEE_TZS,
       buyerPhone: phone.replace(/^\+/, ''),
@@ -152,7 +159,8 @@ export async function initiateActivationPayment(
         currency: 'TZS',
         phone,
         status: 'PENDING',
-        mongikeTxId: orderId,
+        provider: 'ANYPAY',
+        providerTxId: orderId,
       },
     });
 
@@ -170,7 +178,7 @@ export async function initiateActivationPayment(
 }
 
 /**
- * POST /api/auth/activation-webhook  (Mongike webhook)
+ * POST /api/auth/activation-webhook  (AnyPay webhook)
  * Confirms the 35,000 TZS activation fee and activates the tenant account.
  */
 export async function handleActivationWebhook(
@@ -191,9 +199,9 @@ export async function handleActivationWebhook(
       return;
     }
 
-    // Trigger only — reconcileMongikeOrder verifies status with Mongike's API
+    // Trigger only — reconcilePaymentOrder verifies status with AnyPay's API
     // before activating the tenant; the callback's claimed status is untrusted.
-    await reconcileMongikeOrder(order_id);
+    await reconcilePaymentOrder(order_id);
 
     res.status(200).json({ received: true });
   } catch (err) {
@@ -328,17 +336,11 @@ export async function updateSettings(
 ): Promise<void> {
   try {
     const tenantId = req.user!.tenantId!;
-    const { mongikApiKey, logoUrl } = req.body as {
-      mongikApiKey?: string;
+    const { logoUrl } = req.body as {
       logoUrl?: string;
     };
 
     const data: Record<string, string | undefined | null> = {};
-    if (mongikApiKey !== undefined) {
-      // Encrypt in place; clear legacy plaintext field.
-      data.mongikApiKeyEnc = mongikApiKey ? encryptTenantKey(mongikApiKey) : null;
-      data.mongikApiKey = mongikApiKey ? undefined : null;
-    }
     if (logoUrl !== undefined) data.logoUrl = logoUrl || undefined;
 
     const tenant = await prisma.tenant.update({
@@ -348,22 +350,12 @@ export async function updateSettings(
         id: true,
         name: true,
         logoUrl: true,
-        // Return masked API key — never return full key
-        mongikApiKey: true,
-        mongikApiKeyEnc: true,
       },
     });
 
-    const keySet = !!(tenant.mongikApiKeyEnc || tenant.mongikApiKey);
-
-    // Mask sensitive values in response
     res.json({
       success: true,
-      data: {
-        ...tenant,
-        mongikApiKey: keySet ? '********' : null,
-        mongikApiKeySet: keySet,
-      },
+      data: tenant,
     });
   } catch (err) {
     next(err);
@@ -386,8 +378,6 @@ export async function getSettings(
         email: true,
         phone: true,
         logoUrl: true,
-        mongikApiKey: true,
-        mongikApiKeyEnc: true,
       },
     });
 
@@ -396,15 +386,9 @@ export async function getSettings(
       return;
     }
 
-    const keySet = !!(tenant.mongikApiKeyEnc || tenant.mongikApiKey);
-
     res.json({
       success: true,
-      data: {
-        ...tenant,
-        mongikApiKey: keySet ? '********' : null,
-        mongikApiKeySet: keySet,
-      },
+      data: tenant,
     });
   } catch (err) {
     next(err);

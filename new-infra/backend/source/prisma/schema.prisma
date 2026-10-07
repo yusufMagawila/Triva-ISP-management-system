@@ -70,9 +70,7 @@ enum PaymentStatus {
 
 enum PaymentProvider {
   VOUCHER
-  MONGIKE
   ANYPAY
-  ZENOPAY_MOBILE
 }
 
 enum VoucherStatus {
@@ -85,37 +83,33 @@ enum VoucherStatus {
 // ─── Tenant ───────────────────────────────────────────────────────────────────
 
 model Tenant {
-  id              String       @id @default(cuid())
-  name            String
-  slug            String       @unique
-  email           String       @unique
-  phone           String?
-  address         String?
-  logoUrl         String?
-  portalNoticeName String?
+  id                  String         @id @default(cuid())
+  name                String
+  slug                String         @unique
+  email               String         @unique
+  phone               String?
+  address             String?
+  logoUrl             String?
+  portalNoticeName    String?
   portalNoticeMessage String?
-  portalNoticeColor String?   @default("#2563eb")
-  mongikApiKey    String?      // Tenant's own Mongike API key — payments go to their account (legacy plaintext)
-  mongikApiKeyEnc String?      // Encrypted tenant payment key
-  mongikWebhookToken String?   // Deprecated: legacy field retained for backward compatibility
-  webhookSecret   String?      @unique // Per-tenant webhook token used to authenticate provider callbacks
-  paymentProvider PaymentProvider @default(MONGIKE)
-  anypayApiKey    String?      // AnyPay Tanzania API key (legacy plaintext)
-  anypayApiKeyEnc String?      // Encrypted tenant payment key
-  zenopayApiKey   String?      // ZenoPayMobile Tanzania API key (legacy plaintext)
-  zenopayApiKeyEnc String?     // Encrypted tenant payment key
-  status          TenantStatus @default(ACTIVE)
-  subscription Subscription?
-  routers      Router[]
-  tplinkRouters TpLinkRouter[]
-  omadaSites   OmadaSite[]
-  plans        Plan[]
-  sessions     Session[]
-  payments     Payment[]
-  users        User[]
-  vouchers     Voucher[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  portalNoticeColor   String?        @default("#2563eb")
+  webhookSecret       String?        @unique // Per-tenant webhook token used to authenticate provider callbacks
+  anypayApiKey        String? // AnyPay Tanzania credential bundle (legacy plaintext)
+  anypayApiKeyEnc     String? // Encrypted tenant AnyPay credential bundle
+  anypayBaseUrl       String? // Optional AnyPay API base URL override
+  anypayEnabled       Boolean        @default(true)
+  status              TenantStatus   @default(ACTIVE)
+  subscription        Subscription?
+  routers             Router[]
+  tplinkRouters       TpLinkRouter[]
+  omadaSites          OmadaSite[]
+  plans               Plan[]
+  sessions            Session[]
+  payments            Payment[]
+  users               User[]
+  vouchers            Voucher[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
 
   @@map("tenants")
 }
@@ -139,17 +133,17 @@ model Subscription {
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 model User {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   tenantId     String?
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  email        String   @unique
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String    @unique
   passwordHash String
   name         String
-  role         UserRole @default(MERCHANT)
-  isActive     Boolean  @default(true)
+  role         UserRole  @default(MERCHANT)
+  isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("users")
 }
@@ -157,28 +151,28 @@ model User {
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 model Router {
-  id           String       @id @default(cuid())
-  tenantId     String
-  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name         String
-  ipAddress    String
-  apiPort      Int          @default(8728)
-  username     String
-  passwordHash String       // legacy plaintext; to be removed after migration
-  passwordEnc  String?      // encrypted router password
-  provisioningKey String?   @unique
-  serialNumber   String?    @unique
-  hardwareMac    String?    @unique
-  hotspotName  String       @default("hotspot1")
-  location     String?
-  status       RouterStatus @default(OFFLINE)
-  lastSeenAt   DateTime?
+  id              String       @id @default(cuid())
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  ipAddress       String
+  apiPort         Int          @default(8728)
+  username        String
+  passwordHash    String // legacy plaintext; to be removed after migration
+  passwordEnc     String? // encrypted router password
+  provisioningKey String?      @unique
+  serialNumber    String?      @unique
+  hardwareMac     String?      @unique
+  hotspotName     String       @default("hotspot1")
+  location        String?
+  status          RouterStatus @default(OFFLINE)
+  lastSeenAt      DateTime?
   lastBootstrapAt DateTime?
   lastBootstrapIp String?
-  provisionedAt DateTime?
-  sessions     Session[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  provisionedAt   DateTime?
+  sessions        Session[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   @@map("routers")
 }
@@ -193,8 +187,8 @@ model TpLinkRouter {
   ipAddress       String
   sshPort         Int          @default(22)
   username        String
-  passwordHash    String       // legacy plaintext; to be removed after migration
-  passwordEnc     String?      // encrypted router password
+  passwordHash    String // legacy plaintext; to be removed after migration
+  passwordEnc     String? // encrypted router password
   provisioningKey String?      @unique
   serialNumber    String?      @unique
   hardwareMac     String?      @unique
@@ -216,22 +210,22 @@ model TpLinkRouter {
 // ─── Plan ─────────────────────────────────────────────────────────────────────
 
 model Plan {
-  id            String     @id @default(cuid())
-  tenantId      String
-  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name          String
-  description   String?
-  price         Decimal    @db.Decimal(10, 2)
-  durationMins  Int        // duration in minutes
-  downloadKbps  Int?       // null = unlimited
-  uploadKbps    Int?
-  dataLimitMb   Int?       // null = unlimited
-  status        PlanStatus @default(ACTIVE)
-  sessions      Session[]
-  payments      Payment[]
-  vouchers      Voucher[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id           String     @id @default(cuid())
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  price        Decimal    @db.Decimal(10, 2)
+  durationMins Int // duration in minutes
+  downloadKbps Int? // null = unlimited
+  uploadKbps   Int?
+  dataLimitMb  Int? // null = unlimited
+  status       PlanStatus @default(ACTIVE)
+  sessions     Session[]
+  payments     Payment[]
+  vouchers     Voucher[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@map("plans")
 }
@@ -276,46 +270,44 @@ model Session {
 // ─── Payment ──────────────────────────────────────────────────────────────────
 
 model Payment {
-  id           String        @id @default(cuid())
+  id           String          @id @default(cuid())
   tenantId     String
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
-  sessionId    String?       @unique
-  session      Session?      @relation(fields: [sessionId], references: [id])
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  sessionId    String?         @unique
+  session      Session?        @relation(fields: [sessionId], references: [id])
   planId       String?
-  plan         Plan?          @relation(fields: [planId], references: [id])
-  amount       Decimal       @db.Decimal(10, 2)
-  currency     String        @default("TZS")
+  plan         Plan?           @relation(fields: [planId], references: [id])
+  amount       Decimal         @db.Decimal(10, 2)
+  currency     String          @default("TZS")
   phone        String?
-  status       PaymentStatus @default(PENDING)
-  provider     PaymentProvider @default(MONGIKE)
-  mongikeTxId  String?       @unique
-  mongikRef    String?
-  zenopayRef   String?       @unique
+  status       PaymentStatus   @default(PENDING)
+  provider     PaymentProvider @default(ANYPAY)
+  providerTxId String?         @unique
   metadata     Json?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@index([tenantId, status])
-  @@index([mongikeTxId])
+  @@index([providerTxId])
   @@map("payments")
 }
 
 // ─── Voucher ──────────────────────────────────────────────────────────────────
 
 model Voucher {
-  id           String        @id @default(cuid())
-  code         String        @unique
-  tenantId     String
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  planId       String
-  plan         Plan          @relation(fields: [planId], references: [id])
-  status       VoucherStatus @default(ACTIVE)
-  createdAt    DateTime      @default(now())
-  expiresAt    DateTime?
-  redeemedAt   DateTime?
-  sessionId    String?       @unique
-  session      Session?      @relation(fields: [sessionId], references: [id])
-  redeemedMac  String?
+  id          String        @id @default(cuid())
+  code        String        @unique
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId      String
+  plan        Plan          @relation(fields: [planId], references: [id])
+  status      VoucherStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  expiresAt   DateTime?
+  redeemedAt  DateTime?
+  sessionId   String?       @unique
+  session     Session?      @relation(fields: [sessionId], references: [id])
+  redeemedMac String?
 
   @@index([tenantId, status])
   @@index([code])
@@ -325,14 +317,14 @@ model Voucher {
 // ─── RADIUS User (Omada integration) ──────────────────────────────────────────
 
 model RadiusUser {
-  id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
-  sessionId   String   @unique @map("session_id")
-  username    String   @unique
-  password    String
-  status      String   @default("ACTIVE")
-  expiresAt   DateTime @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  tenantId  String   @map("tenant_id")
+  sessionId String   @unique @map("session_id")
+  username  String   @unique
+  password  String
+  status    String   @default("ACTIVE")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([username])
   @@index([status])
@@ -346,16 +338,16 @@ model OmadaSite {
   tenantId        String
   tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name            String
-  controllerUrl   String?      // Omada Controller URL (e.g. https://192.168.1.100:443)
-  controllerIp    String?      // Controller IP for RADIUS client config
-  radiusSecret    String       // Shared secret for FreeRADIUS (legacy plaintext)
-  radiusSecretEnc String?      // Encrypted shared secret
-  ssidName        String?      // WiFi SSID name (for reference)
+  controllerUrl   String? // Omada Controller URL (e.g. https://192.168.1.100:443)
+  controllerIp    String? // Controller IP for RADIUS client config
+  radiusSecret    String // Shared secret for FreeRADIUS (legacy plaintext)
+  radiusSecretEnc String? // Encrypted shared secret
+  ssidName        String? // WiFi SSID name (for reference)
   hotspotName     String       @default("omada1")
   location        String?
   status          RouterStatus @default(OFFLINE)
-  lastSeenAt      DateTime?    // Updated when RADIUS auth requests come from this site
-  provisionedAt   DateTime?    // Set when operator marks the site as configured
+  lastSeenAt      DateTime? // Updated when RADIUS auth requests come from this site
+  provisionedAt   DateTime? // Set when operator marks the site as configured
   sessions        Session[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -365,14 +357,26 @@ model OmadaSite {
 }
 
 model OmadaPortalToken {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  sessionId   String   @unique @map("session_id")
-  tenantId    String   @map("tenant_id")
-  used        Boolean  @default(false)
-  expiresAt   DateTime @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(cuid())
+  token     String   @unique
+  sessionId String   @unique @map("session_id")
+  tenantId  String   @map("tenant_id")
+  used      Boolean  @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([token])
   @@map("omada_portal_tokens")
+}
+
+// ─── Platform Settings (singleton row, SUPER_ADMIN-managed) ──────────────────
+
+model PlatformSetting {
+  id            Int      @id @default(1)
+  anypayKeyEnc  String? // Encrypted platform AnyPay credential bundle (activation + subscription fees)
+  anypayBaseUrl String? // Optional AnyPay API base URL override
+  anypayEnabled Boolean  @default(false)
+  updatedAt     DateTime @updatedAt
+
+  @@map("platform_settings")
 }

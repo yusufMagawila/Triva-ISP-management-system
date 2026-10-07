@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestHeaders } from 'axios';
 import { logger } from '../../config/logger';
 import { PaymentGateway, GatewayPaymentRequest, GatewayInitiateResponse, GatewayPaymentStatus } from './gateway.interface';
 
-const ANYPAY_BASE_URL = 'https://anypaytanzania.com/api/payments';
+export const ANYPAY_DEFAULT_BASE_URL = 'https://anypaytanzania.com/api/payments';
 
 export interface AnypayCredentials {
   accessToken: string;
@@ -58,7 +58,7 @@ export function parseAnypayCredentialBundle(value?: string | null): AnypayCreden
 export class AnypayGateway implements PaymentGateway {
   private client: AxiosInstance;
 
-  constructor(credentialBundle: string) {
+  constructor(credentialBundle: string, baseUrl?: string | null) {
     const { accessToken, apiKey } = parseAnypayCredentialBundle(credentialBundle);
 
     const headers: Record<string, string> = {
@@ -72,7 +72,7 @@ export class AnypayGateway implements PaymentGateway {
     }
 
     this.client = axios.create({
-      baseURL: ANYPAY_BASE_URL,
+      baseURL: (baseUrl ?? '').trim() || ANYPAY_DEFAULT_BASE_URL,
       headers: headers as unknown as AxiosRequestHeaders,
       timeout: 30_000,
     });

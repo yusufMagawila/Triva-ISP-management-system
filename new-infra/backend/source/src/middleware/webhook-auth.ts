@@ -34,7 +34,7 @@ export async function validateWebhookToken(
   try {
     const payment = await prisma.payment.findFirst({
       where: {
-        OR: [{ id: orderId }, { mongikeTxId: orderId }],
+        OR: [{ id: orderId }, { providerTxId: orderId }],
       },
       select: {
         tenantId: true,

@@ -12,7 +12,6 @@ This document separates public configuration from secrets for the new Dokploy/Co
 | `FRONTEND_URL` | Dashboard origin for CORS | `https://dashboard.triva.example.com` | yes |
 | `PORTAL_URL` | Captive portal origin for CORS | `https://triva.example.com` | yes |
 | `APP_URL` | Public backend URL (webhooks) | `https://triva.example.com` | yes |
-| `MONGIKE_API_URL` | Mongike base URL | `https://mongike.com` | yes |
 | `BACKUP_DIR` | Local backup path | `/var/backups/triva` | yes |
 | `BACKUP_REMOTE` | Off-site backup destination | `s3://bucket/backups/` | no |
 | `RETENTION_DAYS` | Backup retention | `14` | yes |
@@ -24,7 +23,6 @@ This document separates public configuration from secrets for the new Dokploy/Co
 | `DATABASE_URL` | PostgreSQL connection string | yes |
 | `DB_USER` / `DB_PASSWORD` | PostgreSQL credentials (Compose only) | yes |
 | `JWT_SECRET` | ≥32 char signing secret | yes |
-| `MONGIKE_API_KEY` | Platform Mongike API key | yes |
 | `ROUTER_CREDENTIALS_KEY` | 32-byte AES key for router/RADIUS secrets | yes |
 | `TENANT_KEYS_ENCRYPTION_KEY` | 32-byte AES key for tenant payment keys | yes |
 | `GPG_RECIPIENT` | Optional backup encryption key ID | no |
@@ -42,6 +40,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 | `MIGRATION_RESET` | Set to `1` in isolated test environments to reset the database schema via `prisma db push`. Must be **unset** for production cutover so `prisma migrate deploy` is used. | no |
 
 ## Important rules
+
+AnyPay credentials (platform and per-tenant) are configured through the admin UI and stored encrypted in the database — no provider secrets live in environment files.
 
 - Never commit `.env` or any secret to Git.
 - Never log secrets or webhook payloads.

@@ -2,8 +2,6 @@ import { Router } from 'express';
 import { body } from 'express-validator';
 import {
   initiatePortalPayment,
-  handleMongikeWebhook,
-  handleZenoPayMobileWebhook,
   listPayments,
   getEarningsSummary,
 } from '../controllers/payment.controller';
@@ -28,10 +26,8 @@ router.post(
   initiatePortalPayment
 );
 
-// Payment gateway webhooks (public but authenticated by tenant webhook token)
-router.post('/webhook/mongike/:token', validateWebhookToken, handleMongikeWebhook);
+// AnyPay webhook (public but authenticated by the tenant webhook token)
 router.post('/webhook/anypay/:token', validateWebhookToken, handleAnypayWebhook);
-router.post('/webhook/zenopaymobile/:token', validateWebhookToken, handleZenoPayMobileWebhook);
 
 // Dashboard routes (authenticated)
 router.get('/earnings', authenticate, requireTenant, validateTenantAccess, getEarningsSummary);

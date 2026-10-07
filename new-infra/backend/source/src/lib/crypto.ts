@@ -3,7 +3,7 @@
  *
  * Use cases:
  * - Router passwords (MikroTik, TP-Link) that the app must know in plain text.
- * - Tenant payment API keys (Mongike, AnyPay, ZenoPayMobile).
+ * - Tenant payment API keys (AnyPay).
  * - Omada RADIUS shared secrets.
  *
  * Algorithm: AES-256-GCM with a random 128-bit IV and 128-bit authentication tag.

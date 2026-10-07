@@ -1,12 +1,12 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/prisma';
-import { mongikeService, MongikeService } from '../services/mongike.service';
+import { getPlatformGateway } from '../services/platform-settings.service';
 import { subscriptionService } from '../services/subscription.service';
 import { env } from '../config/env';
 import { AuthRequest } from '../types';
 import { logger } from '../config/logger';
 import { PLANS, PlanName } from '../config/plans';
-import { reconcileMongikeOrder } from '../services/mongike-reconciliation.service';
+import { reconcilePaymentOrder } from '../services/payment-reconciliation.service';
 
 // Derived from the single source of truth
 const PLAN_PRICES: Record<string, number> = Object.fromEntries(
@@ -43,7 +43,7 @@ export async function getSubscription(
 }
 
 /**
- * POST /api/subscription/pay — initiate subscription payment via Mongike
+ * POST /api/subscription/pay — initiate subscription payment via the platform AnyPay account
  */
 export async function initiateSubscriptionPayment(
   req: AuthRequest,
@@ -66,12 +66,21 @@ export async function initiateSubscriptionPayment(
 
     const totalAmount = pricePerMonth * (months || 1);
 
-    // Subscription payments use the PLATFORM key (the platform collects subscription fees from merchants)
-    // so we use the platform key here, not the tenant's key
+    // Subscription payments use the PLATFORM AnyPay account (the platform
+    // collects subscription fees from merchants), not the tenant's key.
+    const gateway = await getPlatformGateway();
+    if (!gateway) {
+      res.status(503).json({
+        success: false,
+        error: 'Payments are temporarily unavailable. Please try again later or contact support.',
+      });
+      return;
+    }
+
     const orderId = `sub_${tenantId}_${Date.now()}`;
     const webhookUrl = `${env.APP_URL}/api/subscription/webhook/${env.ACTIVATION_WEBHOOK_SECRET}`;
 
-    await mongikeService.initiatePayment({
+    await gateway.initiatePayment({
       orderId,
       amount: totalAmount,
       buyerPhone: phone.replace(/^\+/, ''),
@@ -86,7 +95,8 @@ export async function initiateSubscriptionPayment(
         currency: 'TZS',
         phone,
         status: 'PENDING',
-        mongikeTxId: orderId,
+        provider: 'ANYPAY',
+        providerTxId: orderId,
       },
     });
 
@@ -108,7 +118,7 @@ export async function initiateSubscriptionPayment(
 }
 
 /**
- * POST /api/subscription/webhook — Mongike webhook for subscription payments
+ * POST /api/subscription/webhook — AnyPay webhook for subscription payments
  */
 export async function handleSubscriptionWebhook(
   req: AuthRequest,
@@ -129,9 +139,9 @@ export async function handleSubscriptionWebhook(
       return;
     }
 
-    // Trigger only — reconcileMongikeOrder verifies status with Mongike's API
+    // Trigger only — reconcilePaymentOrder verifies status with AnyPay's API
     // before renewing the subscription; the callback's claimed status is untrusted.
-    await reconcileMongikeOrder(order_id);
+    await reconcilePaymentOrder(order_id);
 
     res.status(200).json({ received: true });
   } catch (err) {

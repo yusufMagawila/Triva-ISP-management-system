@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { Router, Plus, Wifi, WifiOff, RefreshCw, Trash2, Activity, Copy, Info } from 'lucide-react';
 import { format } from 'date-fns';
 
-const PORTAL_BASE = 'https://triva.pandabus.live/captive-portal';
+const PORTAL_BASE = 'https://portal.trivaconnect.site/captive-portal';
 const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
 
 interface TpLinkRouterData {
@@ -72,7 +72,7 @@ export default function TpLinkRoutersPage() {
       '# Run these on the router over SSH (ssh root@192.168.1.1)',
       'cat /etc/openwrt_release',
       'ping -c 4 1.1.1.1',
-      'nslookup triva.pandabus.live',
+      'nslookup api.trivaconnect.site',
       'opkg update && echo "opkg OK"',
       infoUrl
         ? `curl -sk "${infoUrl}" | head -5`
@@ -345,7 +345,7 @@ export default function TpLinkRoutersPage() {
                 <p>② A recurring heartbeat to keep this asset online in the dashboard</p>
                 <p>③ A recurring session-sync job (every 15s) so paid sessions go live without inbound NAT reachability</p>
                 <p>④ A session-expiry sweeper that disconnects clients when their time runs out</p>
-                <p>⑤ The walled garden for pandabus.live, triva.pandabus.live, mongike.com, and *.mongike.com</p>
+                <p>⑤ The walled garden for trivaconnect.site, *.trivaconnect.site, anypaytanzania.com, and *.anypaytanzania.com</p>
               </div>
 
               <div className="text-xs text-gray-600 space-y-1 bg-slate-50 border border-slate-200 rounded-xl p-4">
@@ -394,10 +394,10 @@ export default function TpLinkRoutersPage() {
 
               <div className="text-xs text-gray-600 space-y-1 bg-rose-50 border border-rose-100 rounded-xl p-4">
                 <p className="font-semibold text-rose-800 mb-1.5">Critical buy-flow hosts that must stay reachable before login</p>
-                <p>① pandabus.live</p>
-                <p>② triva.pandabus.live</p>
-                <p>③ mongike.com</p>
-                <p>④ *.mongike.com</p>
+                <p>① trivaconnect.site (TRIVA platform)</p>
+                <p>② api.trivaconnect.site (backend API)</p>
+                <p>③ portal.trivaconnect.site (captive portal)</p>
+                <p>④ anypaytanzania.com / *.anypaytanzania.com (payment gateway)</p>
               </div>
 
               <div>

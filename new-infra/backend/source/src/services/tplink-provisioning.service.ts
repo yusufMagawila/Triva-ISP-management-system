@@ -122,10 +122,10 @@ uci set nodogsplash.@nodogsplash[-1].maxclients='250'
 uci set nodogsplash.@nodogsplash[-1].preauthidletimeout='30'
 uci set nodogsplash.@nodogsplash[-1].authidletimeout='120'
 # Walled garden: TRIVA portal + payment hosts must stay reachable before login
-uci add_list nodogsplash.@nodogsplash[-1].walledgarden_fqdn='pandabus.live'
-uci add_list nodogsplash.@nodogsplash[-1].walledgarden_fqdn='triva.pandabus.live'
-uci add_list nodogsplash.@nodogsplash[-1].walledgarden_fqdn='mongike.com'
-uci add_list nodogsplash.@nodogsplash[-1].walledgarden_fqdn='*.mongike.com'
+uci add_list nodogsplash.@nodogsplash[-1].walledgarden_fqdn='trivaconnect.site'
+uci add_list nodogsplash.@nodogsplash[-1].walledgarden_fqdn='*.trivaconnect.site'
+uci add_list nodogsplash.@nodogsplash[-1].walledgarden_fqdn='anypaytanzania.com'
+uci add_list nodogsplash.@nodogsplash[-1].walledgarden_fqdn='*.anypaytanzania.com'
 uci add_list nodogsplash.@nodogsplash[-1].users_to_router='allow tcp port 53'
 uci add_list nodogsplash.@nodogsplash[-1].users_to_router='allow udp port 53'
 uci add_list nodogsplash.@nodogsplash[-1].users_to_router='allow udp port 67'
@@ -195,7 +195,7 @@ echo '* * * * * /usr/bin/triva-expire.sh' >> "$CRON"
 /usr/bin/triva-sync.sh || true
 
 echo "TRIVA zero-touch bootstrap applied for ${routerName}"
-echo "Captive portal (nodogsplash) is live; walled garden allows pandabus.live, triva.pandabus.live, mongike.com, *.mongike.com"
+echo "Captive portal (nodogsplash) is live; walled garden allows trivaconnect.site, *.trivaconnect.site, anypaytanzania.com, *.anypaytanzania.com"
 echo "The router will keep checking in to TRIVA automatically."
 `;
 }

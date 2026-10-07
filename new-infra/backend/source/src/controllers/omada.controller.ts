@@ -179,10 +179,7 @@ export async function initiateOmadaPayment(
       return;
     }
 
-    const isMongikeReady = tenant.paymentProvider === 'MONGIKE' && (!!(tenant as any).mongikApiKeyEnc || !!tenant.mongikApiKey);
-    const isAnypayReady = tenant.paymentProvider === 'ANYPAY' && (!!(tenant as any).anypayApiKeyEnc || !!tenant.anypayApiKey);
-    const isZenopayReady = tenant.paymentProvider === 'ZENOPAY_MOBILE' && (!!(tenant as any).zenopayApiKeyEnc || !!tenant.zenopayApiKey);
-    if (!isMongikeReady && !isAnypayReady && !isZenopayReady) {
+    if (!tenant.anypayEnabled || (!tenant.anypayApiKeyEnc && !tenant.anypayApiKey)) {
       res.status(503).json({ success: false, error: 'Payments not configured for this hotspot.' });
       return;
     }
@@ -243,11 +240,8 @@ export async function initiateOmadaPayment(
       },
     });
 
-    // Initiate payment via gateway
+    // Initiate payment via the tenant's AnyPay gateway
     const { createGateway } = await import('../services/gateways/factory');
-    const isAnypay = tenant.paymentProvider === 'ANYPAY';
-    const isZenopay = tenant.paymentProvider === 'ZENOPAY_MOBILE';
-    const providerPath = isZenopay ? 'zenopaymobile' : isAnypay ? 'anypay' : 'mongike';
 
     // Lazy backfill: tenants created before webhook secrets existed get one here.
     let webhookSecret = tenant.webhookSecret;
@@ -256,7 +250,7 @@ export async function initiateOmadaPayment(
       webhookSecret = generateWebhookSecret();
       await prisma.tenant.update({ where: { id: tenant.id }, data: { webhookSecret } });
     }
-    const webhookUrl = `${env.APP_URL}/api/payments/webhook/${providerPath}/${webhookSecret}`;
+    const webhookUrl = `${env.APP_URL}/api/payments/webhook/anypay/${webhookSecret}`;
     const gateway = createGateway(tenant);
     const pushResponse = await gateway.initiatePayment({
       orderId: payment.id,
@@ -265,15 +259,15 @@ export async function initiateOmadaPayment(
       webhookUrl,
     });
 
-    const mongikeTxId = (pushResponse.order_id && pushResponse.order_id !== payment.id)
+    const providerTxId = (pushResponse.order_id && pushResponse.order_id !== payment.id)
       ? pushResponse.order_id
-      : null;
+      : payment.id;
 
     await prisma.payment.update({
       where: { id: payment.id },
       data: {
-        provider: tenant.paymentProvider,
-        mongikeTxId: isAnypay ? payment.id : mongikeTxId,
+        provider: 'ANYPAY',
+        providerTxId,
       },
     });
 

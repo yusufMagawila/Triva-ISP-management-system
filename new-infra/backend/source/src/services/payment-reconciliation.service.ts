@@ -1,13 +1,11 @@
 import { prisma } from '../config/prisma';
 import { PLANS } from '../config/plans';
 import { logger } from '../config/logger';
-import { decryptTenantKey } from '../lib/crypto';
-import { MongikeGateway } from './gateways/mongike.gateway';
-import { AnypayGateway } from './gateways/anypay.gateway';
+import { createGateway } from './gateways/factory';
+import { getPlatformGateway } from './platform-settings.service';
 import { sessionService } from './session.service';
 import { radiusService } from './radius.service';
 import { subscriptionService } from './subscription.service';
-import { MongikeWebhookPayload } from '../types';
 import { getIO } from '../socket';
 
 const PLAN_PRICES: Record<string, number> = Object.fromEntries(
@@ -18,12 +16,12 @@ const ACTIVATION_PREFIX = 'act_';
 const SUBSCRIPTION_PREFIX = 'sub_';
 const NOT_FOUND_GRACE_MINUTES = 5;
 
-export type MongikeReconcileResult = 'completed' | 'failed' | 'pending' | 'ignored';
+export type ReconcileResult = 'completed' | 'failed' | 'pending' | 'ignored';
 
-async function completePortalPayment(orderId: string, transactionId?: string): Promise<MongikeReconcileResult> {
+async function completePortalPayment(orderId: string, transactionId?: string): Promise<ReconcileResult> {
   const payment = await prisma.payment.findFirst({
     where: {
-      OR: [{ id: orderId }, { mongikeTxId: orderId }],
+      OR: [{ id: orderId }, { providerTxId: orderId }],
     },
   });
 
@@ -33,7 +31,7 @@ async function completePortalPayment(orderId: string, transactionId?: string): P
 
   await prisma.payment.update({
     where: { id: payment.id },
-    data: { status: 'COMPLETED', mongikeTxId: transactionId ?? orderId },
+    data: { status: 'COMPLETED', providerTxId: transactionId ?? orderId },
   });
 
   if (payment.sessionId) {
@@ -61,7 +59,7 @@ async function completePortalPayment(orderId: string, transactionId?: string): P
 
     // If direct MikroTik activation succeeded, session:activated was already emitted by sessionService.
     // If it failed (router unreachable), the session stays PENDING and the socket event was never sent.
-    // Emit payment:confirmed so the portal can show the success screen and poll for credentials.
+    // Emit session:activated so the portal can show the success screen and poll for credentials.
     const session = await prisma.session.findUnique({
       where: { id: payment.sessionId },
       select: { id: true, status: true, macAddress: true, hotspotUsername: true, hotspotPassword: true, expiresAt: true, vendor: true },
@@ -96,10 +94,10 @@ async function completePortalPayment(orderId: string, transactionId?: string): P
   return 'completed';
 }
 
-async function failPortalPayment(orderId: string): Promise<MongikeReconcileResult> {
+async function failPortalPayment(orderId: string): Promise<ReconcileResult> {
   const payment = await prisma.payment.findFirst({
     where: {
-      OR: [{ id: orderId }, { mongikeTxId: orderId }],
+      OR: [{ id: orderId }, { providerTxId: orderId }],
     },
   });
 
@@ -112,12 +110,26 @@ async function failPortalPayment(orderId: string): Promise<MongikeReconcileResul
     data: { status: 'FAILED' },
   });
 
+  // Notify the portal so the customer sees the failure immediately.
+  const session = payment.sessionId
+    ? await prisma.session.findUnique({
+        where: { id: payment.sessionId },
+        select: { macAddress: true },
+      })
+    : null;
+  if (session) {
+    getIO().to(`mac:${session.macAddress}`).emit('payment:failed', {
+      paymentId: payment.id,
+      reason: 'Payment was not completed',
+    });
+  }
+
   logger.info('Portal payment marked failed', { paymentId: payment.id, orderId });
   return 'failed';
 }
 
-async function reconcileActivationPayment(orderId: string, status: string, transactionId?: string): Promise<MongikeReconcileResult> {
-  const payment = await prisma.payment.findFirst({ where: { mongikeTxId: orderId } });
+async function reconcileActivationPayment(orderId: string, status: string, transactionId?: string): Promise<ReconcileResult> {
+  const payment = await prisma.payment.findFirst({ where: { providerTxId: orderId } });
   if (!payment || payment.status !== 'PENDING') {
     return 'ignored';
   }
@@ -126,7 +138,7 @@ async function reconcileActivationPayment(orderId: string, status: string, trans
     await prisma.$transaction([
       prisma.payment.update({
         where: { id: payment.id },
-        data: { status: 'COMPLETED', mongikeTxId: transactionId ?? orderId },
+        data: { status: 'COMPLETED', providerTxId: transactionId ?? orderId },
       }),
       prisma.tenant.update({
         where: { id: payment.tenantId },
@@ -172,8 +184,8 @@ async function reconcileActivationPayment(orderId: string, status: string, trans
   return 'failed';
 }
 
-async function reconcileSubscriptionPayment(orderId: string, status: string, transactionId?: string): Promise<MongikeReconcileResult> {
-  const payment = await prisma.payment.findFirst({ where: { mongikeTxId: orderId } });
+async function reconcileSubscriptionPayment(orderId: string, status: string, transactionId?: string): Promise<ReconcileResult> {
+  const payment = await prisma.payment.findFirst({ where: { providerTxId: orderId } });
   if (!payment || payment.status !== 'PENDING') {
     return 'ignored';
   }
@@ -193,7 +205,7 @@ async function reconcileSubscriptionPayment(orderId: string, status: string, tra
     await subscriptionService.renewSubscription(payment.tenantId, plan, months);
     await prisma.payment.update({
       where: { id: payment.id },
-      data: { status: 'COMPLETED', mongikeTxId: transactionId ?? orderId },
+      data: { status: 'COMPLETED', providerTxId: transactionId ?? orderId },
     });
 
     logger.info('Subscription payment reconciled', {
@@ -216,34 +228,32 @@ async function reconcileSubscriptionPayment(orderId: string, status: string, tra
   return 'failed';
 }
 
-export async function reconcileMongikeOrder(
-  orderId: string,
-  remoteOverride?: Partial<Pick<MongikeWebhookPayload, 'status' | 'transaction_id'>> | null
-): Promise<MongikeReconcileResult> {
+/**
+ * Reconcile a payment order against the provider's authoritative status API.
+ *
+ * Webhook callbacks are only ever a *trigger* for this function — a payment can
+ * never transition to COMPLETED based on callback-supplied status alone.
+ *
+ * - Portal payments (WiFi plans): verified with the tenant's AnyPay account.
+ * - Platform payments (`act_` / `sub_` prefixes): verified with the platform
+ *   AnyPay account configured by SUPER_ADMIN.
+ */
+export async function reconcilePaymentOrder(orderId: string): Promise<ReconcileResult> {
   const platformOrder = orderId.startsWith(ACTIVATION_PREFIX) || orderId.startsWith(SUBSCRIPTION_PREFIX);
   const payment = platformOrder
     ? await prisma.payment.findFirst({
-        where: { mongikeTxId: orderId },
-        include: {
-          tenant: {
-            select: {
-              mongikApiKey: true,
-              mongikApiKeyEnc: true,
-              anypayApiKey: true,
-              anypayApiKeyEnc: true,
-            },
-          },
-        },
+        where: { providerTxId: orderId },
+        select: { id: true, status: true, createdAt: true },
       })
     : await prisma.payment.findFirst({
-        where: { OR: [{ id: orderId }, { mongikeTxId: orderId }] },
+        where: { OR: [{ id: orderId }, { providerTxId: orderId }] },
         include: {
           tenant: {
             select: {
-              mongikApiKey: true,
-              mongikApiKeyEnc: true,
               anypayApiKey: true,
               anypayApiKeyEnc: true,
+              anypayBaseUrl: true,
+              anypayEnabled: true,
             },
           },
         },
@@ -253,34 +263,35 @@ export async function reconcileMongikeOrder(
     return 'ignored';
   }
 
-  const tenantAny = payment.tenant as any;
-  const mongikKey = tenantAny.mongikApiKeyEnc
-    ? decryptTenantKey(tenantAny.mongikApiKeyEnc)
-    : (tenantAny.mongikApiKey ?? undefined);
-  const anypayKey = tenantAny.anypayApiKeyEnc
-    ? decryptTenantKey(tenantAny.anypayApiKeyEnc)
-    : (tenantAny.anypayApiKey ?? '');
-
-  let service: MongikeGateway | AnypayGateway;
+  let gateway;
   if (platformOrder) {
-    service = new MongikeGateway();
-  } else if ((payment as any).provider === 'ANYPAY') {
-    service = new AnypayGateway(anypayKey);
+    gateway = await getPlatformGateway();
   } else {
-    service = new MongikeGateway(mongikKey);
+    const tenant = (payment as { tenant?: { anypayEnabled: boolean } }).tenant;
+    if (tenant && !tenant.anypayEnabled) {
+      logger.warn('Skipping reconciliation — AnyPay disabled for tenant', { orderId });
+      return 'pending';
+    }
+    gateway = createGateway((payment as any).tenant);
   }
-  const remote = remoteOverride?.status ? remoteOverride : await service.getTransactionStatus(orderId);
+
+  if (!gateway) {
+    logger.warn('Skipping reconciliation — platform AnyPay not configured', { orderId });
+    return 'pending';
+  }
+
+  const remote = await gateway.getTransactionStatus(orderId);
 
   if (!remote || !remote.status) {
     return 'pending';
   }
 
-  // Mongike may temporarily return 404 right after initiation; keep new orders pending.
+  // The provider may temporarily return 404 right after initiation; keep new orders pending.
   if (remote.status === 'NOT_FOUND') {
     const ageMs = Date.now() - new Date(payment.createdAt).getTime();
     const graceMs = NOT_FOUND_GRACE_MINUTES * 60 * 1000;
     if (ageMs < graceMs) {
-      logger.warn('Mongike returned 404 within grace window; keeping payment pending', {
+      logger.warn('Provider returned 404 within grace window; keeping payment pending', {
         orderId,
         paymentId: payment.id,
         ageSeconds: Math.floor(ageMs / 1000),
@@ -288,7 +299,7 @@ export async function reconcileMongikeOrder(
       return 'pending';
     }
 
-    logger.warn('Marking payment FAILED: Mongike returned 404 for order', { orderId });
+    logger.warn('Marking payment FAILED: provider returned 404 for order', { orderId });
     if (orderId.startsWith(ACTIVATION_PREFIX)) return reconcileActivationPayment(orderId, 'FAILED', undefined);
     if (orderId.startsWith(SUBSCRIPTION_PREFIX)) return reconcileSubscriptionPayment(orderId, 'FAILED', undefined);
     return failPortalPayment(orderId);
@@ -320,35 +331,35 @@ export async function expireStalePendingPayments(): Promise<number> {
   const { count } = await prisma.payment.updateMany({
     where: {
       status: 'PENDING',
-      mongikeTxId: null,
+      providerTxId: null,
       createdAt: { lt: cutoff },
     },
     data: { status: 'FAILED' },
   });
   if (count > 0) {
-    logger.info(`Expired ${count} stale PENDING payment(s) with no Mongike order (older than ${PAYMENT_EXPIRY_MINUTES}min)`);
+    logger.info(`Expired ${count} stale PENDING payment(s) with no provider reference (older than ${PAYMENT_EXPIRY_MINUTES}min)`);
   }
   return count;
 }
 
-export async function reconcilePendingMongikePayments(limit = 50): Promise<number> {
-  // First, expire payments that never reached Mongike (no mongikeTxId)
+export async function reconcilePendingPayments(limit = 50): Promise<number> {
+  // First, expire payments that never reached the provider (no providerTxId)
   await expireStalePendingPayments();
 
   const pendingPayments = await prisma.payment.findMany({
     where: {
       status: 'PENDING',
-      mongikeTxId: { not: null },
+      providerTxId: { not: null },
     },
-    select: { mongikeTxId: true },
+    select: { providerTxId: true },
     orderBy: { createdAt: 'asc' },
     take: limit,
   });
 
   let resolved = 0;
   for (const payment of pendingPayments) {
-    if (!payment.mongikeTxId) continue;
-    const result = await reconcileMongikeOrder(payment.mongikeTxId);
+    if (!payment.providerTxId) continue;
+    const result = await reconcilePaymentOrder(payment.providerTxId);
     if (result === 'completed' || result === 'failed') {
       resolved += 1;
     }

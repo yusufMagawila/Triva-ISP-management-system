@@ -6,6 +6,9 @@ import {
   createTenant,
   updateTenantStatus,
   renewTenantSubscription,
+  getPlatformPaymentConfig,
+  updatePlatformPaymentConfigHandler,
+  testPlatformPaymentConfig,
 } from '../controllers/admin.controller';
 import { authenticate, requireRole } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -33,5 +36,10 @@ router.post(
 
 router.patch('/tenants/:id/status', updateTenantStatus);
 router.post('/tenants/:id/subscription/renew', renewTenantSubscription);
+
+// Platform-level AnyPay configuration (activation + subscription fees)
+router.get('/payment-config', getPlatformPaymentConfig);
+router.put('/payment-config', updatePlatformPaymentConfigHandler);
+router.post('/payment-config/test', testPlatformPaymentConfig);
 
 export default router;

@@ -2,18 +2,43 @@ import { Response, NextFunction } from 'express';
 import { prisma } from '../config/prisma';
 import { AuthRequest } from '../types';
 import { logger } from '../config/logger';
+import { env } from '../config/env';
 import { encryptTenantKey, decryptTenantKey } from '../lib/crypto';
-import { AnypayGateway, parseAnypayCredentialBundle } from '../services/gateways/anypay.gateway';
-import { MongikeGateway } from '../services/gateways/mongike.gateway';
-import { ZenoPayMobileGateway } from '../services/gateways/zenopay-mobile.gateway';
-import { createGateway } from '../services/gateways/factory';
+import {
+  AnypayGateway,
+  ANYPAY_DEFAULT_BASE_URL,
+  parseAnypayCredentialBundle,
+} from '../services/gateways/anypay.gateway';
 
-const VALID_PROVIDERS = ['MONGIKE', 'ANYPAY', 'ZENOPAY_MOBILE'];
+function maskSecret(value: string): string | null {
+  if (!value) return null;
+  return `••••••••${value.slice(-4)}`;
+}
+
+function normalizeBaseUrl(value: string | null | undefined): string | null {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw Object.assign(new Error('Base URL must be a valid URL'), { statusCode: 400 });
+  }
+  if (parsed.protocol !== 'https:') {
+    throw Object.assign(new Error('Base URL must use https://'), { statusCode: 400 });
+  }
+  return trimmed.replace(/\/+$/, '');
+}
+
+function tenantWebhookUrl(webhookSecret: string | null): string | null {
+  if (!webhookSecret) return null;
+  return `${env.APP_URL}/api/payments/webhook/anypay/${webhookSecret}`;
+}
 
 /**
  * GET /api/payment-settings
- * Returns the current payment gateway configuration for the tenant.
- * API keys are masked for security.
+ * Returns the tenant's AnyPay configuration. Secrets are never returned —
+ * only masked indicators.
  */
 export async function getPaymentSettings(
   req: AuthRequest,
@@ -25,13 +50,11 @@ export async function getPaymentSettings(
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       select: {
-        paymentProvider: true,
-        mongikApiKey: true,
-        mongikApiKeyEnc: true,
         anypayApiKey: true,
         anypayApiKeyEnc: true,
-        zenopayApiKey: true,
-        zenopayApiKeyEnc: true,
+        anypayBaseUrl: true,
+        anypayEnabled: true,
+        webhookSecret: true,
       },
     });
 
@@ -40,22 +63,21 @@ export async function getPaymentSettings(
       return;
     }
 
-    const anypayPlain = tenant.anypayApiKeyEnc
+    const plain = tenant.anypayApiKeyEnc
       ? decryptTenantKey(tenant.anypayApiKeyEnc)
       : (tenant.anypayApiKey ?? '');
-    const anypayCreds = parseAnypayCredentialBundle(anypayPlain);
+    const creds = parseAnypayCredentialBundle(plain);
 
     res.json({
       success: true,
       data: {
-        paymentProvider: tenant.paymentProvider,
-        mongikApiKey: tenant.mongikApiKeyEnc || tenant.mongikApiKey ? '********' : null,
-        anypayApiKey: anypayCreds.apiKey ? '********' : null,
-        anypayAccessToken: anypayCreds.accessToken ? '********' : null,
-        zenopayApiKey: tenant.zenopayApiKeyEnc || tenant.zenopayApiKey ? '********' : null,
-        mongikReady: !!(tenant.mongikApiKeyEnc || tenant.mongikApiKey),
-        anypayReady: !!anypayCreds.apiKey,
-        zenopayReady: !!(tenant.zenopayApiKeyEnc || tenant.zenopayApiKey),
+        provider: 'ANYPAY',
+        enabled: tenant.anypayEnabled,
+        configured: !!creds.apiKey,
+        anypayApiKey: maskSecret(creds.apiKey),
+        anypayAccessToken: maskSecret(creds.accessToken),
+        anypayBaseUrl: tenant.anypayBaseUrl ?? ANYPAY_DEFAULT_BASE_URL,
+        webhookUrl: tenantWebhookUrl(tenant.webhookSecret),
       },
     });
   } catch (err) {
@@ -65,7 +87,8 @@ export async function getPaymentSettings(
 
 /**
  * PUT /api/payment-settings
- * Updates the payment gateway configuration.
+ * Updates the tenant's AnyPay configuration. Empty secret fields are left
+ * unchanged so admins can adjust non-secret settings without re-entering keys.
  */
 export async function updatePaymentSettings(
   req: AuthRequest,
@@ -75,35 +98,18 @@ export async function updatePaymentSettings(
   try {
     const tenantId = req.user!.tenantId!;
     const {
-      paymentProvider,
-      mongikApiKey,
       anypayApiKey,
       anypayAccessToken,
-      zenopayApiKey,
+      anypayBaseUrl,
+      anypayEnabled,
     } = req.body as {
-      paymentProvider?: 'MONGIKE' | 'ANYPAY' | 'ZENOPAY_MOBILE';
-      mongikApiKey?: string;
       anypayApiKey?: string;
       anypayAccessToken?: string;
-      zenopayApiKey?: string;
+      anypayBaseUrl?: string;
+      anypayEnabled?: boolean;
     };
 
-    if (paymentProvider && !VALID_PROVIDERS.includes(paymentProvider)) {
-      res.status(400).json({ success: false, error: 'Invalid payment provider' });
-      return;
-    }
-
     const updateData: Record<string, unknown> = {};
-    if (paymentProvider) updateData.paymentProvider = paymentProvider;
-
-    if (mongikApiKey !== undefined) {
-      updateData.mongikApiKeyEnc = mongikApiKey ? encryptTenantKey(mongikApiKey) : null;
-      updateData.mongikApiKey = mongikApiKey ? null : null; // clear legacy plaintext
-    }
-    if (zenopayApiKey !== undefined) {
-      updateData.zenopayApiKeyEnc = zenopayApiKey ? encryptTenantKey(zenopayApiKey) : null;
-      updateData.zenopayApiKey = zenopayApiKey ? null : null;
-    }
 
     // AnyPay stores an optional access token + api key bundle in a single column.
     if (anypayApiKey !== undefined || anypayAccessToken !== undefined) {
@@ -132,12 +138,20 @@ export async function updatePaymentSettings(
       }
     }
 
+    if (anypayBaseUrl !== undefined) {
+      updateData.anypayBaseUrl = normalizeBaseUrl(anypayBaseUrl);
+    }
+
+    if (anypayEnabled !== undefined) {
+      updateData.anypayEnabled = Boolean(anypayEnabled);
+    }
+
     await prisma.tenant.update({
       where: { id: tenantId },
       data: updateData,
     });
 
-    logger.info('Payment settings updated', { tenantId, paymentProvider });
+    logger.info('AnyPay settings updated', { tenantId, enabled: updateData.anypayEnabled });
 
     res.json({ success: true, message: 'Payment settings updated successfully.' });
   } catch (err) {
@@ -147,7 +161,8 @@ export async function updatePaymentSettings(
 
 /**
  * POST /api/payment-settings/test
- * Tests the gateway connection by making a lightweight API call.
+ * Verifies the configured AnyPay credentials by making a lightweight
+ * authenticated call to the status endpoint.
  */
 export async function testPaymentGateway(
   req: AuthRequest,
@@ -159,13 +174,9 @@ export async function testPaymentGateway(
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
       select: {
-        paymentProvider: true,
-        mongikApiKey: true,
-        mongikApiKeyEnc: true,
         anypayApiKey: true,
         anypayApiKeyEnc: true,
-        zenopayApiKey: true,
-        zenopayApiKeyEnc: true,
+        anypayBaseUrl: true,
       },
     });
 
@@ -174,15 +185,25 @@ export async function testPaymentGateway(
       return;
     }
 
-    const gateway = createGateway(tenant as any);
-    await gateway.getTransactionStatus('TEST_PING_' + Date.now());
-    res.json({ success: true, message: `${tenant.paymentProvider} connection test completed.` });
+    const plain = tenant.anypayApiKeyEnc
+      ? decryptTenantKey(tenant.anypayApiKeyEnc)
+      : (tenant.anypayApiKey ?? '');
+
+    if (!parseAnypayCredentialBundle(plain).apiKey) {
+      res.status(400).json({ success: false, error: 'AnyPay API key is not configured' });
+      return;
+    }
+
+    const gateway = new AnypayGateway(plain, tenant.anypayBaseUrl);
+    const result = await gateway.getTransactionStatus('TEST_PING_' + Date.now());
+    const reachable = result !== null;
+    res.json({
+      success: reachable,
+      message: reachable
+        ? 'AnyPay connection test completed.'
+        : 'Could not reach AnyPay — check the credentials and base URL.',
+    });
   } catch (err) {
     next(err);
   }
-}
-
-function maskKey(key: string): string {
-  if (key.length <= 8) return '••••••••';
-  return key.slice(0, 4) + '•'.repeat(key.length - 8) + key.slice(-4);
 }

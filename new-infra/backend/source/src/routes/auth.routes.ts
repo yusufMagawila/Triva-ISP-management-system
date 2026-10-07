@@ -61,6 +61,6 @@ router.patch('/settings', authenticate, updateSettings);
 
 // Account activation — pay 35,000 TZS one-time fee
 router.post('/activate-payment', authenticate, [body('phone').notEmpty()], validate, initiateActivationPayment);
-router.post('/activation-webhook/:token', validateActivationWebhookToken, handleActivationWebhook); // public — called by Mongike
+router.post('/activation-webhook/:token', validateActivationWebhookToken, handleActivationWebhook); // public — called by AnyPay
 
 export default router;

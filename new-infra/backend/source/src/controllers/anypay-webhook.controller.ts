@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../config/logger';
-import { reconcileMongikeOrder } from '../services/mongike-reconciliation.service';
+import { reconcilePaymentOrder } from '../services/payment-reconciliation.service';
 
 /**
  * AnyPay Tanzania webhook handler.
@@ -34,8 +34,8 @@ export async function handleAnypayWebhook(
 
     // The callback is only a trigger: AnyPay provides an authoritative
     // order-status endpoint, so the claimed status in the body is never
-    // trusted — reconcileMongikeOrder queries check-order-status itself.
-    await reconcileMongikeOrder(order_id);
+    // trusted — reconcilePaymentOrder queries check-order-status itself.
+    await reconcilePaymentOrder(order_id);
 
     res.status(200).json({ received: true });
   } catch (err) {

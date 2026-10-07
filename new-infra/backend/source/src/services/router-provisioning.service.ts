@@ -161,16 +161,16 @@ export function buildRouterBootstrapScript(router: BootstrapRouter, apiUrl: stri
 /ip service set api disabled=no port=${router.apiPort}
 
 /ip hotspot walled-garden remove [find where comment=$trivaRuleTag]
-/ip hotspot walled-garden add action=allow disabled=no dst-host="pandabus.live" comment=$trivaRuleTag
-/ip hotspot walled-garden add action=allow disabled=no dst-host="triva.pandabus.live" comment=$trivaRuleTag
-/ip hotspot walled-garden add action=allow disabled=no dst-host="mongike.com" comment=$trivaRuleTag
-/ip hotspot walled-garden add action=allow disabled=no dst-host="*.mongike.com" comment=$trivaRuleTag
+/ip hotspot walled-garden add action=allow disabled=no dst-host="trivaconnect.site" comment=$trivaRuleTag
+/ip hotspot walled-garden add action=allow disabled=no dst-host="*.trivaconnect.site" comment=$trivaRuleTag
+/ip hotspot walled-garden add action=allow disabled=no dst-host="anypaytanzania.com" comment=$trivaRuleTag
+/ip hotspot walled-garden add action=allow disabled=no dst-host="*.anypaytanzania.com" comment=$trivaRuleTag
 
 /ip hotspot walled-garden ip remove [find where comment=$trivaRuleTag]
-/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="pandabus.live" dst-port=443 comment=$trivaRuleTag
-/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="triva.pandabus.live" dst-port=443 comment=$trivaRuleTag
-/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="mongike.com" dst-port=443 comment=$trivaRuleTag
-/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="*.mongike.com" dst-port=443 comment=$trivaRuleTag
+/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="trivaconnect.site" dst-port=443 comment=$trivaRuleTag
+/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="*.trivaconnect.site" dst-port=443 comment=$trivaRuleTag
+/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="anypaytanzania.com" dst-port=443 comment=$trivaRuleTag
+/ip hotspot walled-garden ip add action=accept disabled=no protocol=tcp dst-host="*.anypaytanzania.com" dst-port=443 comment=$trivaRuleTag
 
 :if ([:len $trivaHtmlDir] > 0) do={
   :do {
@@ -219,7 +219,7 @@ export function buildRouterBootstrapScript(router: BootstrapRouter, apiUrl: stri
 :do { /system script run triva-sync } on-error={ :log warning "TRIVA bootstrap session sync run failed" }
 
 :put "TRIVA zero-touch bootstrap applied for ${routerName}"
-:put "Hotspot allow-list installed for pandabus.live, triva.pandabus.live, mongike.com, and *.mongike.com"
+:put "Hotspot allow-list installed for trivaconnect.site, *.trivaconnect.site, anypaytanzania.com, and *.anypaytanzania.com"
 :put "The router will keep checking in to TRIVA automatically."
 `;
 }
