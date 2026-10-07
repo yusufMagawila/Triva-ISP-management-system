@@ -53,15 +53,18 @@ psql -h "$DB_HOST" -U "$DB_USER" -d postgres -c "SELECT pg_terminate_backend(pid
 psql -h "$DB_HOST" -U "$DB_USER" -d postgres -c "DROP DATABASE IF EXISTS ${DB_NAME};"
 psql -h "$DB_HOST" -U "$DB_USER" -d postgres -c "CREATE DATABASE ${DB_NAME};"
 
-# Restore schema and data.
+# Restore schema and data. ON_ERROR_STOP + a single transaction make a bad
+# dump fail atomically instead of leaving a half-restored database.
 echo "Restoring backup..."
-gunzip -c "$INPUT" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME"
+gunzip -c "$INPUT" | psql -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" \
+  -v ON_ERROR_STOP=1 --single-transaction
 
-# Resolve baseline Prisma migration so future migrate deploy is a no-op.
-# The baseline migration file must exist in prisma/migrations/20241006000000_baseline.
+# Resolve applied Prisma migrations so future migrate deploy is a no-op.
+# Only works where prisma is installed (backend container), guarded otherwise.
 if command -v npx >/dev/null 2>&1; then
-  echo "Resolving baseline Prisma migration..."
+  echo "Resolving Prisma migration state..."
   npx prisma migrate resolve --applied 20241006000000_baseline || true
+  npx prisma migrate resolve --applied 20251006000000_add_webhook_secret || true
 fi
 
 # Verification.
