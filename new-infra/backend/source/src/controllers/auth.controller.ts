@@ -143,7 +143,9 @@ export async function initiateActivationPayment(
     }
 
     const orderId = `act_${tenantId}_${Date.now()}`;
-    const webhookUrl = `${env.APP_URL}/api/auth/activation-webhook/${env.ACTIVATION_WEBHOOK_SECRET}`;
+    // URL-encode: the platform secret may contain '/'+ '=' (base64) which
+    // would otherwise break the :token path segment.
+    const webhookUrl = `${env.APP_URL}/api/auth/activation-webhook/${encodeURIComponent(env.ACTIVATION_WEBHOOK_SECRET)}`;
 
     await gateway.initiatePayment({
       orderId,
