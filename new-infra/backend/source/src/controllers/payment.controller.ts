@@ -124,12 +124,24 @@ export async function initiatePortalPayment(
     }
     const webhookUrl = `${env.APP_URL}/api/payments/webhook/anypay/${webhookSecret}`;
     const gateway = createGateway(tenant);
-    const pushResponse = await gateway.initiatePayment({
-      orderId: payment.id,
-      amount: Number(plan.price),
-      buyerPhone: phone.replace(/^\+/, ''), // strip leading + if present
-      webhookUrl,
-    });
+
+    let pushResponse;
+    try {
+      pushResponse = await gateway.initiatePayment({
+        orderId: payment.id,
+        amount: Number(plan.price),
+        buyerPhone: phone.replace(/^\+/, ''), // strip leading + if present
+        webhookUrl,
+      });
+    } catch (err) {
+      // Provider rejected/unreachable — fail the payment cleanly instead of a 500
+      await prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED' } });
+      res.status(502).json({
+        success: false,
+        error: 'The payment provider could not be reached. Please try again.',
+      });
+      return;
+    }
 
     // Store our order id — AnyPay's status API accepts it as the lookup key. If
     // AnyPay returned a different reference, keep that instead.

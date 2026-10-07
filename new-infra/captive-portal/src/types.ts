@@ -2,7 +2,7 @@ export interface Plan {
   id: string;
   name: string;
   description: string | null;
-  price: number;
+  price: number | string; // Prisma Decimal serializes as string
   durationMins: number;
   downloadKbps: number | null;
   uploadKbps: number | null;

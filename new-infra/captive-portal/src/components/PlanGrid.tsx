@@ -32,11 +32,12 @@ export function PlanGrid({ plans, onSelect, disabled }: Props) {
   const { categories, visible, cheapestId, bestValueId } = useMemo(() => {
     const cats = Array.from(new Set(plans.map(planCategory)));
     const vis = category === 'all' ? plans : plans.filter((p) => planCategory(p) === category);
-    const cheapest = plans.reduce<Plan | null>((a, p) => (!a || p.price < a.price ? p : a), null);
+    const num = (v: number | string) => Number(v);
+    const cheapest = plans.reduce<Plan | null>((a, p) => (!a || num(p.price) < num(a.price) ? p : a), null);
     // Best value: lowest price per day among plans >= 1 day
-    const dailyPlus = plans.filter((p) => p.durationMins >= 60 * 24 && p.price > 0);
+    const dailyPlus = plans.filter((p) => p.durationMins >= 60 * 24 && num(p.price) > 0);
     const best = dailyPlus.reduce<Plan | null>(
-      (a, p) => (!a || p.price / (p.durationMins / 1440) < a.price / (a.durationMins / 1440) ? p : a),
+      (a, p) => (!a || num(p.price) / (p.durationMins / 1440) < num(a.price) / (a.durationMins / 1440) ? p : a),
       null
     );
     return {

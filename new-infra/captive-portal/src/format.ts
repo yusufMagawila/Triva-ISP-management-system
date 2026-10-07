@@ -1,5 +1,6 @@
-export function formatPrice(price: number): string {
-  return `TZS ${price.toLocaleString('en-TZ')}`;
+export function formatPrice(price: number | string): string {
+  const n = typeof price === 'string' ? Number(price) : price;
+  return `TZS ${Number.isFinite(n) ? n.toLocaleString('en-TZ') : price}`;
 }
 
 export function formatDuration(mins: number): string {

@@ -252,12 +252,23 @@ export async function initiateOmadaPayment(
     }
     const webhookUrl = `${env.APP_URL}/api/payments/webhook/anypay/${webhookSecret}`;
     const gateway = createGateway(tenant);
-    const pushResponse = await gateway.initiatePayment({
-      orderId: payment.id,
-      amount: Number(plan.price),
-      buyerPhone: phone.replace(/^\+/, ''),
-      webhookUrl,
-    });
+
+    let pushResponse;
+    try {
+      pushResponse = await gateway.initiatePayment({
+        orderId: payment.id,
+        amount: Number(plan.price),
+        buyerPhone: phone.replace(/^\+/, ''),
+        webhookUrl,
+      });
+    } catch (err) {
+      await prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED' } });
+      res.status(502).json({
+        success: false,
+        error: 'The payment provider could not be reached. Please try again.',
+      });
+      return;
+    }
 
     const providerTxId = (pushResponse.order_id && pushResponse.order_id !== payment.id)
       ? pushResponse.order_id
