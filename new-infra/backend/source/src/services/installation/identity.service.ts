@@ -36,6 +36,12 @@ export function matchIdentity(
     macAddress: normalizeRouterMac(claim.macAddress),
   };
 
+  // Normalize the stored side too — RouterOS reports uppercase MACs and legacy
+  // rows were written before normalization existed. Without this, a bound
+  // asset would false-MISMATCH against its own real identity.
+  const assetMac = normalizeRouterMac(asset.hardwareMac) ?? null;
+  const assetSerial = normalizeRouterSerial(asset.serialNumber) ?? null;
+
   // Ownership boundary first — an installer must never "claim" another
   // tenant's hardware, and a device bound to a different site cannot be
   // silently re-stolen.
@@ -52,21 +58,21 @@ export function matchIdentity(
   if (!claimMac && !claimSerial) return { match: 'UNMATCHED', normalizedClaim };
 
   // If the asset carries a bound identity, the claim must agree with it.
-  if (claimMac && asset.hardwareMac && asset.hardwareMac !== claimMac) {
+  if (claimMac && assetMac && assetMac !== claimMac) {
     return { match: 'MISMATCH', normalizedClaim };
   }
-  if (claimSerial && asset.serialNumber && asset.serialNumber !== claimSerial) {
+  if (claimSerial && assetSerial && assetSerial !== claimSerial) {
     return { match: 'MISMATCH', normalizedClaim };
   }
 
   // At least one claimed identifier must actually match a bound identifier
   // (or the asset has no bound identity yet, i.e. first binding).
-  const macOk = claimMac ? !asset.hardwareMac || asset.hardwareMac === claimMac : true;
-  const serialOk = claimSerial ? !asset.serialNumber || asset.serialNumber === claimSerial : true;
+  const macOk = claimMac ? !assetMac || assetMac === claimMac : true;
+  const serialOk = claimSerial ? !assetSerial || assetSerial === claimSerial : true;
   const boundSomething =
-    (claimMac && asset.hardwareMac === claimMac) ||
-    (claimSerial && asset.serialNumber === claimSerial) ||
-    (!asset.hardwareMac && !asset.serialNumber);
+    (claimMac && assetMac === claimMac) ||
+    (claimSerial && assetSerial === claimSerial) ||
+    (!assetMac && !assetSerial);
 
   if (macOk && serialOk && boundSomething) return { match: 'MATCHED', normalizedClaim };
   return { match: 'UNMATCHED', normalizedClaim };

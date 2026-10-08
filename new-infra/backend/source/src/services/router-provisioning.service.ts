@@ -216,7 +216,7 @@ export function buildRouterBootstrapScript(router: BootstrapRouter, apiUrl: stri
   } on-error={}
   :do { :set trivaVersion [:pick [/system resource get version] 0 [:find [/system resource get version] " "]] } on-error={}
   :do { :set trivaMac [/interface ethernet get 0 mac-address] } on-error={}
-  :local trivaReportUrl ($hbUrl . "&serialNumber=" . $trivaSerial . "&macAddress=" . $trivaMac . "&model=" . $trivaModel . "&version=" . $trivaVersion)
+  :local trivaReportUrl ($hbUrl . "?serialNumber=" . $trivaSerial . "&macAddress=" . $trivaMac . "&model=" . $trivaModel . "&version=" . $trivaVersion)
   :do {
     /tool fetch mode=https url=$trivaReportUrl keep-result=no check-certificate=no
   } on-error={

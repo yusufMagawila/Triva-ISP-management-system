@@ -86,7 +86,7 @@ export function getCapabilityRegistry(implementedActions: string[], declaredNotI
       lanConfiguration: false,
       dhcpConfiguration: false,
       firewallConfiguration: false,
-      hotspotConfiguration: false,       // hotspot server must pre-exist (installer script errors otherwise)
+      hotspotConfiguration: false,       // not an executor action; /ip hotspot add IS feasible on hw (Phase 5B) but requires mgmt bypass ordering
       captivePortalPages: true,
       hotspotUserProvisioning: true,
       barcodeScanning: false,
