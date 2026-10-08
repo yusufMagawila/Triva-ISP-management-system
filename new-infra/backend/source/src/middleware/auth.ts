@@ -39,6 +39,46 @@ export function requireRole(...roles: string[]) {
   };
 }
 
+/**
+ * Dashboard routes are for tenant staff (MERCHANT) and platform admins.
+ * INSTALLER accounts authenticate fine but must live inside the scoped
+ * /api/install namespace — they get no tenant-wide dashboard privileges.
+ */
+export function requireDashboardRole(req: AuthRequest, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({ success: false, error: 'Unauthorized' });
+    return;
+  }
+  if (req.user.role === 'INSTALLER' || req.user.scope === 'install') {
+    res.status(403).json({ success: false, error: 'Installer accounts use the /api/install namespace' });
+    return;
+  }
+  next();
+}
+
+/**
+ * Scoped-token enforcement for the /api/install namespace. Login JWTs pass
+ * through untouched; tokens with scope='install' are verified against the
+ * InstallerToken table so revoked/expired credentials die here.
+ */
+export async function verifyInstallScope(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  if (req.user?.scope !== 'install') {
+    next();
+    return;
+  }
+  try {
+    const { verifyScopedToken } = await import('../services/installer-token.service');
+    const result = await verifyScopedToken(req.user as Parameters<typeof verifyScopedToken>[0]);
+    if (!result.ok) {
+      res.status(401).json({ success: false, error: `Scoped token invalid: ${result.reason}` });
+      return;
+    }
+    next();
+  } catch {
+    res.status(401).json({ success: false, error: 'Scoped token verification failed' });
+  }
+}
+
 export function requireTenant(req: AuthRequest, res: Response, next: NextFunction): void {
   // Super admins can bypass tenant requirement (they specify tenantId via query param)
   if (req.user?.role === 'SUPER_ADMIN') {

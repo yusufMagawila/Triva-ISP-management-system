@@ -6,7 +6,7 @@ import {
   getEarningsSummary,
 } from '../controllers/payment.controller';
 import { handleAnypayWebhook } from '../controllers/anypay-webhook.controller';
-import { authenticate, requireTenant, validateTenantAccess } from '../middleware/auth';
+import { authenticate, requireDashboardRole, requireTenant, validateTenantAccess } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { validateWebhookToken } from '../middleware/webhook-auth';
 
@@ -30,7 +30,7 @@ router.post(
 router.post('/webhook/anypay/:token', validateWebhookToken, handleAnypayWebhook);
 
 // Dashboard routes (authenticated)
-router.get('/earnings', authenticate, requireTenant, validateTenantAccess, getEarningsSummary);
-router.get('/', authenticate, requireTenant, validateTenantAccess, listPayments);
+router.get('/earnings', authenticate, requireDashboardRole, requireTenant, validateTenantAccess, getEarningsSummary);
+router.get('/', authenticate, requireDashboardRole, requireTenant, validateTenantAccess, listPayments);
 
 export default router;

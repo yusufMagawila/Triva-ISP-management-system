@@ -51,20 +51,27 @@ export function usePaymentTracking(
       }
     };
 
-    // Socket.IO (lazy-loaded so it isn't in the critical bundle)
+    // Socket.IO (lazy-loaded so it isn't in the critical bundle).
+    // The server no longer trusts client-supplied tenantId/MAC — we first
+    // fetch session status to obtain a socketToken bound to this device.
     (async () => {
       try {
-        const { io } = await import('socket.io-client');
+        const [{ io }, initial] = await Promise.all([
+          import('socket.io-client'),
+          getSessionStatus(sessionId).catch(() => null),
+        ]);
         if (disposed) return;
-        socket = io('/', { transports: ['websocket', 'polling'], timeout: 5000 });
+        const socketToken = initial?.socketToken;
+        socket = io('/', {
+          transports: ['websocket', 'polling'],
+          timeout: 5000,
+          auth: socketToken ? { token: socketToken } : undefined,
+        });
         socket.on('connect', () => {
           if (disposed) return;
           setResult((r) => (r.phase === 'watching' ? { phase: 'watching', realtime: true } : r));
-          if (macAddress || tenantId) {
-            socket?.emit('portal:subscribe', {
-              macAddress: macAddress ?? '',
-              tenantId: tenantId ?? '',
-            });
+          if (socketToken && macAddress) {
+            socket?.emit('portal:subscribe', { macAddress });
           }
         });
         socket.on('session:activated', (payload: { sessionId?: string }) => {
@@ -96,8 +103,8 @@ export function usePaymentTracking(
     return () => {
       disposed = true;
       clearInterval(timer);
-      if (socket && (macAddress || tenantId)) {
-        socket.emit('portal:unsubscribe', { macAddress: macAddress ?? '' });
+      if (socket && macAddress) {
+        socket.emit('portal:unsubscribe', { macAddress });
       }
       socket?.disconnect();
     };

@@ -159,6 +159,15 @@ async function findBootstrapRouter(
   return null;
 }
 
+function normalizeReportedField(value: unknown, maxLen = 64): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > maxLen) return undefined;
+  // Reject anything that isn't printable ASCII — device metadata is untrusted input.
+  if (!/^[\x20-\x7e]+$/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
 async function upsertBootstrapIdentity(
   router: {
     id: string;
@@ -170,6 +179,8 @@ async function upsertBootstrapIdentity(
     serialNumber?: string;
     hardwareMac?: string;
     remoteIp?: string;
+    model?: string;
+    routerOsVersion?: string;
   }
 ) {
   if (identity.serialNumber && router.serialNumber && router.serialNumber !== identity.serialNumber) {
@@ -185,6 +196,9 @@ async function upsertBootstrapIdentity(
     data: {
       serialNumber: router.serialNumber ?? identity.serialNumber,
       hardwareMac: router.hardwareMac ?? identity.hardwareMac,
+      ...(identity.model ? { model: identity.model } : {}),
+      ...(identity.routerOsVersion ? { routerOsVersion: identity.routerOsVersion } : {}),
+      ...(identity.model || identity.routerOsVersion ? { discoveredAt: new Date() } : {}),
       lastBootstrapAt: new Date(),
       lastBootstrapIp: identity.remoteIp,
       lastSeenAt: new Date(),
@@ -247,6 +261,9 @@ export async function getBootstrapRouterInfo(
     const apiUrl = process.env.APP_URL ?? 'https://triva.pandabus.live';
     const bootstrapUrls = buildRouterBootstrapUrls(router, apiUrl);
 
+    // SECURITY: never return router API credentials or the provisioning key
+    // here — the caller already holds the key (it's the URL), and the
+    // password lives only inside the generated RouterOS script.
     res.json({
       success: true,
       data: {
@@ -256,11 +273,10 @@ export async function getBootstrapRouterInfo(
           hotspotName: router.hotspotName,
           controlPlaneIp: router.ipAddress,
           apiPort: router.apiPort,
-          apiUsername: router.username,
-          apiPassword: router.passwordHash,
-          provisioningKey: router.provisioningKey,
           serialNumber: router.serialNumber,
           hardwareMac: router.hardwareMac,
+          model: router.model,
+          routerOsVersion: router.routerOsVersion,
           provisionedAt: router.provisionedAt,
         },
         bootstrap: {
@@ -289,6 +305,8 @@ export async function heartbeatBootstrapRouter(
     const provisioningKey = getProvisioningKey(req);
     const serialNumber = normalizeRouterSerial(typeof req.query.serialNumber === 'string' ? req.query.serialNumber : undefined);
     const hardwareMac = normalizeRouterMac(typeof req.query.macAddress === 'string' ? req.query.macAddress : undefined);
+    const model = normalizeReportedField(req.query.model);
+    const routerOsVersion = normalizeReportedField(req.query.version, 32);
 
     const router = await findBootstrapRouter(provisioningKey, serialNumber, hardwareMac);
     if (!router) {
@@ -300,6 +318,8 @@ export async function heartbeatBootstrapRouter(
       serialNumber,
       hardwareMac,
       remoteIp: getRequestIp(req),
+      model,
+      routerOsVersion,
     });
 
     res.type('text/plain').send(`OK ${updated.id}`);

@@ -40,6 +40,8 @@ export interface SessionStatus {
   plan: { name: string; durationMins: number } | null;
   paymentStatus: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED' | null;
   credentials: { username: string; password: string } | null;
+  /** Short-lived socket token bound to this tenant+MAC (needed for realtime). */
+  socketToken?: string;
 }
 
 export interface InitiateResponse {

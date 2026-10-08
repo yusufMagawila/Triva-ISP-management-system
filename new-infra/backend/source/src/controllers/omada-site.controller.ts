@@ -1,11 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import crypto from 'crypto';
-import { encryptRouterCredential, decryptRouterCredential } from '../lib/crypto';
 import { prisma } from '../config/prisma';
 import { logger } from '../config/logger';
-import { getPlanConfig } from '../config/plans';
 import { env } from '../config/env';
 import { AuthRequest } from '../types';
+import {
+  createOmadaSiteAsset,
+  removeNasClient,
+  upsertNasClient,
+  PlanLimitError,
+} from '../services/device-registry.service';
 
 /**
  * Dashboard controller for managing Omada sites.
@@ -18,40 +21,8 @@ import { AuthRequest } from '../types';
  *   5. The site shows online/offline status based on RADIUS auth activity
  */
 
-function generateRadiusSecret(): string {
-  return crypto.randomBytes(24).toString('base64url');
-}
-
-/**
- * Upsert a NAS client in the FreeRADIUS nas table for this Omada site.
- * This allows per-site RADIUS shared secrets.
- * If controllerIp is not set, we use a wildcard (%) so any IP can authenticate.
- */
-async function upsertNasClient(siteId: string, controllerIp: string | null | undefined, radiusSecretEnc: string | null, siteName: string): Promise<void> {
-  const radiusSecret = radiusSecretEnc ? decryptRouterCredential(radiusSecretEnc) : '';
-  if (!radiusSecret) return;
-  const nasname = controllerIp || '%';
-  // Use prisma.$executeRaw to upsert into the nas table
-  await prisma.$executeRaw`
-    INSERT INTO nas (nasname, shortname, type, secret, description)
-    VALUES (${nasname}, ${'omada-' + siteName}, 'other', ${radiusSecret}, ${'Omada site: ' + siteName + ' (' + siteId + ')'})
-    ON CONFLICT (nasname) DO UPDATE SET
-      secret = EXCLUDED.secret,
-      shortname = EXCLUDED.shortname,
-      description = EXCLUDED.description
-  `;
-}
-
-/**
- * Remove a NAS client when an Omada site is deleted.
- */
-async function removeNasClient(controllerIp: string | null | undefined, siteId: string): Promise<void> {
-  const nasname = controllerIp || '%';
-  // Only remove if the description matches this site (avoid removing wildcard)
-  await prisma.$executeRaw`
-    DELETE FROM nas WHERE nasname = ${nasname} AND description LIKE ${'%' + siteId + '%'}
-  `;
-}
+// NAS client helpers + RADIUS secret generation now live in
+// services/device-registry.service.ts (shared with the installation executor).
 
 /**
  * List all Omada sites for the tenant.
@@ -128,6 +99,9 @@ export async function getOmadaSite(
       success: true,
       data: {
         ...site,
+        // Never expose the RADIUS shared secret (plain or encrypted) via API.
+        radiusSecret: undefined,
+        radiusSecretEnc: undefined,
         _count: { ...site._count, activeSessions },
       },
     });
@@ -166,56 +140,30 @@ export async function createOmadaSite(
       return;
     }
 
-    // Plan limit check (same as MikroTik routers)
-    const tenantWithSub = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      include: {
-        subscription: true,
-        _count: { select: { routers: true, tplinkRouters: true, omadaSites: true } },
-      },
+    // Plan limit check lives inside the shared asset service.
+    const site = await createOmadaSiteAsset(tenantId, {
+      name,
+      controllerUrl,
+      controllerIp,
+      ssidName,
+      hotspotName,
+      location,
     });
 
-    const planConfig = getPlanConfig(tenantWithSub?.subscription?.plan);
-    const totalSites = (tenantWithSub?._count.routers ?? 0) +
-                       (tenantWithSub?._count.tplinkRouters ?? 0) +
-                       (tenantWithSub?._count.omadaSites ?? 0);
-    if (planConfig.maxRouters !== -1 && totalSites >= planConfig.maxRouters) {
+    res.status(201).json({
+      success: true,
+      data: { ...site, radiusSecret: undefined, radiusSecretEnc: undefined },
+    });
+  } catch (err) {
+    if (err instanceof PlanLimitError) {
       res.status(403).json({
         success: false,
-        error: `Your ${planConfig.label} plan allows a maximum of ${planConfig.maxRouters} site(s). Upgrade your subscription to add more.`,
+        error: err.message,
         limitReached: true,
-        currentPlan: tenantWithSub?.subscription?.plan,
+        currentPlan: err.currentPlan,
       });
       return;
     }
-
-    const radiusSecret = generateRadiusSecret();
-    const radiusSecretEnc = encryptRouterCredential(radiusSecret);
-
-    const site = await prisma.omadaSite.create({
-      data: {
-        tenantId,
-        name,
-        controllerUrl,
-        controllerIp,
-        radiusSecret,
-        radiusSecretEnc,
-        ssidName,
-        hotspotName: hotspotName ?? 'omada1',
-        location,
-        status: 'OFFLINE',
-      },
-    });
-
-    // Register the RADIUS client in the nas table
-    await upsertNasClient(site.id, site.controllerIp, site.radiusSecretEnc, site.name).catch((err) => {
-      logger.warn('Failed to register NAS client', { siteId: site.id, err });
-    });
-
-    logger.info('Omada site created', { siteId: site.id, tenantId });
-
-    res.status(201).json({ success: true, data: site });
-  } catch (err) {
     next(err);
   }
 }

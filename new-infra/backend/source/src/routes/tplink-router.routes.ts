@@ -9,12 +9,12 @@ import {
   pingTpLinkRouter,
   getTpLinkRouterActiveSessions,
 } from '../controllers/tplink-router.controller';
-import { authenticate, requireTenant, validateTenantAccess } from '../middleware/auth';
+import { authenticate, requireDashboardRole, requireTenant, validateTenantAccess } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router = Router();
 
-router.use(authenticate, requireTenant, validateTenantAccess);
+router.use(authenticate, requireDashboardRole, requireTenant, validateTenantAccess);
 
 router.get('/', listTpLinkRouters);
 

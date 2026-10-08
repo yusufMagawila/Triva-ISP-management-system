@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { prisma } from '../config/prisma';
+import { decryptRouterCredential } from '../lib/crypto';
 
 const CONTROL_PLANE_PREFIX = '10.251';
 const ROUTER_API_USERNAME = 'triva-agent';
@@ -11,6 +12,7 @@ type BootstrapRouter = {
   apiPort: number;
   username: string;
   passwordHash: string;
+  passwordEnc?: string | null;
   hotspotName: string;
   provisioningKey: string | null;
   updatedAt: Date;
@@ -107,7 +109,12 @@ export function buildRouterBootstrapScript(router: BootstrapRouter, apiUrl: stri
   const urls = buildRouterBootstrapUrls(router, apiUrl);
   const routerName = sanitizeRouterOsLiteral(router.name);
   const apiUsername = sanitizeRouterOsLiteral(router.username);
-  const apiPassword = sanitizeRouterOsLiteral(router.passwordHash);
+  // The API password must reach the router inside the script, so it is
+  // decrypted here (in-memory only) — never persisted or returned via API.
+  const plainPassword = router.passwordEnc
+    ? decryptRouterCredential(router.passwordEnc)
+    : router.passwordHash;
+  const apiPassword = sanitizeRouterOsLiteral(plainPassword);
   const hotspotName = sanitizeRouterOsLiteral(router.hotspotName);
   const heartbeatUrl = urls.heartbeatUrl;
   const syncScriptUrl = urls.sessionSyncUrl;
@@ -193,8 +200,25 @@ export function buildRouterBootstrapScript(router: BootstrapRouter, apiUrl: stri
 /system script remove [find where name="triva-heartbeat"]
 /system script add name="triva-heartbeat" policy=read,write,test source={
   :local hbUrl "${heartbeatUrl}"
+  :local trivaSerial ""
+  :local trivaModel ""
+  :local trivaVersion ""
+  :local trivaMac ""
+  :do { :set trivaSerial [/system routerboard get serial-number] } on-error={}
   :do {
-    /tool fetch mode=https url=$hbUrl keep-result=no check-certificate=no
+    :local trivaFullModel [/system routerboard get model]
+    :local trivaSpace [:find $trivaFullModel " "]
+    :if ([:typeof $trivaSpace] = "num") do={
+      :set trivaModel [:pick $trivaFullModel 0 $trivaSpace]
+    } else={
+      :set trivaModel $trivaFullModel
+    }
+  } on-error={}
+  :do { :set trivaVersion [:pick [/system resource get version] 0 [:find [/system resource get version] " "]] } on-error={}
+  :do { :set trivaMac [/interface ethernet get 0 mac-address] } on-error={}
+  :local trivaReportUrl ($hbUrl . "&serialNumber=" . $trivaSerial . "&macAddress=" . $trivaMac . "&model=" . $trivaModel . "&version=" . $trivaVersion)
+  :do {
+    /tool fetch mode=https url=$trivaReportUrl keep-result=no check-certificate=no
   } on-error={
     :log warning "TRIVA heartbeat failed"
   }

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { io, Socket } from 'socket.io-client';
+import { useAuthStore } from './authStore';
 
 interface SocketState {
   socket: Socket | null;
@@ -18,10 +19,12 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     const existing = get().socket;
     if (existing?.connected) return;
 
+    const token = useAuthStore.getState().token;
     const socket = io(SOCKET_URL, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
+      auth: token ? { token } : undefined,
     });
 
     socket.on('connect', () => {

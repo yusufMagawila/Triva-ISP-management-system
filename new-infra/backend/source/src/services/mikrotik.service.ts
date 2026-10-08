@@ -2,7 +2,7 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { RouterOSAPI } = require('node-routeros');
 import { decryptRouterCredential } from '../lib/crypto';
-import { MikroTikConfig, HotspotUser, HotspotActive, RouterOSResponse } from '../types';
+import { MikroTikConfig, HotspotUser, HotspotActive, RouterOSResponse, RouterDiscoverySnapshot } from '../types';
 import { logger } from '../config/logger';
 
 export class MikroTikService {
@@ -45,6 +45,74 @@ export class MikroTikService {
       api = await this.connect();
       const result = (await api.write('/system/identity/print')) as RouterOSResponse[];
       return result[0]?.name ?? 'Unknown';
+    } finally {
+      if (api) await api.close();
+    }
+  }
+
+  /**
+   * Read the router's actual state — "what is on this router right now?"
+   * Used by the installation engine before proposing changes.
+   *
+   * Requires the RouterOS API to be reachable from the backend (public IP,
+   * port forward, or tunnel). Routers behind NAT without forwarding rely on
+   * heartbeat-reported identity instead; this call will throw/fail there.
+   */
+  async getDiscoverySnapshot(): Promise<RouterDiscoverySnapshot> {
+    let api: any = null;
+    try {
+      api = await this.connect();
+
+      const [identity, resource, routerboard, interfaces, ipAddresses, dhcpServers, dhcpLeases, hotspotServers] =
+        await Promise.all([
+          api.write('/system/identity/print') as Promise<RouterOSResponse[]>,
+          api.write('/system/resource/print') as Promise<RouterOSResponse[]>,
+          api.write('/system/routerboard/print').catch(() => [] as RouterOSResponse[]),
+          api.write('/interface/print') as Promise<RouterOSResponse[]>,
+          api.write('/ip/address/print') as Promise<RouterOSResponse[]>,
+          api.write('/ip/dhcp-server/print').catch(() => [] as RouterOSResponse[]),
+          api.write('/ip/dhcp-server/lease/print', ['?dynamic=yes']).catch(() => [] as RouterOSResponse[]),
+          api.write('/ip/hotspot/print').catch(() => [] as RouterOSResponse[]),
+        ]);
+
+      const res0 = resource[0] ?? {};
+      const rb0 = routerboard[0] ?? {};
+
+      return {
+        live: true,
+        identity: identity[0]?.name ?? null,
+        model: rb0['model'] ?? res0['board-name'] ?? null,
+        serialNumber: rb0['serial-number'] ?? null,
+        routerOsVersion: res0['version'] ?? null,
+        boardName: res0['board-name'] ?? null,
+        uptime: res0['uptime'] ?? null,
+        cpuLoad: res0['cpu-load'] ?? null,
+        interfaces: interfaces.map((i) => ({
+          name: i['name'] ?? '',
+          type: i['type'] ?? '',
+          running: i['running'] === 'true',
+          macAddress: i['mac-address'] ?? null,
+        })),
+        ipAddresses: ipAddresses.map((a) => ({
+          address: a['address'] ?? '',
+          interface: a['interface'] ?? '',
+          network: a['network'] ?? '',
+        })),
+        dhcpServers: dhcpServers.map((d: RouterOSResponse) => ({
+          name: d['name'] ?? '',
+          interface: d['interface'] ?? '',
+          addressPool: d['address-pool'] ?? '',
+          disabled: d['disabled'] === 'true',
+        })),
+        dhcpLeaseCount: dhcpLeases.length,
+        hotspotServers: hotspotServers.map((h: RouterOSResponse) => ({
+          name: h['name'] ?? '',
+          interface: h['interface'] ?? '',
+          profile: h['profile'] ?? '',
+          disabled: h['disabled'] === 'true',
+        })),
+        capturedAt: new Date().toISOString(),
+      };
     } finally {
       if (api) await api.close();
     }

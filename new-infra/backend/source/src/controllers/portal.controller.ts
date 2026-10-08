@@ -5,6 +5,7 @@ import { MikroTikService } from '../services/mikrotik.service';
 import { verifyRouterSyncToken } from '../services/router-sync-auth.service';
 import { logger } from '../config/logger';
 import { env } from '../config/env';
+import { mintPortalSocketToken } from '../socket';
 import { AuthRequest } from '../types';
 
 function buildSubscriptionExpiredHtml(tenantName: string): string {
@@ -482,6 +483,9 @@ export async function checkSessionStatus(
         expiresAt: session.expiresAt,
         plan: session.plan,
         paymentStatus: session.payment?.status ?? null,
+        // Short-lived socket token bound to THIS tenant+MAC — required for
+        // portal:subscribe since sockets no longer trust client-supplied IDs.
+        socketToken: mintPortalSocketToken(session.tenantId, session.macAddress),
         // Return credentials as soon as payment is confirmed so the portal can show
         // the success screen and attempt hotspot login. The router pull-sync will
         // activate the hotspot user within ~15 s if direct activation failed.

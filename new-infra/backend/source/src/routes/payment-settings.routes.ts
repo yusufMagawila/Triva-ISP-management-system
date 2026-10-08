@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireDashboardRole } from '../middleware/auth';
 import {
   getPaymentSettings,
   updatePaymentSettings,
@@ -8,8 +8,8 @@ import {
 
 const router = Router();
 
-router.get('/', authenticate, getPaymentSettings);
-router.put('/', authenticate, updatePaymentSettings);
-router.post('/test', authenticate, testPaymentGateway);
+router.get('/', authenticate, requireDashboardRole, getPaymentSettings);
+router.put('/', authenticate, requireDashboardRole, updatePaymentSettings);
+router.post('/test', authenticate, requireDashboardRole, testPaymentGateway);
 
 export default router;

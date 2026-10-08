@@ -4,17 +4,11 @@ import { createTpLinkService } from '../services/tplink.service';
 import { getIO } from '../socket';
 import { AuthRequest } from '../types';
 import { logger } from '../config/logger';
-import { getPlanConfig } from '../config/plans';
 import {
-  allocateNextRouterControlIp,
   normalizeRouterMac,
   normalizeRouterSerial,
 } from '../services/router-provisioning.service';
-import {
-  generateTpLinkProvisioningKey,
-  generateTpLinkSshPassword,
-  generateTpLinkSshUsername,
-} from '../services/tplink-provisioning.service';
+import { createTpLinkAsset, PlanLimitError } from '../services/device-registry.service';
 
 export async function listTpLinkRouters(
   req: AuthRequest,
@@ -71,58 +65,26 @@ export async function createTpLinkRouter(
       location?: string;
     };
 
-    // ── Plan limit check (routers of both vendors count toward the quota) ──
-    const tenantWithSub = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      include: {
-        subscription: true,
-        _count: { select: { routers: true, tplinkRouters: true } },
-      },
+    const router = await createTpLinkAsset(tenantId, {
+      name,
+      serialNumber,
+      hardwareMac,
+      openwrtVersion,
+      location,
     });
 
-    const totalRouters =
-      (tenantWithSub?._count.routers ?? 0) + (tenantWithSub?._count.tplinkRouters ?? 0);
-    const planConfig = getPlanConfig(tenantWithSub?.subscription?.plan);
-    if (planConfig.maxRouters !== -1 && totalRouters >= planConfig.maxRouters) {
+    const { passwordHash: _, passwordEnc: _e, ...safeRouter } = router;
+    res.status(201).json({ success: true, data: safeRouter });
+  } catch (err) {
+    if (err instanceof PlanLimitError) {
       res.status(403).json({
         success: false,
-        error: `Your ${planConfig.label} plan allows a maximum of ${planConfig.maxRouters} router${planConfig.maxRouters === 1 ? '' : 's'}. Upgrade your subscription to add more.`,
+        error: err.message,
         limitReached: true,
-        currentPlan: tenantWithSub?.subscription?.plan,
+        currentPlan: err.currentPlan,
       });
       return;
     }
-    // ─────────────────────────────────────────────────────────────────────
-
-    const normalizedSerial = normalizeRouterSerial(serialNumber);
-    const normalizedMac = normalizeRouterMac(hardwareMac);
-    const ipAddress = await allocateNextRouterControlIp();
-    const username = generateTpLinkSshUsername();
-    const password = generateTpLinkSshPassword();
-    const provisioningKey = generateTpLinkProvisioningKey();
-
-    const router = await prisma.tpLinkRouter.create({
-      data: {
-        tenantId,
-        name,
-        ipAddress,
-        sshPort: 22,
-        username,
-        passwordHash: password, // stored as-is (router OS credentials, not user passwords)
-        provisioningKey,
-        serialNumber: normalizedSerial,
-        hardwareMac: normalizedMac,
-        openwrtVersion,
-        location,
-        status: 'OFFLINE',
-        lastSeenAt: null,
-      },
-    });
-
-    logger.info('TP-Link router created', { routerId: router.id, tenantId });
-    const { passwordHash: _, ...safeRouter } = router;
-    res.status(201).json({ success: true, data: safeRouter });
-  } catch (err) {
     next(err);
   }
 }

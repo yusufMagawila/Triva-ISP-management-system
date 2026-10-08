@@ -8,6 +8,12 @@ export interface AuthPayload {
   tenantId: string | null;
   role: UserRole;
   email: string;
+  /** Present when this is a scoped installer token (scope === 'install'). */
+  scope?: 'install';
+  jti?: string;
+  installationId?: string | null;
+  siteId?: string | null;
+  scopes?: string[];
 }
 
 export interface AuthRequest extends Request {
@@ -76,6 +82,24 @@ export interface HotspotActive {
 export interface RouterOSResponse {
   '.id'?: string;
   [key: string]: string | undefined;
+}
+
+/** Structured RouterOS read-back snapshot (Phase 5A discovery). */
+export interface RouterDiscoverySnapshot {
+  live: boolean;
+  identity: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  routerOsVersion: string | null;
+  boardName: string | null;
+  uptime: string | null;
+  cpuLoad: string | null;
+  interfaces: Array<{ name: string; type: string; running: boolean; macAddress: string | null }>;
+  ipAddresses: Array<{ address: string; interface: string; network: string }>;
+  dhcpServers: Array<{ name: string; interface: string; addressPool: string; disabled: boolean }>;
+  dhcpLeaseCount: number;
+  hotspotServers: Array<{ name: string; interface: string; profile: string; disabled: boolean }>;
+  capturedAt: string;
 }
 
 // ─── Socket Events ────────────────────────────────────────────────────────────

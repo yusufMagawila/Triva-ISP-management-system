@@ -4,16 +4,12 @@ import { createMikroTikService } from '../services/mikrotik.service';
 import { getIO } from '../socket';
 import { AuthRequest } from '../types';
 import { logger } from '../config/logger';
-import { getPlanConfig } from '../config/plans';
 import {
-  allocateNextRouterControlIp,
   buildRouterBootstrapUrls,
-  generateProvisioningKey,
-  generateRouterApiPassword,
-  generateRouterApiUsername,
   normalizeRouterMac,
   normalizeRouterSerial,
 } from '../services/router-provisioning.service';
+import { createMikrotikAsset, PlanLimitError } from '../services/device-registry.service';
 
 export async function listRouters(
   req: AuthRequest,
@@ -70,54 +66,26 @@ export async function createRouter(
       location?: string;
     };
 
-    // Test connection before saving
-    // ── Plan limit check ──────────────────────────────────────────────────
-    const tenantWithSub = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      include: { subscription: true, _count: { select: { routers: true } } },
+    const router = await createMikrotikAsset(tenantId, {
+      name,
+      serialNumber,
+      hardwareMac,
+      hotspotName,
+      location,
     });
 
-    const planConfig = getPlanConfig(tenantWithSub?.subscription?.plan);
-    if (planConfig.maxRouters !== -1 && (tenantWithSub?._count.routers ?? 0) >= planConfig.maxRouters) {
+    const { passwordHash: _, passwordEnc: _e, ...safeRouter } = router;
+    res.status(201).json({ success: true, data: safeRouter });
+  } catch (err) {
+    if (err instanceof PlanLimitError) {
       res.status(403).json({
         success: false,
-        error: `Your ${planConfig.label} plan allows a maximum of ${planConfig.maxRouters} router${planConfig.maxRouters === 1 ? '' : 's'}. Upgrade your subscription to add more.`,
+        error: err.message,
         limitReached: true,
-        currentPlan: tenantWithSub?.subscription?.plan,
+        currentPlan: err.currentPlan,
       });
       return;
     }
-
-    // ─────────────────────────────────────────────────────────────────────
-    const normalizedSerial = normalizeRouterSerial(serialNumber);
-    const normalizedMac = normalizeRouterMac(hardwareMac);
-    const ipAddress = await allocateNextRouterControlIp();
-    const username = generateRouterApiUsername();
-    const password = generateRouterApiPassword();
-    const provisioningKey = generateProvisioningKey();
-
-    const router = await prisma.router.create({
-      data: {
-        tenantId,
-        name,
-        ipAddress,
-        apiPort: 8728,
-        username,
-        passwordHash: password, // stored as-is (router OS credentials, not user passwords)
-        provisioningKey,
-        serialNumber: normalizedSerial,
-        hardwareMac: normalizedMac,
-        hotspotName: hotspotName ?? 'hotspot1',
-        location,
-        status: 'OFFLINE',
-        lastSeenAt: null,
-      },
-    });
-
-    logger.info('Router created', { routerId: router.id, tenantId });
-    const { passwordHash: _, ...safeRouter } = router;
-    res.status(201).json({ success: true, data: safeRouter });
-  } catch (err) {
     next(err);
   }
 }

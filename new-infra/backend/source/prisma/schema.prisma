@@ -35,6 +35,55 @@ enum SubscriptionPlan {
 enum UserRole {
   SUPER_ADMIN
   MERCHANT
+  INSTALLER
+}
+
+enum CustomerStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SiteStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SiteInstallationStatus {
+  UNINSTALLED
+  IN_PROGRESS
+  ONLINE
+  FAILED
+}
+
+enum InstallationStatus {
+  DRAFT
+  IN_PROGRESS
+  WAITING_FOR_HARDWARE
+  CONFIGURING
+  VERIFYING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum InstallationStage {
+  CUSTOMER
+  SITE
+  HARDWARE
+  WAN
+  LAN
+  WIFI
+  CAPTIVE_PORTAL
+  BILLING
+  SECURITY
+  VERIFICATION
+  COMPLETION
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+  DENIED
 }
 
 enum RouterStatus {
@@ -108,6 +157,9 @@ model Tenant {
   payments            Payment[]
   users               User[]
   vouchers            Voucher[]
+  customers           Customer[]
+  sites               Site[]
+  installations       Installation[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -145,6 +197,9 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  installations   Installation[]  @relation("InstallationInstaller")
+  installerTokens InstallerToken[]
+
   @@map("users")
 }
 
@@ -165,6 +220,12 @@ model Router {
   hardwareMac     String?      @unique
   hotspotName     String       @default("hotspot1")
   location        String?
+  siteId          String?
+  site            Site?        @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  model           String?      // reported by bootstrap/heartbeat (e.g. "hAP ac2")
+  routerOsVersion String?      // reported RouterOS version
+  discovery       Json?        // last RouterOS read-back snapshot
+  discoveredAt    DateTime?
   status          RouterStatus @default(OFFLINE)
   lastSeenAt      DateTime?
   lastBootstrapAt DateTime?
@@ -195,6 +256,8 @@ model TpLinkRouter {
   hotspotName     String       @default("nodogsplash1")
   openwrtVersion  String?
   location        String?
+  siteId          String?
+  site            Site?        @relation(fields: [siteId], references: [id], onDelete: SetNull)
   status          RouterStatus @default(OFFLINE)
   lastSeenAt      DateTime?
   lastBootstrapAt DateTime?
@@ -345,6 +408,8 @@ model OmadaSite {
   ssidName        String? // WiFi SSID name (for reference)
   hotspotName     String       @default("omada1")
   location        String?
+  siteId          String?
+  site            Site?        @relation(fields: [siteId], references: [id], onDelete: SetNull)
   status          RouterStatus @default(OFFLINE)
   lastSeenAt      DateTime? // Updated when RADIUS auth requests come from this site
   provisionedAt   DateTime? // Set when operator marks the site as configured
@@ -379,4 +444,164 @@ model PlatformSetting {
   updatedAt     DateTime @updatedAt
 
   @@map("platform_settings")
+}
+
+// ─── Customer (the WiFi business receiving service — distinct from Tenant) ────
+//
+// Tenant = the Triva business account (billing/subscription boundary).
+// Customer = the client's business that is receiving a WiFi installation.
+// A tenant (e.g. an ISP operating Triva) may install for many customers.
+
+model Customer {
+  id          String         @id @default(cuid())
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  contactName String?
+  phone       String?
+  email       String?
+  status      CustomerStatus @default(ACTIVE)
+  metadata    Json?
+  sites       Site[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([tenantId])
+  @@map("customers")
+}
+
+// ─── Site (one physical premises; groups devices + installations) ────────────
+
+model Site {
+  id                 String                  @id @default(cuid())
+  tenantId           String
+  tenant             Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerId         String?
+  customer           Customer?               @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  name               String
+  address            String?
+  location           String?                 // free-text or "lat,lon"
+  status             SiteStatus              @default(ACTIVE)
+  installationStatus SiteInstallationStatus  @default(UNINSTALLED)
+  metadata           Json?
+  routers            Router[]
+  tplinkRouters      TpLinkRouter[]
+  omadaSites         OmadaSite[]
+  installations      Installation[]
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@map("sites")
+}
+
+// ─── Installation (one physical installation event) ───────────────────────────
+//
+// Persists the structured configuration contract:
+//   requestedConfig  — what the installer/wizard asked for
+//   validatedConfig  — what the policy validator approved
+//   executedConfig   — what the configuration engine actually applied
+// revision is bumped on every validate/execute pass (optimistic concurrency).
+
+model Installation {
+  id              String             @id @default(cuid())
+  tenantId        String
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId          String
+  site            Site               @relation(fields: [siteId], references: [id])
+  installerId     String
+  installer       User               @relation("InstallationInstaller", fields: [installerId], references: [id])
+  status          InstallationStatus @default(DRAFT)
+  stage           InstallationStage  @default(CUSTOMER)
+  failureReason   String?
+  contractVersion String             @default("1.0")
+  revision        Int                @default(0)
+  idempotencyKey  String?            @unique
+  requestedConfig  Json?
+  validatedConfig  Json?
+  executedConfig   Json?
+  executionResults Json?             // ordered action results [{actionId,type,status,evidence,error}]
+  approvals        Json?             // [{step,by,at,method}]
+  startedAt        DateTime          @default(now())
+  completedAt      DateTime?
+  metadata         Json?
+  secrets          InstallationSecret[]
+  tokens           InstallerToken[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([installerId])
+  @@index([status])
+  @@map("installations")
+}
+
+// ─── Installer scoped token (revocable, short-lived, audit-linked) ───────────
+//
+// Login JWTs prove identity; InstallerTokens authorize work on one
+// installation. jti is stored so a leaked token can be revoked.
+
+model InstallerToken {
+  id             String        @id @default(cuid())
+  jti            String        @unique
+  installerId    String
+  installer      User          @relation(fields: [installerId], references: [id], onDelete: Cascade)
+  tenantId       String
+  installationId String?
+  installation   Installation? @relation(fields: [installationId], references: [id], onDelete: SetNull)
+  siteId         String?
+  scopes         String[]      // e.g. ["install:read","install:execute"]
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([installerId])
+  @@index([tenantId])
+  @@map("installer_tokens")
+}
+
+// ─── Installation secret (PPPoE creds, controller creds, admin passwords) ────
+//
+// Values are AES-256-GCM encrypted and referenced everywhere else by
+// secretRef "secret://installation/<installationId>/<secretId>" — never inline.
+
+model InstallationSecret {
+  id             String       @id @default(cuid())
+  installationId String
+  installation   Installation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+  kind           String       // e.g. "pppoe", "omada-controller", "router-admin"
+  label          String?
+  valueEnc       String       // AES-256-GCM ciphertext (ROUTER_CREDENTIALS_KEY)
+  consumedAt     DateTime?    // set once the executor has used it
+  createdAt      DateTime     @default(now())
+
+  @@index([installationId])
+  @@map("installation_secrets")
+}
+
+// ─── Audit log ────────────────────────────────────────────────────────────────
+//
+// Append-only record of every sensitive action. metadata is sanitized before
+// write (see services/audit.service.ts) — secrets must never land here.
+
+model AuditLog {
+  id             String      @id @default(cuid())
+  tenantId       String?
+  userId         String?     // actor (installer/merchant/admin); null = system
+  installationId String?
+  siteId         String?
+  action         String      // e.g. INSTALLATION_CREATED, DEVICE_CLAIMED
+  targetType     String?     // e.g. "router", "site", "plan"
+  targetId       String?
+  result         AuditResult @default(SUCCESS)
+  correlationId  String?     // request/installation correlation
+  metadata       Json?       // sanitized — never contains secrets
+  createdAt      DateTime    @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([installationId])
+  @@index([action])
+  @@map("audit_logs")
 }
