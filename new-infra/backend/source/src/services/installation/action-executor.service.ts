@@ -90,6 +90,13 @@ interface ActionDef {
   requiresApproval?: boolean;
   allowedRoles?: string[];
   run?: (params: Record<string, unknown>, ctx: RunContext) => Promise<unknown>;
+  /**
+   * Mutating actions capture pre-state before run() and declare a rollback
+   * strategy. captureState must never throw — it is best-effort evidence.
+   */
+  mutates?: boolean;
+  captureState?: (params: Record<string, unknown>, ctx: RunContext) => Promise<unknown>;
+  rollback?: string;
 }
 
 interface RunContext extends ExecutorContext {
@@ -111,6 +118,9 @@ const ACTION_REGISTRY: ActionDef[] = [
     type: 'REGISTER_ROUTER',
     implemented: true,
     paramsSchema: registerRouterParams,
+    mutates: true,
+    rollback: 'Delete the created Router row (no device-side change).',
+    captureState: async () => ({ note: 'Creates a new Router asset row; nothing exists yet.' }),
     run: async (p, ctx) => {
       const router = await createMikrotikAsset(ctx.installation.tenantId, {
         name: p.name as string,
@@ -126,6 +136,9 @@ const ACTION_REGISTRY: ActionDef[] = [
     type: 'REGISTER_TPLINK_ROUTER',
     implemented: true,
     paramsSchema: registerTpLinkParams,
+    mutates: true,
+    rollback: 'Delete the created TpLinkRouter row (no device-side change).',
+    captureState: async () => ({ note: 'Creates a new TpLinkRouter asset row; nothing exists yet.' }),
     run: async (p, ctx) => {
       const router = await createTpLinkAsset(ctx.installation.tenantId, {
         name: p.name as string,
@@ -141,6 +154,9 @@ const ACTION_REGISTRY: ActionDef[] = [
     type: 'REGISTER_OMADA_SITE',
     implemented: true,
     paramsSchema: registerOmadaSiteParams,
+    mutates: true,
+    rollback: 'Delete the created OmadaSite row (controller-side config is manual).',
+    captureState: async () => ({ note: 'Creates a new OmadaSite asset row; nothing exists yet.' }),
     run: async (p, ctx) => {
       const site = await createOmadaSiteAsset(ctx.installation.tenantId, {
         name: p.name as string,
@@ -158,6 +174,12 @@ const ACTION_REGISTRY: ActionDef[] = [
     type: 'CLAIM_DEVICE',
     implemented: true,
     paramsSchema: claimDeviceParams,
+    mutates: true,
+    rollback: 'Restore the prior siteId/identity captured in preState via an explicit reassignment.',
+    captureState: async (p) => {
+      const asset = await findAsset(p.vendor as string, p.assetId as string).catch(() => null);
+      return { priorSiteId: asset?.siteId ?? null, priorSerial: asset?.serialNumber ?? null, priorMac: asset?.hardwareMac ?? null };
+    },
     run: async (p, ctx) => {
       const vendor = p.vendor as 'MIKROTIK' | 'TPLINK' | 'OMADA';
       const assetId = p.assetId as string;
@@ -253,6 +275,17 @@ const ACTION_REGISTRY: ActionDef[] = [
     type: 'CONFIGURE_HOTSPOT_PROFILE',
     implemented: true,
     paramsSchema: hotspotProfileParams,
+    mutates: true,
+    rollback: 'createOrUpdateProfile is idempotent — re-apply the prior rate-limit values, or remove the profile if it did not exist (see preState).',
+    captureState: async (p, ctx) => {
+      try {
+        const router = await ctx.getScopedRouter(p.assetId as string);
+        const snap = await createMikroTikService(router).getDiscoverySnapshot();
+        return { hotspotServers: snap.hotspotServers, capturedAt: snap.capturedAt };
+      } catch {
+        return { liveSnapshotFailed: true };
+      }
+    },
     run: async (p, ctx) => {
       const router = await ctx.getScopedRouter(p.assetId as string);
       await createMikroTikService(router).createOrUpdateProfile(
@@ -329,6 +362,14 @@ async function findAsset(vendor: string, assetId: string) {
   return site ? { ...site, serialNumber: null, hardwareMac: null } : null;
 }
 
+/** Mark Devices attached to a failed installation as FAILED — never pretend ACTIVE. */
+async function markLinkedDeviceFailed(installationId: string): Promise<void> {
+  await prisma.device.updateMany({
+    where: { installationId, provisioningStatus: { in: ['DISCOVERING', 'READY', 'CONFIGURING', 'VERIFYING'] } },
+    data: { provisioningStatus: 'FAILED' },
+  });
+}
+
 async function bindAssetToSite(vendor: string, assetId: string, siteId: string, claim: { serialNumber?: string; macAddress?: string }) {
   const serial = normalizeRouterSerial(claim.serialNumber) ?? undefined;
   const mac = normalizeRouterMac(claim.macAddress) ?? undefined;
@@ -379,8 +420,14 @@ export async function executeActions(
       (parsedReq.success && parsedReq.data.actionId) || `a${results.length + 1}`;
     const type = parsedReq.success ? parsedReq.data.type : 'unknown';
 
-    const finish = async (status: ActionResult['status'], evidence?: unknown, error?: string) => {
-      const result: ActionResult = { actionId, type, status, evidence: evidence ? sanitizeSecrets(evidence) : undefined, error, at: new Date().toISOString() };
+    const finish = async (status: ActionResult['status'], evidence?: unknown, error?: string, preState?: unknown, rollback?: string) => {
+      const result: ActionResult = {
+        actionId, type, status,
+        evidence: evidence ? sanitizeSecrets(evidence) : undefined,
+        preState: preState ? sanitizeSecrets(preState) : undefined,
+        rollback, error,
+        at: new Date().toISOString(),
+      };
       results.push(result);
       await recordAudit({
         ...auditBase(ctx, installation),
@@ -431,14 +478,26 @@ export async function executeActions(
       continue;
     }
 
+    // Mutating actions capture pre-state first — evidence for diagnosis and
+    // rollback. Capture failure must not block the action itself.
+    let preState: unknown;
+    if (entry.mutates && entry.captureState) {
+      preState = await entry.captureState(pCheck.data as Record<string, unknown>, runCtx).catch(() => ({ captureFailed: true }));
+    }
+
     try {
       const evidence = await entry.run!(pCheck.data as Record<string, unknown>, runCtx);
-      await finish('OK', evidence);
+      await finish('OK', evidence, undefined, preState, entry.rollback);
     } catch (err) {
       const statusCode = (err as { statusCode?: number }).statusCode;
       const message = err instanceof Error ? err.message : 'Action failed';
       logger.warn('Installation action failed', { installationId, type, actionId, statusCode, message });
-      await finish(statusCode === 403 ? 'DENIED' : 'FAILED', undefined, message);
+      await finish(statusCode === 403 ? 'DENIED' : 'FAILED', undefined, message, preState, entry.rollback);
+
+      // A failed mutation leaves the linked Device honest — never ACTIVE.
+      if (entry.mutates && statusCode !== 403) {
+        await markLinkedDeviceFailed(installation.id).catch((e) => logger.warn('device failure-mark failed', { e }));
+      }
     }
   }
 

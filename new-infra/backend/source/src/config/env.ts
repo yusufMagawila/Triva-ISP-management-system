@@ -16,6 +16,11 @@ const envSchema = z.object({
   APP_URL: z.string().url(),
   // Platform webhook shared secret (activation/subscription callbacks)
   ACTIVATION_WEBHOOK_SECRET: z.string().min(32, 'ACTIVATION_WEBHOOK_SECRET must be at least 32 characters'),
+  // AI provider — optional; AI features degrade to unavailable when unset.
+  // Never exposed to the frontend; used only by services/ai.
+  AI_PROVIDER: z.string().default('gemini'),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default('gemini-2.0-flash'),
 });
 
 const parsed = envSchema.safeParse(process.env);

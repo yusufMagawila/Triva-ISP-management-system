@@ -16,10 +16,22 @@ import TenantsPage from './pages/admin/TenantsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import SubscriptionPage from './pages/subscription/SubscriptionPage';
 import VouchersPage from './pages/vouchers/VouchersPage';
+import InstallerJobsPage from './pages/installer/InstallerJobsPage';
+import InstallationDetailPage from './pages/installer/InstallationDetailPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
   return token ? <>{children}</> : <Navigate to="/login" replace />;
+}
+
+/** Installer accounts only reach the installer namespace — no merchant dashboard. */
+function InstallerRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthStore();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'INSTALLER' && user.role !== 'MERCHANT' && user.role !== 'SUPER_ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <>{children}</>;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -68,11 +80,32 @@ export default function App() {
       />
 
       <Route
+        path="/installer"
+        element={
+          <PrivateRoute>
+            <InstallerRoute>
+              <InstallerJobsPage />
+            </InstallerRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/installer/jobs/:id"
+        element={
+          <PrivateRoute>
+            <InstallerRoute>
+              <InstallationDetailPage />
+            </InstallerRoute>
+          </PrivateRoute>
+        }
+      />
+
+      <Route
         path="/"
         element={
           <PrivateRoute>
             <ActiveMerchantRoute>
-              <DashboardLayout />
+              {user?.role === 'INSTALLER' ? <Navigate to="/installer" replace /> : <DashboardLayout />}
             </ActiveMerchantRoute>
           </PrivateRoute>
         }

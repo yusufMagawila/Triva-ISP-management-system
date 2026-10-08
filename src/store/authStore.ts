@@ -7,7 +7,7 @@ interface User {
   email: string;
   name: string;
   phone?: string;
-  role: 'SUPER_ADMIN' | 'MERCHANT';
+  role: 'SUPER_ADMIN' | 'MERCHANT' | 'INSTALLER';
   tenantId: string | null;
   tenant: {
     id: string;

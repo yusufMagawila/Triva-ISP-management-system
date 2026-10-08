@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate, requireRole, verifyInstallScope } from '../middleware/auth';
 import * as ctrl from '../controllers/install.controller';
+import * as deviceCtrl from '../controllers/device.controller';
 
 const router = Router();
 
@@ -31,6 +32,24 @@ router.post('/installations/:id/execute', requireRole(...FIELD_ROLES), ctrl.exec
 router.post('/installations/:id/transition', requireRole(...FIELD_ROLES), ctrl.transitionInstallation);
 router.post('/installations/:id/diagnostics', requireRole(...FIELD_ROLES), ctrl.runDiagnostic);
 router.get('/installations/:id/audit', requireRole(...FIELD_ROLES), ctrl.getInstallationAudit);
+
+// AI planner + diagnostic assistant — output is schema-validated and
+// allowlist-checked; the AI never executes anything itself.
+router.post('/installations/:id/plan', requireRole(...FIELD_ROLES), ctrl.generatePlan);
+router.post('/installations/:id/ai-diagnose', requireRole(...FIELD_ROLES), ctrl.aiDiagnose);
+
+// Device inventory — scan/identify, register, assign, reassign, history.
+router.post('/devices/identify', requireRole(...FIELD_ROLES), deviceCtrl.identifyScannedDevice);
+router.post('/devices/register', requireRole(...FIELD_ROLES), deviceCtrl.registerDeviceHandler);
+router.get('/devices', requireRole(...FIELD_ROLES), deviceCtrl.listDevices);
+router.get('/devices/:id', requireRole(...FIELD_ROLES), deviceCtrl.getDevice);
+router.post('/devices/:id/assign', requireRole(...FIELD_ROLES), deviceCtrl.assignDevice);
+router.post('/devices/:id/reassign', requireRole(...FIELD_ROLES), deviceCtrl.reassignDeviceHandler);
+router.get('/devices/:id/history', requireRole(...FIELD_ROLES), deviceCtrl.getDeviceHistoryHandler);
+
+// Hardware Lab — physical test-run evidence, tenant-scoped.
+router.post('/lab/tests', requireRole(...FIELD_ROLES), deviceCtrl.recordHardwareTest);
+router.get('/lab/tests', requireRole(...FIELD_ROLES), deviceCtrl.listHardwareTests);
 
 // Installation secrets — write-only; values never readable via API.
 router.post('/installations/:id/secrets', requireRole(...FIELD_ROLES), ctrl.createInstallationSecret);

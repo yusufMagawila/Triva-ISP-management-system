@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useSocketStore } from '../store/socketStore';
 import {
@@ -40,6 +40,9 @@ export default function DashboardLayout() {
   const { user, logout, fetchMe } = useAuthStore();
   const { connected, socket } = useSocketStore();
   const navigate = useNavigate();
+
+  // Installers never see the merchant dashboard — send them to the installer app.
+  if (user?.role === 'INSTALLER') return <Navigate to="/installer" replace />;
 
   const sub = user?.tenant?.subscription ?? null;
   const isExpired = sub?.status === 'EXPIRED' || (sub ? new Date() > new Date(sub.expiresAt) : false);

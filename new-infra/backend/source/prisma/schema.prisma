@@ -129,6 +129,58 @@ enum VoucherStatus {
   CANCELLED
 }
 
+enum DeviceVendor {
+  MIKROTIK
+  TPLINK
+  OMADA
+  UBNT
+  OPENWRT
+  OTHER
+}
+
+enum DeviceType {
+  ROUTER
+  ACCESS_POINT
+  SWITCH
+  CONTROLLER
+  OTHER
+}
+
+enum DeviceStatus {
+  UNASSIGNED
+  AVAILABLE
+  RESERVED
+  INSTALLING
+  ACTIVE
+  OFFLINE
+  FAULTY
+  RETIRED
+}
+
+enum DeviceProvisioningStatus {
+  NOT_PROVISIONED
+  DISCOVERING
+  READY
+  CONFIGURING
+  VERIFYING
+  PROVISIONED
+  FAILED
+}
+
+enum DeviceIdentitySource {
+  SCAN
+  DISCOVERY
+  HEARTBEAT
+  MANUAL
+}
+
+enum HardwareTestResult {
+  PASS
+  FAIL
+  INFO
+  SKIP
+}
+
 // ─── Tenant ───────────────────────────────────────────────────────────────────
 
 model Tenant {
@@ -160,6 +212,8 @@ model Tenant {
   customers           Customer[]
   sites               Site[]
   installations       Installation[]
+  devices             Device[]
+  hardwareTestRuns    HardwareTestRun[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -199,6 +253,8 @@ model User {
 
   installations   Installation[]  @relation("InstallationInstaller")
   installerTokens InstallerToken[]
+  installedDevices Device[]         @relation("DeviceInstaller")
+  hardwareTestRuns HardwareTestRun[]
 
   @@map("users")
 }
@@ -232,6 +288,7 @@ model Router {
   lastBootstrapIp String?
   provisionedAt   DateTime?
   sessions        Session[]
+  device          Device?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -264,6 +321,7 @@ model TpLinkRouter {
   lastBootstrapIp String?
   provisionedAt   DateTime?
   sessions        Session[]
+  device          Device?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -414,6 +472,7 @@ model OmadaSite {
   lastSeenAt      DateTime? // Updated when RADIUS auth requests come from this site
   provisionedAt   DateTime? // Set when operator marks the site as configured
   sessions        Session[]
+  device          Device?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -488,6 +547,7 @@ model Site {
   tplinkRouters      TpLinkRouter[]
   omadaSites         OmadaSite[]
   installations      Installation[]
+  devices            Device[]
   createdAt          DateTime                @default(now())
   updatedAt          DateTime                @updatedAt
 
@@ -528,6 +588,8 @@ model Installation {
   metadata         Json?
   secrets          InstallationSecret[]
   tokens           InstallerToken[]
+  devices          Device[]
+  testRuns         HardwareTestRun[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -604,4 +666,79 @@ model AuditLog {
   @@index([installationId])
   @@index([action])
   @@map("audit_logs")
+}
+
+// ─── Device (first-class physical inventory/identity record) ─────────────────
+//
+// Device is the canonical "this physical box exists and is owned by tenant X,
+// installed at site Y" record. It links to the operational provisioning
+// records (Router / TpLinkRouter / OmadaSite) which carry credentials and
+// runtime state — Device carries identity, ownership, and lifecycle.
+
+model Device {
+  id                 String                    @id @default(cuid())
+  tenantId           String
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId             String?
+  site               Site?                     @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  vendor             DeviceVendor
+  deviceType         DeviceType
+  model              String?
+  serialNumber       String?                   @unique
+  macAddress         String?                   @unique
+  assetTag           String?
+  barcodeValue       String?                   @unique
+  identitySource     DeviceIdentitySource      @default(MANUAL)
+  status             DeviceStatus              @default(UNASSIGNED)
+  provisioningStatus DeviceProvisioningStatus  @default(NOT_PROVISIONED)
+  // linked operational records (one device → at most one live asset)
+  routerId           String?                   @unique
+  router             Router?                   @relation(fields: [routerId], references: [id], onDelete: SetNull)
+  tpLinkRouterId     String?                   @unique
+  tpLinkRouter       TpLinkRouter?             @relation(fields: [tpLinkRouterId], references: [id], onDelete: SetNull)
+  omadaSiteId        String?                   @unique
+  omadaSite          OmadaSite?                @relation(fields: [omadaSiteId], references: [id], onDelete: SetNull)
+  // provenance
+  installedById      String?
+  installedBy        User?                     @relation("DeviceInstaller", fields: [installedById], references: [id], onDelete: SetNull)
+  installationId     String?
+  installation       Installation?             @relation(fields: [installationId], references: [id], onDelete: SetNull)
+  lastSeenAt         DateTime?
+  installedAt        DateTime?
+  retiredAt          DateTime?
+  metadata           Json?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@index([tenantId])
+  @@index([siteId])
+  @@index([status])
+  @@map("devices")
+}
+
+// ─── Hardware test run (lab-mode evidence capture) ───────────────────────────
+//
+// Records one physical test against real hardware: who ran it, on which
+// device, against which config version, with what result and evidence.
+
+model HardwareTestRun {
+  id             String             @id @default(cuid())
+  tenantId       String
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  siteId         String?
+  deviceId       String?
+  installationId String?
+  installation   Installation?      @relation(fields: [installationId], references: [id], onDelete: SetNull)
+  operatorId     String
+  operator       User               @relation(fields: [operatorId], references: [id], onDelete: Cascade)
+  testName       String             // e.g. "DISCOVER_ROUTER", "PORTAL_REDIRECT"
+  result         HardwareTestResult
+  durationMs     Int?
+  configVersion  String?
+  logs           Json?              // sanitized evidence — never secrets
+  createdAt      DateTime           @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([deviceId])
+  @@map("hardware_test_runs")
 }

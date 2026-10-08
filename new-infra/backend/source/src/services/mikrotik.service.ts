@@ -119,6 +119,55 @@ export class MikroTikService {
   }
 
   /**
+   * Add an /ip hotspot ip-binding entry. Hardware finding (Phase 5B): the
+   * provisioning host MUST be bypassed BEFORE a hotspot server is enabled on
+   * its interface — otherwise all management TCP is intercepted and the API
+   * locks out. Idempotent: skips if a matching binding already exists.
+   */
+  async addHotspotIpBinding(address: string, type: 'bypassed' | 'regular' | 'blocked', comment?: string): Promise<void> {
+    let api: any = null;
+    try {
+      api = await this.connect();
+      const existing = (await api.write('/ip/hotspot/ip-binding/print', [`?address=${address}`])) as RouterOSResponse[];
+      if (existing.length > 0) {
+        await api.write('/ip/hotspot/ip-binding/set', [`=.id=${existing[0]['.id']}`, `=type=${type}`, ...(comment ? [`=comment=${comment}`] : [])]);
+      } else {
+        await api.write('/ip/hotspot/ip-binding/add', [`=address=${address}`, `=type=${type}`, ...(comment ? [`=comment=${comment}`] : [])]);
+      }
+    } finally {
+      if (api) await api.close();
+    }
+  }
+
+  /**
+   * Create a hotspot server on an interface (proven non-interactively on
+   * RouterOS 6.49.12 — /ip hotspot add works without the setup wizard).
+   * WARNING: enabling it on the caller's own management interface will
+   * intercept all the caller's TCP — pair with addHotspotIpBinding bypass
+   * first when provisioning over the LAN.
+   */
+  async createHotspotServer(name: string, iface: string, addressPool?: string, profile?: string): Promise<void> {
+    let api: any = null;
+    try {
+      api = await this.connect();
+      const existing = (await api.write('/ip/hotspot/print', [`?name=${name}`])) as RouterOSResponse[];
+      if (existing.length > 0) {
+        await api.write('/ip/hotspot/set', [`=.id=${existing[0]['.id']}`, `=interface=${iface}`, '=disabled=no']);
+        return;
+      }
+      await api.write('/ip/hotspot/add', [
+        `=name=${name}`,
+        `=interface=${iface}`,
+        `=address-pool=${addressPool ?? 'default-dhcp'}`,
+        `=profile=${profile ?? 'default'}`,
+        '=disabled=no',
+      ]);
+    } finally {
+      if (api) await api.close();
+    }
+  }
+
+  /**
    * Add a hotspot user with time and/or bandwidth limits.
    */
   async addHotspotUser(hotspotName: string, user: HotspotUser): Promise<string> {

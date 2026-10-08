@@ -598,3 +598,71 @@ export async function runDiagnostic(req: AuthRequest, res: Response, next: NextF
     next(err);
   }
 }
+
+// ─── AI planner & diagnostic assistant ───────────────────────────────────────
+// AI output is a *proposal*: schema-validated, allowlist-checked, then — if
+// the operator proceeds — re-gated per-action by the executor's policy engine.
+
+export async function generatePlan(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const installation = await scopedInstallation(req, req.params.id);
+    if (TERMINAL.has(installation.status)) httpError(409, `Installation is ${installation.status}`);
+
+    // Structured context: site + tenant-scoped devices only.
+    const [site, devices] = await Promise.all([
+      prisma.site.findUnique({ where: { id: installation.siteId }, include: { customer: { select: { name: true } } } }),
+      prisma.device.findMany({
+        where: { tenantId: installation.tenantId, OR: [{ siteId: installation.siteId }, { installationId: installation.id }] },
+        select: { vendor: true, model: true, deviceType: true, status: true, provisioningStatus: true, metadata: true },
+      }),
+    ]);
+
+    const { generateInstallationPlan } = await import('../services/ai/installation-planner.service');
+    const result = await generateInstallationPlan({
+      site: { name: site?.name ?? 'unknown', id: installation.siteId },
+      customer: site?.customer ?? undefined,
+      devices: devices.map((d) => ({ vendor: d.vendor, model: d.model ?? undefined, deviceType: d.deviceType })),
+      requirements: { requestedConfig: installation.requestedConfig ?? {} },
+    });
+
+    await recordAudit({
+      tenantId: installation.tenantId, userId: req.user!.userId, installationId: installation.id, siteId: installation.siteId,
+      action: 'AI_PLAN_GENERATED', targetType: 'installation', targetId: installation.id,
+      metadata: { actionCount: result.plan.actions.length, notImplemented: result.notImplementedActions, requiresApproval: result.plan.requiresApproval },
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    // Record AI rejections too — an AI proposing forbidden actions is signal.
+    if (err instanceof Error && (err.name === 'PlanRejectedError' || err.name === 'AIMalformedResponseError')) {
+      const installation = await prisma.installation.findUnique({ where: { id: req.params.id } }).catch(() => null);
+      if (installation) {
+        await recordAudit({
+          tenantId: installation.tenantId, userId: req.user!.userId, installationId: installation.id, siteId: installation.siteId,
+          action: 'AI_PLAN_REJECTED', targetType: 'installation', targetId: installation.id,
+          result: 'DENIED', metadata: { reason: err.message },
+        });
+      }
+    }
+    next(err);
+  }
+}
+
+export async function aiDiagnose(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const installation = await scopedInstallation(req, req.params.id);
+    const diagnostics = req.body?.diagnostics as Record<string, unknown> | undefined;
+    if (!diagnostics || typeof diagnostics !== 'object') httpError(400, 'diagnostics object is required');
+
+    const { diagnose } = await import('../services/ai/diagnostic.service');
+    const report = await diagnose(diagnostics);
+
+    await recordAudit({
+      tenantId: installation.tenantId, userId: req.user!.userId, installationId: installation.id, siteId: installation.siteId,
+      action: 'AI_DIAGNOSTIC_GENERATED', targetType: 'installation', targetId: installation.id,
+      metadata: { severity: report.severity, headline: report.headline },
+    });
+    res.json({ success: true, data: report });
+  } catch (err) {
+    next(err);
+  }
+}

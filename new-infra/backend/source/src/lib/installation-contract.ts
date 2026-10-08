@@ -233,6 +233,10 @@ export interface ActionResult {
   type: string;
   status: ActionResultStatus;
   evidence?: unknown;
+  /** Pre-mutation state captured before a write action (sanitized). */
+  preState?: unknown;
+  /** Documented rollback path for this action ('none' | description). */
+  rollback?: string;
   error?: string;
   at: string;
 }
