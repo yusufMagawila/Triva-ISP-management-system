@@ -21,6 +21,7 @@ import { storeInstallationSecret } from '../lib/secrets';
 import { sanitizeSecrets } from '../lib/sanitize';
 import { issueInstallerToken, revokeInstallerToken } from '../services/installer-token.service';
 import { CONTRACT_VERSION, type ContractBody } from '../lib/installation-contract';
+import { createError } from '../middleware/errorHandler';
 
 // ─── Lifecycle state machine ─────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ const TRANSITIONS: Record<string, string[]> = {
 const TERMINAL = new Set(['COMPLETED', 'FAILED', 'CANCELLED']);
 
 function httpError(statusCode: number, message: string): never {
-  throw Object.assign(new Error(message), { statusCode });
+  throw createError(message, statusCode);
 }
 
 /** Resolve tenantId honoring SUPER_ADMIN body/query override. */

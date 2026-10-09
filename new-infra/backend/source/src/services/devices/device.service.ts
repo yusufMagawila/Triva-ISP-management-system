@@ -11,6 +11,7 @@ import { prisma } from '../../config/prisma';
 import { normalizeRouterMac, normalizeRouterSerial } from '../router-provisioning.service';
 import { recordAudit } from '../audit.service';
 import { sanitizeSecrets } from '../../lib/sanitize';
+import { createError } from '../../middleware/errorHandler';
 
 // ─── Scan payload normalization ──────────────────────────────────────────────
 
@@ -39,7 +40,7 @@ const MODEL_RES: Array<[RegExp, string]> = [
 export function normalizeScannedPayload(raw: string): ScannedIdentity {
   const trimmed = raw.trim();
   if (!trimmed || trimmed.length > 512) {
-    throw Object.assign(new Error('Invalid scan payload'), { statusCode: 400 });
+    throw createError('Invalid scan payload', 400);
   }
 
   // JSON payload (some QR labels encode a whole object)
@@ -119,7 +120,8 @@ export class DeviceConflictError extends Error {
   constructor(public readonly existing: { id: string; siteId: string | null; status: string }, field: string) {
     super(`A device with this ${field} is already registered`);
     this.name = 'DeviceConflictError';
-    (this as { statusCode?: number }).statusCode = 409;
+    (this as { statusCode?: number; isOperational?: boolean }).statusCode = 409;
+    (this as { statusCode?: number; isOperational?: boolean }).isOperational = true;
   }
 }
 
@@ -191,12 +193,12 @@ export async function assignDeviceToSite(
     prisma.device.findUnique({ where: { id: deviceId } }),
     prisma.site.findUnique({ where: { id: siteId } }),
   ]);
-  if (!device || device.tenantId !== actor.tenantId) throw Object.assign(new Error('Device not found'), { statusCode: 404 });
-  if (!site || site.tenantId !== actor.tenantId) throw Object.assign(new Error('Site not found'), { statusCode: 404 });
+  if (!device || device.tenantId !== actor.tenantId) throw createError('Device not found', 404);
+  if (!site || site.tenantId !== actor.tenantId) throw createError('Site not found', 404);
 
   if (device.siteId && device.siteId !== siteId) {
     // Never silently reassign — the caller must use reassignDevice.
-    throw Object.assign(new Error('DEVICE_ALREADY_ASSIGNED — use the reassignment workflow'), { statusCode: 409 });
+    throw createError('DEVICE_ALREADY_ASSIGNED — use the reassignment workflow', 409);
   }
 
   const updated = await prisma.device.update({
@@ -224,14 +226,14 @@ export async function reassignDevice(
   actor: { id: string; tenantId: string }
 ) {
   if (!reason || reason.trim().length < 3) {
-    throw Object.assign(new Error('Reassignment requires a reason'), { statusCode: 400 });
+    throw createError('Reassignment requires a reason', 400);
   }
   const [device, site] = await Promise.all([
     prisma.device.findUnique({ where: { id: deviceId } }),
     prisma.site.findUnique({ where: { id: newSiteId } }),
   ]);
-  if (!device || device.tenantId !== actor.tenantId) throw Object.assign(new Error('Device not found'), { statusCode: 404 });
-  if (!site || site.tenantId !== actor.tenantId) throw Object.assign(new Error('Site not found'), { statusCode: 404 });
+  if (!device || device.tenantId !== actor.tenantId) throw createError('Device not found', 404);
+  if (!site || site.tenantId !== actor.tenantId) throw createError('Site not found', 404);
 
   const updated = await prisma.device.update({
     where: { id: deviceId },
@@ -247,7 +249,7 @@ export async function reassignDevice(
 
 export async function getDeviceHistory(deviceId: string, tenantId: string) {
   const device = await prisma.device.findUnique({ where: { id: deviceId } });
-  if (!device || device.tenantId !== tenantId) throw Object.assign(new Error('Device not found'), { statusCode: 404 });
+  if (!device || device.tenantId !== tenantId) throw createError('Device not found', 404);
   const logs = await prisma.auditLog.findMany({
     where: { targetType: 'device', targetId: deviceId, tenantId },
     orderBy: { createdAt: 'asc' },
@@ -262,7 +264,7 @@ export async function updateDeviceStatus(
   patch: { status?: DeviceStatus; provisioningStatus?: DeviceProvisioningStatus; lastSeenAt?: Date; metadata?: Record<string, unknown> }
 ) {
   const device = await prisma.device.findUnique({ where: { id: deviceId } });
-  if (!device || device.tenantId !== tenantId) throw Object.assign(new Error('Device not found'), { statusCode: 404 });
+  if (!device || device.tenantId !== tenantId) throw createError('Device not found', 404);
   return prisma.device.update({
     where: { id: deviceId },
     data: { ...patch, metadata: patch.metadata ? (patch.metadata as Prisma.InputJsonValue) : undefined },

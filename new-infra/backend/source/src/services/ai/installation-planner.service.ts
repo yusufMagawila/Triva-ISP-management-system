@@ -112,6 +112,7 @@ export class PlanRejectedError extends Error {
   constructor(msg: string) {
     super(msg);
     this.name = 'PlanRejectedError';
-    (this as { statusCode?: number }).statusCode = 422;
+    (this as { statusCode?: number; isOperational?: boolean }).statusCode = 422;
+    (this as { statusCode?: number; isOperational?: boolean }).isOperational = true;
   }
 }

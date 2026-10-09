@@ -9,6 +9,7 @@ import { prisma } from '../config/prisma';
 import { AuthRequest } from '../types';
 import { recordAudit } from '../services/audit.service';
 import { sanitizeSecrets } from '../lib/sanitize';
+import { createError } from '../middleware/errorHandler';
 import {
   normalizeScannedPayload,
   findDeviceByIdentity,
@@ -20,7 +21,7 @@ import {
 } from '../services/devices/device.service';
 
 function httpError(statusCode: number, message: string): never {
-  throw Object.assign(new Error(message), { statusCode });
+  throw createError(message, statusCode);
 }
 
 function callerTenantId(req: AuthRequest): string {

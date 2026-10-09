@@ -18,7 +18,8 @@ export class AIUnavailableError extends Error {
   constructor(msg = 'AI provider is not configured') {
     super(msg);
     this.name = 'AIUnavailableError';
-    (this as { statusCode?: number }).statusCode = 503;
+    (this as { statusCode?: number; isOperational?: boolean }).statusCode = 503;
+    (this as { statusCode?: number; isOperational?: boolean }).isOperational = true;
   }
 }
 
@@ -26,7 +27,8 @@ export class AIMalformedResponseError extends Error {
   constructor(msg: string, public readonly raw?: string) {
     super(msg);
     this.name = 'AIMalformedResponseError';
-    (this as { statusCode?: number }).statusCode = 502;
+    (this as { statusCode?: number; isOperational?: boolean }).statusCode = 502;
+    (this as { statusCode?: number; isOperational?: boolean }).isOperational = true;
   }
 }
 
