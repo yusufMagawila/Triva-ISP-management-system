@@ -40,9 +40,10 @@ const httpServer = http.createServer(app);
 
 // ─── Socket.IO ────────────────────────────────────────────────────────────────
 
+const socketOrigins = [env.FRONTEND_URL, env.PORTAL_URL, env.DASHBOARD_URL].filter((o): o is string => Boolean(o));
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: [env.FRONTEND_URL, env.PORTAL_URL],
+    origin: socketOrigins,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -66,7 +67,7 @@ app.use(
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [env.FRONTEND_URL, env.PORTAL_URL].filter(Boolean);
+      const allowedOrigins = [env.FRONTEND_URL, env.PORTAL_URL, env.DASHBOARD_URL].filter(Boolean);
       // Allow requests with no origin (server-to-server webhooks, health probes).
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);

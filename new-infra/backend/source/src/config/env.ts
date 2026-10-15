@@ -12,6 +12,7 @@ const envSchema = z.object({
   // Cors
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   PORTAL_URL: z.string().default('http://localhost:5174'),
+  DASHBOARD_URL: z.string().optional(),
   // Backend public URL (used for webhook registration)
   APP_URL: z.string().url(),
   // Platform webhook shared secret (activation/subscription callbacks)

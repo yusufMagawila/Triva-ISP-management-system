@@ -1,0 +1,35 @@
+# Build context for the dashboard (frontend) service. We intentionally start
+# from the repo root so the Dockerfile can COPY src/, index.html, etc.
+# This ignore file keeps the context small by excluding everything except the
+# dashboard source and the frontend service files.
+
+# Exclude everything by default
+**
+
+# Dashboard source + build config
+!/package*.json
+!/index.html
+!/src
+!/src/**
+!/vite.config.ts
+!/tsconfig.json
+!/tsconfig.node.json
+!/tailwind.config.js
+!/postcss.config.js
+!/vercel.json
+
+# Frontend service files (Dockerfile + nginx.conf)
+!/new-infra
+!/new-infra/frontend
+!/new-infra/frontend/**
+
+# Exclude the rest of new-infra so the context stays small
+/new-infra/backend
+/new-infra/captive-portal
+/new-infra/scripts
+/new-infra/nginx
+/new-infra/proposed-changes
+/new-infra/docker-compose*.yml
+/new-infra/.env*
+/new-infra/*.md
+/new-infra/*.sh
