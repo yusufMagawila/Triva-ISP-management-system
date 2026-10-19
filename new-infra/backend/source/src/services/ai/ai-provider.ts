@@ -79,8 +79,18 @@ class GeminiProvider implements AIProvider {
 
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      logger.warn('Gemini request failed', { status: res.status });
-      throw new AIMalformedResponseError(`AI provider returned HTTP ${res.status}`, body.slice(0, 200));
+      let reason = '';
+      try {
+        reason = (JSON.parse(body) as { error?: { message?: string } }).error?.message ?? '';
+      } catch {
+        /* non-JSON error body */
+      }
+      reason = reason.replace(/key=[^\s&]+/gi, 'key=[redacted]').slice(0, 160);
+      logger.warn('Gemini request failed', { status: res.status, model: env.GEMINI_MODEL, reason });
+      throw new AIMalformedResponseError(
+        `AI provider returned HTTP ${res.status} (model ${env.GEMINI_MODEL})${reason ? `: ${reason}` : ''}`,
+        body.slice(0, 200)
+      );
     }
 
     const data = (await res.json()) as {

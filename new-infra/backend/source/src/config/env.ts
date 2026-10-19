@@ -21,7 +21,7 @@ const envSchema = z.object({
   // Never exposed to the frontend; used only by services/ai.
   AI_PROVIDER: z.string().default('gemini'),
   GEMINI_API_KEY: z.string().optional(),
-  GEMINI_MODEL: z.string().default('gemini-2.0-flash'),
+  GEMINI_MODEL: z.string().default('gemini-3.5-flash'),
 });
 
 const parsed = envSchema.safeParse(process.env);
