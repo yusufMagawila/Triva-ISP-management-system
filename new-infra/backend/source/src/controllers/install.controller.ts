@@ -648,6 +648,78 @@ export async function generatePlan(req: AuthRequest, res: Response, next: NextFu
   }
 }
 
+// ─── AI onboarding interview ─────────────────────────────────────────────────
+// Stateless: the client sends the conversation each turn. The AI returns the
+// next question or a validated profile; nothing is written until /apply.
+
+export async function onboardTurn(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const installation = await scopedInstallation(req, req.params.id);
+    if (TERMINAL.has(installation.status)) httpError(409, `Installation is ${installation.status}`);
+
+    const { interviewHistorySchema, runInterviewTurn } = await import('../services/ai/onboarding.service');
+    const history = interviewHistorySchema.safeParse(req.body?.history ?? []);
+    if (!history.success) httpError(400, 'history must be an array of {role, content} messages (max 40)');
+
+    const site = await prisma.site.findUnique({
+      where: { id: installation.siteId },
+      include: { customer: { select: { name: true } } },
+    });
+    const turn = await runInterviewTurn(history.data!, { siteName: site?.name, customerName: site?.customer?.name });
+
+    if (turn.status === 'ready') {
+      await recordAudit({
+        tenantId: installation.tenantId, userId: req.user!.userId, installationId: installation.id, siteId: installation.siteId,
+        action: 'AI_ONBOARDING_PROFILE_READY', targetType: 'installation', targetId: installation.id,
+        metadata: { planCount: turn.profile.plans.length },
+      });
+    }
+    res.json({ success: true, data: turn });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function onboardApply(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const installation = await scopedInstallation(req, req.params.id);
+    if (TERMINAL.has(installation.status)) httpError(409, `Installation is ${installation.status}`);
+
+    const { onboardingProfileSchema } = await import('../services/ai/onboarding.service');
+    const parsed = onboardingProfileSchema.safeParse(req.body?.profile);
+    if (!parsed.success) {
+      httpError(400, `Invalid profile: ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
+    }
+    const profile = parsed.data!;
+
+    const actions = [
+      {
+        type: 'APPLY_PORTAL_BRANDING',
+        params: {
+          portalNoticeName: profile.shopName,
+          ...(profile.welcomeMessage ? { portalNoticeMessage: profile.welcomeMessage } : {}),
+          ...(profile.brandColor ? { portalNoticeColor: profile.brandColor } : {}),
+        },
+      },
+      { type: 'CREATE_PLANS', params: { plans: profile.plans } },
+    ];
+
+    const { results, allOk } = await executeActions(installation.id, actions, {
+      actor: { userId: req.user!.userId, role: req.user!.role, tenantId: installation.tenantId },
+      tokenScope: req.user!.scope === 'install' ? { installationId: req.user!.installationId, siteId: req.user!.siteId } : undefined,
+    });
+
+    await recordAudit({
+      tenantId: installation.tenantId, userId: req.user!.userId, installationId: installation.id, siteId: installation.siteId,
+      action: 'AI_ONBOARDING_APPLIED', targetType: 'installation', targetId: installation.id,
+      result: allOk ? 'SUCCESS' : 'FAILURE', metadata: { statuses: results.map((r) => `${r.type}:${r.status}`) },
+    });
+    res.json({ success: true, data: { results, allOk } });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function aiDiagnose(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const installation = await scopedInstallation(req, req.params.id);

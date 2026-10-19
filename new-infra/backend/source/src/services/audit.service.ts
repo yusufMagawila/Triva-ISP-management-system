@@ -43,6 +43,8 @@ export type AuditAction =
   | 'AI_PLAN_GENERATED'
   | 'AI_PLAN_REJECTED'
   | 'AI_DIAGNOSTIC_GENERATED'
+  | 'AI_ONBOARDING_PROFILE_READY'
+  | 'AI_ONBOARDING_APPLIED'
   | 'HARDWARE_TEST_RECORDED';
 
 export interface AuditEntry {

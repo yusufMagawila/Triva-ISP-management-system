@@ -11,6 +11,7 @@ import {
 import toast from 'react-hot-toast';
 import { installApi, Installation, DeviceRecord, IdentifyResult } from '../../services/installApi';
 import DeviceScanner from './DeviceScanner';
+import OnboardingChat from './OnboardingChat';
 
 const CHECK_STEPS = ['Scanned', 'Detected', 'Assigned', 'Provisioned', 'Verified'];
 
@@ -24,6 +25,7 @@ export default function InstallationDetailPage() {
   const [job, setJob] = useState<Installation | null>(null);
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [scanning, setScanning] = useState(false);
+  const [onboarding, setOnboarding] = useState(false);
   const [scanResult, setScanResult] = useState<IdentifyResult | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [plan, setPlan] = useState<{ plan: { summary: string; actions: Array<{ type: string; reason?: string; params?: Record<string, unknown> }>; warnings: string[]; requiresApproval: boolean } } | null>(null);
@@ -277,7 +279,10 @@ export default function InstallationDetailPage() {
       {/* Action bar */}
       {!terminal && (
         <div className="fixed bottom-0 inset-x-0 bg-white border-t p-3">
-          <div className="max-w-lg mx-auto grid grid-cols-3 gap-2">
+          <div className="max-w-lg mx-auto grid grid-cols-4 gap-2">
+            <button onClick={() => setOnboarding(true)} className="flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-lg py-3 text-sm font-medium">
+              <Sparkles className="w-4 h-4" /> Setup
+            </button>
             <button onClick={() => setScanning(true)} className="flex items-center justify-center gap-1.5 bg-cyan-600 text-white rounded-lg py-3 text-sm font-medium">
               <ScanLine className="w-4 h-4" /> Scan
             </button>
@@ -292,6 +297,7 @@ export default function InstallationDetailPage() {
       )}
 
       {scanning && <DeviceScanner onScan={handleScan} onClose={() => setScanning(false)} />}
+      {onboarding && <OnboardingChat installationId={job.id} onClose={() => setOnboarding(false)} onApplied={load} />}
     </div>
   );
 }

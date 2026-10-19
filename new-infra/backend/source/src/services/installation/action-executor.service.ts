@@ -75,6 +75,24 @@ const hotspotProfileParams = z.object({
   uploadKbps: z.number().int().positive().max(1_000_000).optional(),
 }).strict();
 
+const brandingParams = z.object({
+  portalNoticeName: z.string().trim().min(1).max(60),
+  portalNoticeMessage: z.string().trim().max(280).optional(),
+  portalNoticeColor: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+}).strict();
+
+const createPlansParams = z.object({
+  plans: z.array(z.object({
+    name: z.string().trim().min(1).max(60),
+    description: z.string().trim().max(200).optional(),
+    price: z.number().min(100).max(1_000_000),
+    durationMins: z.number().int().min(5).max(525_600),
+    downloadKbps: z.number().int().min(64).max(1_000_000).optional(),
+    uploadKbps: z.number().int().min(64).max(1_000_000).optional(),
+    dataLimitMb: z.number().int().min(1).max(10_000_000).optional(),
+  }).strict()).min(1).max(8),
+}).strict();
+
 // ─── Executor context ────────────────────────────────────────────────────────
 
 export interface ExecutorContext {
@@ -308,6 +326,60 @@ const ACTION_REGISTRY: ActionDef[] = [
       // URLs contain the provisioning key — a capability to pull a script,
       // not a stored credential. The script itself is generated at fetch time.
       return { bootstrapUrls: buildRouterBootstrapUrls(router, apiUrl) };
+    },
+  },
+  {
+    type: 'APPLY_PORTAL_BRANDING',
+    implemented: true,
+    paramsSchema: brandingParams,
+    mutates: true,
+    rollback: 'Re-apply the previous portalNoticeName/Message/Color captured in preState.',
+    captureState: async (_p, ctx) => {
+      const t = await prisma.tenant.findUnique({
+        where: { id: ctx.installation.tenantId },
+        select: { portalNoticeName: true, portalNoticeMessage: true, portalNoticeColor: true },
+      });
+      return t ?? {};
+    },
+    run: async (p, ctx) => {
+      const data: Record<string, unknown> = { portalNoticeName: p.portalNoticeName };
+      if (p.portalNoticeMessage !== undefined) data.portalNoticeMessage = p.portalNoticeMessage || null;
+      if (p.portalNoticeColor !== undefined) data.portalNoticeColor = (p.portalNoticeColor as string).toLowerCase();
+      await prisma.tenant.update({ where: { id: ctx.installation.tenantId }, data });
+      return { applied: true, portalNoticeName: p.portalNoticeName };
+    },
+  },
+  {
+    type: 'CREATE_PLANS',
+    implemented: true,
+    paramsSchema: createPlansParams,
+    mutates: true,
+    rollback: 'Created plan ids are in the result; archive/delete only those ids. Plans that already existed by name are skipped, never modified.',
+    captureState: async (_p, ctx) => {
+      const existing = await prisma.plan.findMany({
+        where: { tenantId: ctx.installation.tenantId },
+        select: { name: true },
+      });
+      return { existingPlanNames: existing.map((x) => x.name) };
+    },
+    run: async (p, ctx) => {
+      const tenantId = ctx.installation.tenantId;
+      const input = (p.plans as Array<{
+        name: string; description?: string; price: number; durationMins: number;
+        downloadKbps?: number; uploadKbps?: number; dataLimitMb?: number;
+      }>);
+      const existing = new Set(
+        (await prisma.plan.findMany({ where: { tenantId }, select: { name: true } })).map((x) => x.name.toLowerCase())
+      );
+      const created: Array<{ id: string; name: string }> = [];
+      const skipped: string[] = [];
+      for (const pl of input) {
+        if (existing.has(pl.name.toLowerCase())) { skipped.push(pl.name); continue; }
+        const row = await prisma.plan.create({ data: { tenantId, ...pl } });
+        existing.add(pl.name.toLowerCase());
+        created.push({ id: row.id, name: row.name });
+      }
+      return { created, skipped };
     },
   },
 ];

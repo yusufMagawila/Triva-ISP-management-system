@@ -77,5 +77,25 @@ export const installApi = {
     unwrap<{ headline: string; severity: string; likelyCauses: string[]; recommendedSteps: Array<{ step: string; automatable: boolean }> }>(
       api.post(`/install/installations/${id}/ai-diagnose`, { diagnostics })
     ),
+  onboardTurn: (id: string, history: ChatMessage[]) =>
+    unwrap<OnboardingTurn>(api.post(`/install/installations/${id}/onboard/turn`, { history })),
+  onboardApply: (id: string, profile: OnboardingProfile) =>
+    unwrap<{ allOk: boolean; results: Array<{ type: string; status: string; error?: string }> }>(
+      api.post(`/install/installations/${id}/onboard/apply`, { profile })
+    ),
   recordHardwareTest: (body: Record<string, unknown>) => unwrap<unknown>(api.post('/install/lab/tests', body)),
 };
+
+export interface ChatMessage { role: 'assistant' | 'user'; content: string }
+export interface OnboardingProfile {
+  shopName: string;
+  welcomeMessage?: string;
+  brandColor?: string;
+  plans: Array<{
+    name: string; description?: string; price: number; durationMins: number;
+    downloadKbps?: number; uploadKbps?: number; dataLimitMb?: number;
+  }>;
+}
+export type OnboardingTurn =
+  | { status: 'asking'; question: string }
+  | { status: 'ready'; message: string; profile: OnboardingProfile };

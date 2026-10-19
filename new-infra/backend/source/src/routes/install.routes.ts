@@ -37,6 +37,8 @@ router.get('/installations/:id/audit', requireRole(...FIELD_ROLES), ctrl.getInst
 // allowlist-checked; the AI never executes anything itself.
 router.post('/installations/:id/plan', requireRole(...FIELD_ROLES), ctrl.generatePlan);
 router.post('/installations/:id/ai-diagnose', requireRole(...FIELD_ROLES), ctrl.aiDiagnose);
+router.post('/installations/:id/onboard/turn', requireRole(...FIELD_ROLES), ctrl.onboardTurn);
+router.post('/installations/:id/onboard/apply', requireRole(...FIELD_ROLES), ctrl.onboardApply);
 
 // Device inventory — scan/identify, register, assign, reassign, history.
 router.post('/devices/identify', requireRole(...FIELD_ROLES), deviceCtrl.identifyScannedDevice);
