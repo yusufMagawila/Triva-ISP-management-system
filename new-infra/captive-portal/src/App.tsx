@@ -48,6 +48,7 @@ interface Params {
   omadaUrl: string | null;
   ssidName: string | null;
   voucher: string | null;
+  hotspotError: string | null;
 }
 
 function parseParams(): Params {
@@ -79,6 +80,7 @@ function parseParams(): Params {
     omadaUrl: q.get('omadaUrl'),
     ssidName: q.get('ssidName'),
     voucher,
+    hotspotError: q.get('error'),
   };
 }
 
@@ -99,6 +101,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [voucherBusy, setVoucherBusy] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [redeemActivating, setRedeemActivating] = useState(false);
   const [initiating, setInitiating] = useState(false);
   const [successSession, setSuccessSession] = useState<SessionStatus | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -140,6 +143,14 @@ export default function App() {
         return;
       }
       setInfo(data);
+      if (params.hotspotError) {
+        // Router rejected the hotspot login (usually: user not synced yet) —
+        // take them back to the voucher sheet with a retry hint instead of
+        // silently landing on the plans page.
+        setVoucherError('Still activating your access — tap Redeem again in a few seconds.');
+        setScreen('voucher');
+        return;
+      }
       setScreen(
         // Returning from router login (?connected=1): land on the success page.
         params.connected && data.activeSession
@@ -327,19 +338,40 @@ export default function App() {
           ipAddress: params.ip || undefined,
           code,
         });
-        // Fetch session to grab hotspot credentials for auto-login
-        try {
-          const st = await getSessionStatus(res.sessionId);
-          if (params.linkLogin && st.credentials) {
-            submitHotspotLogin(params.linkLogin, st.credentials.username, st.credentials.password, connectedUrl());
-            setConnecting(true);
-            setTimeout(() => setScreen('success'), 6000);
-            return;
-          }
-        } catch {
-          /* fall through */
+        if (res.alreadyActive) {
+          setScreen('success');
+          return;
         }
-        setScreen('success');
+        // The hotspot user reaches the router either by direct push or by the
+        // router's pull-sync (up to ~15s). Poll until the session is ACTIVE
+        // before posting the login form — otherwise the router rejects the
+        // login and bounces the browser back to the plans page.
+        let st: Awaited<ReturnType<typeof getSessionStatus>> | null = null;
+        setRedeemActivating(true);
+        const deadline = Date.now() + 30_000;
+        while (Date.now() < deadline) {
+          try {
+            st = await getSessionStatus(res.sessionId);
+            if (st.status === 'ACTIVE' && st.credentials) break;
+          } catch { /* keep polling */ }
+          await new Promise((r) => setTimeout(r, 2500));
+        }
+        setRedeemActivating(false);
+
+        if (st?.status === 'ACTIVE' && st.credentials) {
+          setSuccessSession(st);
+          if (params.linkLogin) {
+            setScreen('success');
+            setConnecting(true);
+            submitHotspotLogin(params.linkLogin, st.credentials.username, st.credentials.password, connectedUrl());
+            setTimeout(() => setConnecting(false), 6000);
+          } else {
+            setScreen('success');
+          }
+          announce('Voucher accepted. You are connected.');
+          return;
+        }
+        setVoucherError('Still activating your access — tap Redeem again in a few seconds.');
       }
       announce('Voucher accepted. You are connected.');
     } catch (err) {
@@ -440,6 +472,7 @@ export default function App() {
       {screen === 'voucher' && (
         <VoucherSheet
           busy={voucherBusy}
+          busyText={redeemActivating ? 'Activating your access…' : undefined}
           error={voucherError}
           initialCode={params.voucher ?? undefined}
           onSubmit={handleVoucher}

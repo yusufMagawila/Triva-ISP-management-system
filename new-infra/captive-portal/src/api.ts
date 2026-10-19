@@ -80,7 +80,7 @@ export function redeemRouterVoucher(body: {
   macAddress: string;
   ipAddress?: string;
   code: string;
-}): Promise<{ sessionId: string; expiresAt: string | null; plan?: { name: string; durationMins: number } }> {
+}): Promise<{ sessionId: string; expiresAt: string | null; alreadyActive?: boolean; plan?: { name: string; durationMins: number } }> {
   return request('/api/portal/redeem-voucher', { method: 'POST', body: JSON.stringify(body) });
 }
 

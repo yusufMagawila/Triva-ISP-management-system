@@ -4,6 +4,7 @@ import { TicketIcon } from './Icons';
 
 interface Props {
   busy: boolean;
+  busyText?: string;
   error: string | null;
   initialCode?: string;
   onSubmit: (code: string) => void;
@@ -36,7 +37,7 @@ function ScanIcon({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
-export function VoucherSheet({ busy, error, initialCode, onSubmit, onClose }: Props) {
+export function VoucherSheet({ busy, busyText, error, initialCode, onSubmit, onClose }: Props) {
   const [code, setCode] = useState(initialCode ?? '');
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
@@ -180,7 +181,7 @@ export function VoucherSheet({ busy, error, initialCode, onSubmit, onClose }: Pr
           className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-full accent-bg text-white text-[16px] font-semibold py-3.5 disabled:opacity-50 active:scale-[0.98] transition-transform"
         >
           <TicketIcon className="w-4.5 h-4.5 w-[18px] h-[18px]" />
-          {busy ? 'Redeeming…' : 'Redeem Voucher'}
+          {busy ? (busyText ?? 'Redeeming…') : 'Redeem Voucher'}
         </button>
       </form>
     </Sheet>
