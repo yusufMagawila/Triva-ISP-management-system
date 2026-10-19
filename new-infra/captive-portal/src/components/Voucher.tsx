@@ -78,9 +78,18 @@ export function VoucherSheet({ busy, error, initialCode, onSubmit, onClose }: Pr
             }
           } catch { /* frame not ready yet — keep scanning */ }
         }, 300);
-      } catch {
+      } catch (err) {
         if (!cancelled) {
-          setScanError('Camera unavailable — type the code instead.');
+          const name = (err as { name?: string })?.name;
+          setScanError(
+            name === 'NotAllowedError' || name === 'SecurityError'
+              ? 'Camera access is blocked in this window. Scan the code with your camera app, or type it below.'
+              : name === 'NotFoundError' || name === 'OverconstrainedError'
+                ? 'No camera found — type the code instead.'
+                : name === 'NotReadableError'
+                  ? 'Camera is busy in another app — type the code instead.'
+                  : 'Camera unavailable — type the code instead.'
+          );
           setScanning(false);
         }
       }
