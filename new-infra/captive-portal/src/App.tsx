@@ -54,6 +54,16 @@ function parseParams(): Params {
   const vendorParam = q.get('vendor');
   const siteId = q.get('siteId');
   const routerId = q.get('router') ?? q.get('routerId');
+  // Voucher code arrives directly (?voucher=) or inside link-orig when a
+  // printed QR's http URL was intercepted by the router's hotspot login page.
+  const linkOrig = q.get('link-orig') ?? q.get('linkOrig');
+  let voucher = (q.get('voucher') ?? '').trim().toUpperCase() || null;
+  if (!voucher && linkOrig) {
+    try {
+      voucher = (new URL(linkOrig).searchParams.get('voucher') ?? '').trim().toUpperCase() || null;
+    } catch { /* link-orig was not a parseable URL */ }
+  }
+
   return {
     routerId,
     siteId,
@@ -62,10 +72,10 @@ function parseParams(): Params {
     mac: q.get('mac') ?? q.get('clientMac') ?? '',
     ip: q.get('ip') ?? q.get('clientIp') ?? '',
     linkLogin: q.get('link-login') ?? q.get('linkLogin'),
-    linkOrig: q.get('link-orig') ?? q.get('linkOrig'),
+    linkOrig,
     omadaUrl: q.get('omadaUrl'),
     ssidName: q.get('ssidName'),
-    voucher: (q.get('voucher') ?? '').trim().toUpperCase() || null,
+    voucher,
   };
 }
 
@@ -290,6 +300,11 @@ export default function App() {
         }
         setScreen('success');
       } else {
+        if (!params.mac) {
+          setVoucherError('You are not connected to the WiFi yet — join the hotspot, then redeem the voucher.');
+          setVoucherBusy(false);
+          return;
+        }
         const res = await redeemRouterVoucher({
           routerId: params.routerId!,
           macAddress: params.mac,

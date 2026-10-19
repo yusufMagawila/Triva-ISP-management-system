@@ -80,7 +80,11 @@ export default function PrintVouchers({
     (async () => {
       const map: Record<string, string> = {};
       for (const v of vouchers) {
-        const url = `${PORTAL_URL}/?${routerId ? `router=${routerId}&` : ''}voucher=${encodeURIComponent(v.code)}`;
+        // http:// on purpose: an unauthenticated hotspot client gets captured
+        // by the router and passed through its login page, which injects the
+        // device mac/ip params the redeem API needs (the code survives inside
+        // link-orig). Off-network it just redirects to https.
+        const url = `${PORTAL_URL.replace(/^https:/, 'http:')}/?${routerId ? `router=${routerId}&` : ''}voucher=${encodeURIComponent(v.code)}`;
         try {
           map[v.code] = await QRCode.toDataURL(url, { margin: 0, width: 140, errorCorrectionLevel: 'L' });
         } catch { /* QR optional */ }
