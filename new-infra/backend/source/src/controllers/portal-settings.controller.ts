@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { prisma } from '../config/prisma';
 import { AuthRequest } from '../types';
+import { isPortalTheme, isPortalSeasonal, safeTheme, safeSeasonal, PORTAL_THEME_KEYS, PORTAL_SEASONAL_MODES } from '../config/portal-themes';
 
 const DEFAULT_NOTICE_COLOR = '#2563eb';
 
@@ -38,6 +39,8 @@ export async function getPortalSettings(
         portalNoticeName: true,
         portalNoticeMessage: true,
         portalNoticeColor: true,
+        portalTheme: true,
+        portalSeasonal: true,
       },
     });
 
@@ -52,6 +55,8 @@ export async function getPortalSettings(
         portalNoticeName: tenant.portalNoticeName,
         portalNoticeMessage: tenant.portalNoticeMessage,
         portalNoticeColor: tenant.portalNoticeColor ?? DEFAULT_NOTICE_COLOR,
+        portalTheme: safeTheme(tenant.portalTheme),
+        portalSeasonal: safeSeasonal(tenant.portalSeasonal),
       },
     });
   } catch (err) {
@@ -75,6 +80,8 @@ export async function updatePortalSettings(
       portalNoticeName?: string;
       portalNoticeMessage?: string;
       portalNoticeColor?: string;
+      portalTheme?: string;
+      portalSeasonal?: string;
     };
 
     const updateData: Record<string, unknown> = {};
@@ -106,6 +113,22 @@ export async function updatePortalSettings(
         normalizeNoticeColor(body.portalNoticeColor) ?? DEFAULT_NOTICE_COLOR;
     }
 
+    if (body.portalTheme !== undefined) {
+      if (!isPortalTheme(body.portalTheme)) {
+        res.status(400).json({ success: false, error: `portalTheme must be one of: ${PORTAL_THEME_KEYS.join(', ')}` });
+        return;
+      }
+      updateData.portalTheme = body.portalTheme;
+    }
+
+    if (body.portalSeasonal !== undefined) {
+      if (!isPortalSeasonal(body.portalSeasonal)) {
+        res.status(400).json({ success: false, error: `portalSeasonal must be one of: ${PORTAL_SEASONAL_MODES.join(', ')}` });
+        return;
+      }
+      updateData.portalSeasonal = body.portalSeasonal;
+    }
+
     const updated = await prisma.tenant.update({
       where: { id: tenantId },
       data: updateData,
@@ -113,6 +136,8 @@ export async function updatePortalSettings(
         portalNoticeName: true,
         portalNoticeMessage: true,
         portalNoticeColor: true,
+        portalTheme: true,
+        portalSeasonal: true,
       },
     });
 
@@ -123,6 +148,8 @@ export async function updatePortalSettings(
         portalNoticeName: updated.portalNoticeName,
         portalNoticeMessage: updated.portalNoticeMessage,
         portalNoticeColor: updated.portalNoticeColor ?? DEFAULT_NOTICE_COLOR,
+        portalTheme: safeTheme(updated.portalTheme),
+        portalSeasonal: safeSeasonal(updated.portalSeasonal),
       },
     });
   } catch (err) {

@@ -16,6 +16,8 @@ export interface TenantBranding {
   portalNoticeName: string | null;
   portalNoticeMessage: string | null;
   portalNoticeColor: string | null;
+  portalTheme?: string | null;
+  portalSeasonal?: string | null;
 }
 
 export interface ActiveSession {
@@ -27,6 +29,7 @@ export interface ActiveSession {
 export interface PortalInfo {
   router?: { id: string; name: string };
   tenant: TenantBranding;
+  serverTime?: string;
   plans: Plan[];
   activeSession: ActiveSession | null;
 }

@@ -5,6 +5,7 @@ import { MikroTikService } from '../services/mikrotik.service';
 import { verifyRouterSyncToken } from '../services/router-sync-auth.service';
 import { logger } from '../config/logger';
 import { env } from '../config/env';
+import { safeTheme, safeSeasonal } from '../config/portal-themes';
 import { mintPortalSocketToken } from '../socket';
 import { AuthRequest } from '../types';
 
@@ -214,6 +215,8 @@ export async function getPortalInfo(
           portalNoticeName: true,
           portalNoticeMessage: true,
           portalNoticeColor: true,
+          portalTheme: true,
+          portalSeasonal: true,
           subscription: {
             select: { status: true, expiresAt: true },
           },
@@ -275,7 +278,10 @@ export async function getPortalInfo(
           portalNoticeName: router.tenant.portalNoticeName,
           portalNoticeMessage: router.tenant.portalNoticeMessage,
           portalNoticeColor: router.tenant.portalNoticeColor,
+          portalTheme: safeTheme(router.tenant.portalTheme),
+          portalSeasonal: safeSeasonal(router.tenant.portalSeasonal),
         },
+        serverTime: new Date().toISOString(),
         plans,
         activeSession: activeSession
           ? {

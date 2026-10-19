@@ -194,6 +194,8 @@ model Tenant {
   portalNoticeName    String?
   portalNoticeMessage String?
   portalNoticeColor   String?        @default("#2563eb")
+  portalTheme         String         @default("classic")
+  portalSeasonal      String         @default("auto")
   webhookSecret       String?        @unique // Per-tenant webhook token used to authenticate provider callbacks
   anypayApiKey        String? // AnyPay Tanzania credential bundle (legacy plaintext)
   anypayApiKeyEnc     String? // Encrypted tenant AnyPay credential bundle

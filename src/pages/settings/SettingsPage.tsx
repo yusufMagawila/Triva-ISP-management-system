@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
+import PortalLookSettings from './PortalLookSettings';
 import { Settings, KeyRound, CreditCard, Eye, EyeOff, AlertTriangle, CheckCircle, Zap, Copy } from 'lucide-react';
 
 interface PaymentSettingsData {
@@ -539,6 +540,8 @@ export default function SettingsPage() {
           </form>
         </div>
       )}
+
+      {isMerchant && <PortalLookSettings />}
 
       {/* Change Password */}
       <div className="card p-6">

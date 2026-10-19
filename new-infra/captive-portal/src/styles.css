@@ -3,7 +3,7 @@
 :root {
   color-scheme: light;
   --accent: #0ea5e9;
-  --accent-soft: rgba(14, 165, 233, 0.12);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
   --accent-deep: color-mix(in srgb, var(--accent) 72%, #1e1b4b);
   --accent-glow: color-mix(in srgb, var(--accent) 55%, #f0abfc);
   --ink: #0f172a;
@@ -34,6 +34,29 @@
   50% { transform: translateY(-6px); }
 }
 .float { animation: float 3.2s ease-in-out infinite; }
+
+/* ---------- Seasonal decorations (CSS only, no external assets) ---------- */
+.ambient { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.particle {
+  position: absolute; top: -8vh; opacity: 0.85; line-height: 1;
+  animation-name: fall; animation-timing-function: linear; animation-iteration-count: infinite;
+}
+@keyframes fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+  8% { opacity: 0.9; }
+  100% { transform: translate3d(var(--drift, 0px), 112vh, 0) rotate(300deg); opacity: 0.2; }
+}
+.burst-layer { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+.burst-bit {
+  position: fixed; width: 9px; height: 9px; border-radius: 2px;
+  animation: burst 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+@keyframes burst {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 90px)) rotate(var(--rot)) scale(0.6); opacity: 0; }
+}
+.greeting-pill { animation: pop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+main, footer { position: relative; z-index: 1; }
 
 html {
   -webkit-font-smoothing: antialiased;
@@ -136,6 +159,7 @@ input[type='tel'], input[type='text'] {
 
 /* ---------- Reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
+  .ambient, .burst-layer { display: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

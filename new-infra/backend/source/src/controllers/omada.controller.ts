@@ -4,6 +4,7 @@ import { sessionService } from '../services/session.service';
 import { radiusService } from '../services/radius.service';
 import { logger } from '../config/logger';
 import { env } from '../config/env';
+import { safeTheme, safeSeasonal } from '../config/portal-themes';
 
 /**
  * Omada Portal Info endpoint.
@@ -61,6 +62,8 @@ export async function getOmadaPortalInfo(
         portalNoticeName: true,
         portalNoticeMessage: true,
         portalNoticeColor: true,
+        portalTheme: true,
+        portalSeasonal: true,
         subscription: { select: { status: true, expiresAt: true } },
       },
     });
@@ -111,7 +114,10 @@ export async function getOmadaPortalInfo(
           portalNoticeName: tenant.portalNoticeName,
           portalNoticeMessage: tenant.portalNoticeMessage,
           portalNoticeColor: tenant.portalNoticeColor,
+          portalTheme: safeTheme(tenant.portalTheme),
+          portalSeasonal: safeSeasonal(tenant.portalSeasonal),
         },
+        serverTime: new Date().toISOString(),
         plans,
         activeSession: activeSession
           ? { id: activeSession.id, expiresAt: activeSession.expiresAt, plan: activeSession.plan }

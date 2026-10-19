@@ -13,6 +13,8 @@ import {
 import type { PortalInfo, Plan, SessionStatus } from './types';
 import { usePaymentTracking } from './hooks/usePaymentTracking';
 import { BrandHeader, PortalNotice } from './components/Brand';
+import { AmbientDecor } from './components/Decor';
+import { resolveLook, applyLook } from './themes';
 import { PlanGrid } from './components/PlanGrid';
 import { CheckoutSheet } from './components/Checkout';
 import { PaymentSheet, type PayPhase } from './components/PaymentStatus';
@@ -92,13 +94,22 @@ export default function App() {
     if (announceRef.current) announceRef.current.textContent = msg;
   }, []);
 
-  // Apply tenant accent color once known
-  useEffect(() => {
-    const color = info?.tenant.portalNoticeColor;
-    if (color && /^#[0-9a-fA-F]{6}$/.test(color)) {
-      document.documentElement.style.setProperty('--accent', color);
-    }
+  // Theme + seasonal look (server clock decides the date; ?previewTheme= /
+  // ?previewEvent= let the merchant dashboard preview a choice before saving).
+  const look = useMemo(() => {
+    const q = new URLSearchParams(window.location.search);
+    return resolveLook({
+      theme: info?.tenant.portalTheme,
+      seasonal: info?.tenant.portalSeasonal,
+      serverTime: info?.serverTime,
+      previewTheme: q.get('previewTheme'),
+      previewEvent: q.get('previewEvent'),
+    });
   }, [info]);
+
+  useEffect(() => {
+    applyLook(look, info?.tenant.portalNoticeColor);
+  }, [look, info]);
 
   const load = useCallback(async () => {
     setScreen('loading');
@@ -314,9 +325,10 @@ export default function App() {
     <div className="min-h-screen min-h-dvh flex flex-col items-center px-4 py-6 sm:py-10 safe-top safe-bottom">
       {/* Screen-reader announcements */}
       <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only" />
+      {look.event && <AmbientDecor event={look.event} />}
 
       <main className="w-full max-w-md sm:max-w-3xl flex flex-col gap-5 flex-1">
-        {tenant && <BrandHeader tenant={tenant} networkName={networkLabel} />}
+        {tenant && <BrandHeader tenant={tenant} networkName={networkLabel} event={look.event} />}
 
         {screen === 'loading' && <FullStatus kind="loading" />}
 
