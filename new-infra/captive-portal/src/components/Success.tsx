@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { Plan } from '../types';
 import { formatPrice, formatDuration, formatExpiry, formatTimeLeft, formatSpeed } from '../format';
 import { CheckIcon, WifiIcon } from './Icons';
@@ -15,6 +16,13 @@ interface Props {
 }
 
 export function SuccessScreen({ plan, amount, expiresAt, vendor, connecting, redirecting, onDone }: Props) {
+  // Tick every second so "time left" is a real countdown.
+  const [, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+
   const expiry = formatExpiry(expiresAt);
   const remaining = formatTimeLeft(expiresAt);
   const speed = plan && 'downloadKbps' in plan ? formatSpeed(plan.downloadKbps ?? null) : null;
@@ -41,17 +49,22 @@ export function SuccessScreen({ plan, amount, expiresAt, vendor, connecting, red
             : 'Your internet access is now active.'}
       </p>
 
-      {plan && (
+      {(plan || expiry) && (
         <div
           className="card-surface mt-6 w-full max-w-[320px] rounded-2xl px-5 py-4"
           style={{ boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}
         >
-          <p className="text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>{plan.name}</p>
+          {plan && <p className="text-[15px] font-semibold" style={{ color: 'var(--ink)' }}>{plan.name}</p>}
           <div className="mt-1.5 space-y-1 text-[13px]" style={{ color: 'var(--ink-2)' }}>
             {amount != null && amount > 0 && <p>{formatPrice(amount)}</p>}
-            <p>{formatDuration(plan.durationMins)}</p>
+            {plan && <p>{formatDuration(plan.durationMins)}</p>}
             {speed && <p>{speed}</p>}
-            {expiry && <p>Valid until {expiry}{remaining ? ` (${remaining})` : ''}</p>}
+            {expiry && (
+              <p>
+                Valid until {expiry}
+                {remaining ? <> — <span className="font-semibold tabular-nums" style={{ color: 'var(--accent)' }}>{remaining} left</span></> : null}
+              </p>
+            )}
           </div>
         </div>
       )}

@@ -44,6 +44,7 @@ interface Params {
   ip: string;
   linkLogin: string | null;
   linkOrig: string | null;
+  connected: boolean;
   omadaUrl: string | null;
   ssidName: string | null;
   voucher: string | null;
@@ -54,6 +55,7 @@ function parseParams(): Params {
   const vendorParam = q.get('vendor');
   const siteId = q.get('siteId');
   const routerId = q.get('router') ?? q.get('routerId');
+  const linkLogin = q.get('link-login') ?? q.get('linkLogin');
   // Voucher code arrives directly (?voucher=) or inside link-orig when a
   // printed QR's http URL was intercepted by the router's hotspot login page.
   const linkOrig = q.get('link-orig') ?? q.get('linkOrig');
@@ -71,8 +73,9 @@ function parseParams(): Params {
     vendor: vendorParam === 'omada' || siteId ? 'omada' : routerId ? 'mikrotik' : null,
     mac: q.get('mac') ?? q.get('clientMac') ?? '',
     ip: q.get('ip') ?? q.get('clientIp') ?? '',
-    linkLogin: q.get('link-login') ?? q.get('linkLogin'),
+    linkLogin,
     linkOrig,
+    connected: q.get('connected') === '1',
     omadaUrl: q.get('omadaUrl'),
     ssidName: q.get('ssidName'),
     voucher,
@@ -138,9 +141,12 @@ export default function App() {
       }
       setInfo(data);
       setScreen(
-        params.voucher
-          ? 'voucher'
-          : data.plans.length === 0 && !data.activeSession ? 'empty' : 'plans',
+        // Returning from router login (?connected=1): land on the success page.
+        params.connected && data.activeSession
+          ? 'success'
+          : params.voucher
+            ? 'voucher'
+            : data.plans.length === 0 && !data.activeSession ? 'empty' : 'plans',
       );
       if (data.activeSession) announce('You already have an active session.');
     } catch (err) {
@@ -209,7 +215,7 @@ export default function App() {
     if (params.linkLogin && session.credentials) {
       setConnecting(true);
       announce('Payment confirmed. Connecting you now.');
-      submitHotspotLogin(params.linkLogin, session.credentials.username, session.credentials.password, params.linkOrig);
+      submitHotspotLogin(params.linkLogin, session.credentials.username, session.credentials.password, connectedUrl());
       // The router will take over from here (it navigates away). Give it a
       // moment, then show the success screen as a fallback.
       setTimeout(() => {
@@ -219,6 +225,16 @@ export default function App() {
       return;
     }
     setScreen('success');
+  }
+
+  // After router login, always land back on the portal's connected page —
+  // not link-orig, which in the QR-voucher flow is the voucher URL itself
+  // and would bounce the user back to the redeem sheet.
+  function connectedUrl(): string {
+    const url = new URL(window.location.origin + window.location.pathname);
+    url.searchParams.set('router', params.routerId ?? '');
+    url.searchParams.set('connected', '1');
+    return url.toString();
   }
 
   function submitHotspotLogin(loginUrl: string, username: string, password: string, dst: string | null) {
@@ -315,7 +331,7 @@ export default function App() {
         try {
           const st = await getSessionStatus(res.sessionId);
           if (params.linkLogin && st.credentials) {
-            submitHotspotLogin(params.linkLogin, st.credentials.username, st.credentials.password, params.linkOrig);
+            submitHotspotLogin(params.linkLogin, st.credentials.username, st.credentials.password, connectedUrl());
             setConnecting(true);
             setTimeout(() => setScreen('success'), 6000);
             return;
