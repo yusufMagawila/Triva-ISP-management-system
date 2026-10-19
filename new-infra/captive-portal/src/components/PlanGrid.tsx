@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Plan } from '../types';
 import { formatPrice, formatDuration, formatSpeed, formatData } from '../format';
-import { BoltIcon } from './Icons';
+import { BoltIcon, ClockIcon } from './Icons';
 
 type Category = 'all' | 'short' | 'daily' | 'weekly' | 'monthly';
 
@@ -117,60 +117,68 @@ function PlanCard({
 }) {
   const speed = formatSpeed(plan.downloadKbps);
   const data = formatData(plan.dataLimitMb);
+  const amount = Number(plan.price);
+  const priceText = Number.isFinite(amount) ? amount.toLocaleString('en-TZ') : String(plan.price);
 
   return (
     <button
       onClick={() => onSelect(plan)}
       disabled={disabled}
-      className="plan-card card-surface relative min-w-[78%] sm:min-w-0 rounded-3xl p-6 text-left
-                 flex flex-col gap-1 disabled:opacity-60
-                 focus-visible:outline-2"
+      className="plan-card card-surface relative min-w-[80%] sm:min-w-0 overflow-hidden rounded-3xl text-left
+                 flex flex-col disabled:opacity-60 focus-visible:outline-2"
       style={{
         boxShadow: badge
-          ? '0 8px 30px rgba(0,0,0,0.10), inset 0 0 0 2px var(--accent)'
-          : '0 2px 16px rgba(0,0,0,0.06)',
+          ? '0 14px 36px color-mix(in srgb, var(--accent) 28%, transparent), inset 0 0 0 2px var(--accent)'
+          : '0 6px 24px rgba(15, 23, 42, 0.08), inset 0 0 0 1px rgba(15, 23, 42, 0.05)',
         animationDelay: `${Math.min(index, 6) * 0.06}s`,
       }}
       aria-label={`${plan.name}, ${formatPrice(plan.price)}, valid ${formatDuration(plan.durationMins)}`}
     >
-      {badge && (
+      <span className="grad-bg flex items-center justify-between px-5 py-2.5 text-white">
+        <span className="text-[13px] font-bold uppercase tracking-wider">{plan.name}</span>
+        {badge && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/25 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide">
+            <BoltIcon className="w-3 h-3" /> {badge}
+          </span>
+        )}
+      </span>
+
+      <span className="flex flex-col gap-1 px-5 pt-4 pb-5">
+        <span className="flex items-baseline gap-1.5">
+          <span className="text-[14px] font-bold" style={{ color: 'var(--accent)' }}>TZS</span>
+          <span className="text-[40px] font-extrabold leading-none" style={{ color: 'var(--ink)', letterSpacing: '-0.03em' }}>
+            {priceText}
+          </span>
+        </span>
+
+        <span className="mt-1 flex flex-wrap gap-1.5">
+          <span className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[13px] font-semibold" style={{ background: 'var(--accent-soft)', color: 'var(--accent-deep)' }}>
+            <ClockIcon className="w-3.5 h-3.5" /> {formatDuration(plan.durationMins)}
+          </span>
+          {speed && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-[13px] font-semibold text-amber-800">
+              <BoltIcon className="w-3.5 h-3.5" /> {speed.replace('Up to ', '')}
+            </span>
+          )}
+          {data && (
+            <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-[13px] font-semibold text-emerald-800">
+              {data}
+            </span>
+          )}
+        </span>
+
+        {plan.description && (
+          <span className="mt-1 text-[13px] leading-snug" style={{ color: 'var(--ink-2)' }}>
+            {plan.description}
+          </span>
+        )}
+
         <span
-          className="absolute -top-2.5 left-5 inline-flex items-center gap-1 accent-bg text-white text-[11px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-wide"
+          className="btn-grad mt-4 inline-flex items-center justify-center rounded-2xl text-white text-[16px] font-bold py-3"
+          aria-hidden="true"
         >
-          <BoltIcon className="w-3 h-3" /> {badge}
+          Get Connected
         </span>
-      )}
-
-      <span className="text-[13px] font-medium uppercase tracking-wide" style={{ color: 'var(--ink-2)' }}>
-        {plan.name}
-      </span>
-
-      <span className="text-[28px] font-semibold tracking-tight mt-1" style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}>
-        {formatPrice(plan.price)}
-      </span>
-
-      <span className="text-[15px] font-medium" style={{ color: 'var(--ink)' }}>
-        {formatDuration(plan.durationMins)}
-      </span>
-
-      {(speed || data) && (
-        <span className="mt-1 space-y-0.5 text-[13px]" style={{ color: 'var(--ink-2)' }}>
-          {speed && <span className="block">{speed}</span>}
-          {data && <span className="block">{data}</span>}
-        </span>
-      )}
-
-      {plan.description && (
-        <span className="mt-1 text-[13px] leading-snug" style={{ color: 'var(--ink-2)' }}>
-          {plan.description}
-        </span>
-      )}
-
-      <span
-        className="mt-4 inline-flex items-center justify-center rounded-full accent-bg text-white text-[15px] font-semibold py-2.5"
-        aria-hidden="true"
-      >
-        Get Connected
       </span>
     </button>
   );

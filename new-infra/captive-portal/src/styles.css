@@ -1,14 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  --accent: #0071e3;
-  --accent-soft: rgba(0, 113, 227, 0.1);
-  --ink: #1d1d1f;
-  --ink-2: #6e6e73;
-  --ink-3: #aeaeb2;
+  color-scheme: light;
+  --accent: #0ea5e9;
+  --accent-soft: rgba(14, 165, 233, 0.12);
+  --accent-deep: color-mix(in srgb, var(--accent) 72%, #1e1b4b);
+  --accent-glow: color-mix(in srgb, var(--accent) 55%, #f0abfc);
+  --ink: #0f172a;
+  --ink-2: #475569;
+  --ink-3: #94a3b8;
   --surface: #ffffff;
-  --bg: #f5f5f7;
+  --bg: #f8fbff;
 }
+
+/* Bright, branded building blocks */
+.grad-bg { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%); }
+.hero-bg {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255,255,255,0.28) 0, transparent 38%),
+    radial-gradient(circle at 90% 80%, var(--accent-glow) 0, transparent 45%),
+    linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+}
+.card-surface { background: #ffffff; }
+.sheet-surface { background: #ffffff; }
+.btn-grad {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 38%, transparent);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s;
+}
+.btn-grad:active { transform: scale(0.97); }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.float { animation: float 3.2s ease-in-out infinite; }
 
 html {
   -webkit-font-smoothing: antialiased;
@@ -20,7 +45,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
     'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   color: var(--ink);
-  background: var(--bg);
+  background:
+    radial-gradient(900px 420px at 100% -5%, color-mix(in srgb, var(--accent) 16%, transparent) 0, transparent 70%),
+    radial-gradient(700px 380px at -10% 25%, color-mix(in srgb, var(--accent-glow) 22%, transparent) 0, transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
   overscroll-behavior-y: none;
 }
 
@@ -114,15 +143,5 @@ input[type='tel'], input[type='text'] {
   }
 }
 
-/* ---------- Dark mode ---------- */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #f5f5f7;
-    --ink-2: #aeaeb2;
-    --ink-3: #6e6e73;
-    --surface: #1d1d1f;
-    --bg: #000000;
-  }
-  .card-surface { background: #1c1c1e !important; }
-  .sheet-surface { background: #1c1c1e !important; }
-}
+/* The portal is intentionally always light: bright and inviting on every
+   phone, regardless of the visitor's dark-mode setting. */

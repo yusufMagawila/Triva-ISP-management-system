@@ -327,14 +327,16 @@ export default function App() {
 
         {(screen === 'plans' || screen === 'checkout' || screen === 'voucher' || screen === 'paying') && info && (
           <>
-            <div className="rise rise-1 text-center">
-              <h1 className="text-[28px] sm:text-[34px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.03em' }}>
-                Get Connected
-              </h1>
-              <p className="mt-1.5 text-[15px]" style={{ color: 'var(--ink-2)' }}>
-                Choose a package and get online instantly.
+            <div className="rise rise-1 text-center -mb-1">
+              <h2 className="text-[22px] sm:text-[26px] font-extrabold" style={{ color: 'var(--ink)', letterSpacing: '-0.02em' }}>
+                Choose your package
+              </h2>
+              <p className="mt-1 text-[14px]" style={{ color: 'var(--ink-2)' }}>
+                Tap a package, pay with mobile money, and you are online.
               </p>
             </div>
+
+            {tenant && <PortalNotice tenant={tenant} />}
 
             {info.activeSession && <ActiveSessionCard session={info.activeSession} onRefresh={load} />}
 
@@ -343,8 +345,6 @@ export default function App() {
             ) : (
               !info.activeSession && <FullStatus kind="empty" />
             )}
-
-            {tenant && <PortalNotice tenant={tenant} />}
 
             <button
               onClick={() => { setVoucherError(null); setScreen('voucher'); }}
