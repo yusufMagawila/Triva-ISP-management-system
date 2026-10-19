@@ -45,6 +45,7 @@ export type AuditAction =
   | 'AI_DIAGNOSTIC_GENERATED'
   | 'AI_ONBOARDING_PROFILE_READY'
   | 'AI_ONBOARDING_APPLIED'
+  | 'TENANT_PASSWORD_RESET'
   | 'HARDWARE_TEST_RECORDED';
 
 export interface AuditEntry {

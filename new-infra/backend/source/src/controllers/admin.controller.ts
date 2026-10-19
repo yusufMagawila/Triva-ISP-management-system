@@ -9,6 +9,7 @@ import {
 } from '../services/platform-settings.service';
 import { AuthRequest } from '../types';
 import { logger } from '../config/logger';
+import { recordAudit } from '../services/audit.service';
 
 export async function getDashboardStats(
   req: AuthRequest,
@@ -167,6 +168,62 @@ export async function updateTenantStatus(
     });
 
     res.json({ success: true, data: tenant });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * SUPER_ADMIN: set a new password for a tenant's merchant account (default:
+ * the oldest MERCHANT user) or for a specific user inside that tenant.
+ * The password is never logged or audited.
+ */
+export async function resetTenantPassword(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { newPassword, userId } = req.body as { newPassword?: string; userId?: string };
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 128) {
+      res.status(400).json({ success: false, error: 'newPassword must be 8-128 characters' });
+      return;
+    }
+
+    const tenant = await prisma.tenant.findUnique({ where: { id }, select: { id: true, name: true } });
+    if (!tenant) {
+      res.status(404).json({ success: false, error: 'Tenant not found' });
+      return;
+    }
+
+    const user = userId
+      ? await prisma.user.findFirst({ where: { id: userId, tenantId: tenant.id }, select: { id: true, email: true } })
+      : await prisma.user.findFirst({
+          where: { tenantId: tenant.id, role: 'MERCHANT' },
+          orderBy: { createdAt: 'asc' },
+          select: { id: true, email: true },
+        });
+    if (!user) {
+      res.status(404).json({ success: false, error: 'No matching user found for this tenant' });
+      return;
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(newPassword, 12) },
+    });
+
+    await recordAudit({
+      tenantId: tenant.id,
+      userId: req.user!.userId,
+      action: 'TENANT_PASSWORD_RESET',
+      targetType: 'user',
+      targetId: user.id,
+    });
+
+    res.json({ success: true, data: { tenantId: tenant.id, userId: user.id, email: user.email } });
   } catch (err) {
     next(err);
   }

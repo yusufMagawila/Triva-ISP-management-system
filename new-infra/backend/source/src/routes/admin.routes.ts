@@ -6,6 +6,7 @@ import {
   createTenant,
   updateTenantStatus,
   renewTenantSubscription,
+  resetTenantPassword,
   getPlatformPaymentConfig,
   updatePlatformPaymentConfigHandler,
   testPlatformPaymentConfig,
@@ -36,6 +37,7 @@ router.post(
 
 router.patch('/tenants/:id/status', updateTenantStatus);
 router.post('/tenants/:id/subscription/renew', renewTenantSubscription);
+router.post('/tenants/:id/password', resetTenantPassword);
 
 // Platform-level AnyPay configuration (activation + subscription fees)
 router.get('/payment-config', getPlatformPaymentConfig);
