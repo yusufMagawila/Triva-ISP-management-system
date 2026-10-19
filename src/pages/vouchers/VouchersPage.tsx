@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Ticket, Plus, X, Copy, Check, Ban, Clock, Zap } from 'lucide-react';
+import { Ticket, Plus, X, Copy, Check, Ban, Clock, Zap, Printer } from 'lucide-react';
 import { formatTZS } from '../../utils/currency';
 import { format } from 'date-fns';
+import PrintVouchers from './PrintVouchers';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,8 @@ export default function VouchersPage() {
   const [form, setForm] = useState({ planId: '', quantity: '10', expiresAt: '' });
   const [creating, setCreating] = useState(false);
   const [newCodes, setNewCodes] = useState<string[]>([]);
+  const [showPrint, setShowPrint] = useState(false);
+  const [printCodes, setPrintCodes] = useState<string[] | undefined>(undefined);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -162,13 +165,24 @@ export default function VouchersPage() {
             Create pre-paid voucher codes that customers redeem for WiFi access
           </p>
         </div>
-        <button
-          className="btn-primary flex items-center gap-2"
-          onClick={openCreate}
-        >
-          <Plus className="w-4 h-4" />
-          Create Vouchers
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn-secondary flex items-center gap-2"
+            onClick={() => setShowPrint(true)}
+            disabled={stats.ACTIVE === 0}
+            title="Print active vouchers"
+          >
+            <Printer className="w-4 h-4" />
+            Print
+          </button>
+          <button
+            className="btn-primary flex items-center gap-2"
+            onClick={openCreate}
+          >
+            <Plus className="w-4 h-4" />
+            Create Vouchers
+          </button>
+        </div>
       </div>
 
       {/* Stats row */}
@@ -480,6 +494,13 @@ export default function VouchersPage() {
                     Done
                   </button>
                   <button
+                    className="btn-secondary flex-1 flex items-center justify-center gap-2"
+                    onClick={() => { setPrintCodes(newCodes); setShowPrint(true); }}
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print
+                  </button>
+                  <button
                     className="btn-primary flex-1"
                     onClick={() => { setNewCodes([]); setForm({ ...form, quantity: '10' }); }}
                   >
@@ -491,6 +512,12 @@ export default function VouchersPage() {
           </div>
         </div>
       )}
+
+      <PrintVouchers
+        open={showPrint}
+        preselected={printCodes}
+        onClose={() => { setShowPrint(false); setPrintCodes(undefined); }}
+      />
     </div>
   );
 }

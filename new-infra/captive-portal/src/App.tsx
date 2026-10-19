@@ -46,6 +46,7 @@ interface Params {
   linkOrig: string | null;
   omadaUrl: string | null;
   ssidName: string | null;
+  voucher: string | null;
 }
 
 function parseParams(): Params {
@@ -64,6 +65,7 @@ function parseParams(): Params {
     linkOrig: q.get('link-orig') ?? q.get('linkOrig'),
     omadaUrl: q.get('omadaUrl'),
     ssidName: q.get('ssidName'),
+    voucher: (q.get('voucher') ?? '').trim().toUpperCase() || null,
   };
 }
 
@@ -125,7 +127,11 @@ export default function App() {
         return;
       }
       setInfo(data);
-      setScreen(data.plans.length === 0 && !data.activeSession ? 'empty' : 'plans');
+      setScreen(
+        params.voucher
+          ? 'voucher'
+          : data.plans.length === 0 && !data.activeSession ? 'empty' : 'plans',
+      );
       if (data.activeSession) announce('You already have an active session.');
     } catch (err) {
       const status = err instanceof RequestError ? err.status : 0;
@@ -404,6 +410,7 @@ export default function App() {
         <VoucherSheet
           busy={voucherBusy}
           error={voucherError}
+          initialCode={params.voucher ?? undefined}
           onSubmit={handleVoucher}
           onClose={() => setScreen('plans')}
         />

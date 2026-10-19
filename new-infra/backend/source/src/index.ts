@@ -29,6 +29,7 @@ import portalSettingsRoutes from './routes/portal-settings.routes';
 import subscriptionRoutes from './routes/subscription.routes';
 import paymentSettingsRoutes from './routes/payment-settings.routes';
 import installRoutes from './routes/install.routes';
+import assistantRoutes from './routes/assistant.routes';
 
 // Background jobs
 import { startSessionExpiryJob, startStalePendingCleanupJob } from './jobs/sessionExpiry.job';
@@ -158,6 +159,7 @@ app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/payment-settings', paymentSettingsRoutes);
 app.use('/api/portal-settings', portalSettingsRoutes);
 app.use('/api/vouchers', voucherRoutes);
+app.use('/api/assistant', assistantRoutes);
 // Installation namespace — the only surface INSTALLER accounts may reach.
 app.use('/api/install', installRoutes);
 

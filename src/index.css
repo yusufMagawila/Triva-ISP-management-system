@@ -276,3 +276,15 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Printing (vouchers): show only .print-root on paper.
+   ------------------------------------------------------------------------ */
+.print-root { display: none; }
+@media print {
+  @page { size: A4; margin: 10mm; }
+  body { background: #fff !important; }
+  body > *:not(.print-root) { display: none !important; }
+  body > .print-root { display: block !important; }
+  .pv-card { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

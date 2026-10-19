@@ -5,12 +5,13 @@ import { TicketIcon } from './Icons';
 interface Props {
   busy: boolean;
   error: string | null;
+  initialCode?: string;
   onSubmit: (code: string) => void;
   onClose: () => void;
 }
 
-export function VoucherSheet({ busy, error, onSubmit, onClose }: Props) {
-  const [code, setCode] = useState('');
+export function VoucherSheet({ busy, error, initialCode, onSubmit, onClose }: Props) {
+  const [code, setCode] = useState(initialCode ?? '');
 
   return (
     <Sheet title="Redeem voucher" onClose={busy ? undefined : onClose}>

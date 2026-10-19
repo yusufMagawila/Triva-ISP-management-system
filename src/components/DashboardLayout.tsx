@@ -1,4 +1,5 @@
 import { Outlet, NavLink, useNavigate, Navigate, useLocation } from 'react-router-dom';
+import AssistantChat from './AssistantChat';
 import { useAuthStore } from '../store/authStore';
 import { useSocketStore } from '../store/socketStore';
 import { useUiStore, applyTheme, type ThemeMode } from '../store/uiStore';
@@ -338,6 +339,7 @@ export default function DashboardLayout() {
       )}
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} nav={paletteNav} onLogout={handleLogout} />
+      {user?.role === 'MERCHANT' && <AssistantChat />}
     </div>
   );
 }

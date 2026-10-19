@@ -46,6 +46,7 @@ export default function SettingsPage() {
   const [showKeys, setShowKeys] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [platform, setPlatform] = useState<PlatformPaymentData | null>(null);
   const [platformKey, setPlatformKey] = useState('');
@@ -142,6 +143,40 @@ export default function SettingsPage() {
       setAnypayKey(''); setAnypayToken('');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setSavingPayment(false);
+    }
+  }
+
+  /** One-step setup: save the key, enable payments, verify it works. */
+  async function handleConnectAnypay(e: React.FormEvent) {
+    e.preventDefault();
+    const key = anypayKey.trim();
+    if (!key) return;
+    setSavingPayment(true);
+    try {
+      await api.put('/payment-settings', { anypayApiKey: key, anypayEnabled: true });
+      let ok = false;
+      let message = '';
+      try {
+        const r = await api.post<{ success: boolean; message: string }>('/payment-settings/test', {});
+        ok = r.data.success;
+        message = r.data.message;
+      } catch (err) {
+        message = err instanceof Error ? err.message : 'Connection test failed';
+      }
+      if (ok) {
+        toast.success('AnyPay connected. Customers can pay now.');
+      } else {
+        await api.put('/payment-settings', { anypayEnabled: false });
+        toast.error('We could not verify this key. ' + message);
+      }
+      const r = await api.get<{ data: PaymentSettingsData }>('/payment-settings');
+      setSettings(r.data.data);
+      setAnypayEnabled(ok);
+      setAnypayKey('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save the key');
     } finally {
       setSavingPayment(false);
     }
@@ -272,7 +307,7 @@ export default function SettingsPage() {
             )}
           </div>
           <p className="text-sm mb-5" style={{ color: 'var(--text-2)' }}>
-            Customer WiFi payments are collected through AnyPay into your account. Credentials are stored encrypted.
+            Customers pay by mobile money and the money goes straight to your AnyPay account. Your key is stored encrypted.
           </p>
 
           {/* Status badge */}
@@ -280,100 +315,122 @@ export default function SettingsPage() {
             <div className="flex items-start gap-2 rounded-xl p-3.5 mb-5 text-sm"
               style={{ background: 'color-mix(in srgb, var(--warning) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 35%, transparent)', color: 'color-mix(in srgb, var(--warning) 62%, var(--text))' }}>
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span><strong>Payments not configured.</strong> Customers cannot pay until you add your AnyPay credentials.</span>
+              <span><strong>Payments are not connected yet.</strong> Paste your AnyPay API key below so customers can pay.</span>
             </div>
           ) : (
             <div className="flex items-center gap-2 mb-5 text-sm rounded-xl p-3.5"
-              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }}>
+              style={{ background: 'color-mix(in srgb, var(--success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)', color: 'var(--success)' }}>
               <CheckCircle className="w-4 h-4 shrink-0" />
               <span><strong>AnyPay Tanzania</strong> is active — payments go directly to your account.</span>
             </div>
           )}
 
-          <form onSubmit={handleSavePaymentSettings} className="space-y-5">
-            <label className="flex items-center justify-between rounded-xl border px-4 py-3" style={{ borderColor: 'var(--border)' }}>
-              <div>
-                <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Accept payments</p>
-                <p className="text-xs" style={{ color: 'var(--text-2)' }}>Disable to pause customer payments without removing credentials.</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={anypayEnabled}
-                onChange={(e) => setAnypayEnabled(e.target.checked)}
-                className="h-5 w-5 accent-blue-600"
-              />
-            </label>
-
+          <form onSubmit={handleConnectAnypay} className="space-y-4">
             <div>
               <label className="label">
-                AnyPay API Key{' '}
-                {settings?.configured && <span className="text-xs ml-1" style={{ color: 'var(--success)' }}>(set — enter to replace)</span>}
+                AnyPay API key{' '}
+                {settings?.configured && <span className="text-xs ml-1" style={{ color: 'var(--success)' }}>(connected — paste a new key to replace it)</span>}
               </label>
               <div className="relative">
                 <input
                   type={showKeys ? 'text' : 'password'}
                   className="input pr-10"
-                  placeholder={settings?.anypayApiKey ?? 'Your AnyPay API key'}
+                  placeholder={settings?.anypayApiKey ?? 'Paste your AnyPay API key'}
                   value={anypayKey}
                   onChange={(e) => setAnypayKey(e.target.value)}
                   autoComplete="off"
                 />
                 <button type="button" onClick={() => setShowKeys((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }}>
+                  className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }}
+                  aria-label={showKeys ? 'Hide key' : 'Show key'}>
                   {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>Required. From anypaytanzania.com → API Keys (API-Key header).</p>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>
+                Find it in your AnyPay account under API Keys. That is all we need. Everything else is handled for you.
+              </p>
             </div>
-
-            <div>
-              <label className="label">
-                Access Token{' '}
-                {settings?.anypayAccessToken && <span className="text-xs ml-1" style={{ color: 'var(--success)' }}>(set — enter to replace)</span>}
-              </label>
-              <input
-                type={showKeys ? 'text' : 'password'}
-                className="input"
-                placeholder={settings?.anypayAccessToken ?? 'Optional — only if your account uses one'}
-                value={anypayToken}
-                onChange={(e) => setAnypayToken(e.target.value)}
-                autoComplete="off"
-              />
-              <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>Optional bearer token for accounts that require it.</p>
-            </div>
-
-            <div>
-              <label className="label">API Base URL</label>
-              <input
-                type="url"
-                className="input"
-                placeholder={DEFAULT_ANYAPAY_BASE_URL}
-                value={anypayBaseUrl}
-                onChange={(e) => setAnypayBaseUrl(e.target.value)}
-              />
-              <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>Leave empty to use the default AnyPay endpoint.</p>
-            </div>
-
-            {settings?.webhookUrl && (
-              <div>
-                <label className="label">Webhook URL</label>
-                <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                  <code className="text-xs break-all flex-1" style={{ color: 'var(--text)' }}>{settings.webhookUrl}</code>
-                  <button type="button" className="flex-shrink-0" style={{ color: 'var(--text-3)' }}
-                    onClick={() => settings.webhookUrl && copyText(settings.webhookUrl, 'Webhook URL')}>
-                    <Copy className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>
-                  Paste this URL in your AnyPay dashboard so payment callbacks reach your hotspot.
-                </p>
-              </div>
-            )}
-
-            <button type="submit" className="btn-primary" disabled={savingPayment}>
-              {savingPayment ? 'Saving…' : 'Save Payment Settings'}
+            <button type="submit" className="btn-primary" disabled={savingPayment || !anypayKey.trim()}>
+              {savingPayment ? 'Connecting…' : settings?.configured ? 'Update key' : 'Connect AnyPay'}
             </button>
           </form>
+
+          <div className="mt-6 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="text-xs font-semibold"
+              style={{ color: 'var(--text-2)' }}
+              aria-expanded={showAdvanced}
+            >
+              {showAdvanced ? 'Hide' : 'Show'} advanced options
+            </button>
+
+            {showAdvanced && (
+              <form onSubmit={handleSavePaymentSettings} className="space-y-5 mt-4">
+                <label className="flex items-center justify-between rounded-xl border px-4 py-3" style={{ borderColor: 'var(--border)' }}>
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Accept payments</p>
+                    <p className="text-xs" style={{ color: 'var(--text-2)' }}>Turn off to pause customer payments without removing your key.</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={anypayEnabled}
+                    onChange={(e) => setAnypayEnabled(e.target.checked)}
+                    className="h-5 w-5 accent-blue-600"
+                  />
+                </label>
+
+                <div>
+                  <label className="label">
+                    Access token{' '}
+                    {settings?.anypayAccessToken && <span className="text-xs ml-1" style={{ color: 'var(--success)' }}>(set — enter to replace)</span>}
+                  </label>
+                  <input
+                    type={showKeys ? 'text' : 'password'}
+                    className="input"
+                    placeholder={settings?.anypayAccessToken ?? 'Only if AnyPay gave you one'}
+                    value={anypayToken}
+                    onChange={(e) => setAnypayToken(e.target.value)}
+                    autoComplete="off"
+                  />
+                </div>
+
+                <div>
+                  <label className="label">API address</label>
+                  <input
+                    type="url"
+                    className="input"
+                    placeholder={DEFAULT_ANYAPAY_BASE_URL}
+                    value={anypayBaseUrl}
+                    onChange={(e) => setAnypayBaseUrl(e.target.value)}
+                  />
+                  <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>Leave empty unless AnyPay told you to change it.</p>
+                </div>
+
+                {settings?.webhookUrl && (
+                  <div>
+                    <label className="label">Instant confirmation link (optional)</label>
+                    <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                      <code className="text-xs break-all flex-1" style={{ color: 'var(--text)' }}>{settings.webhookUrl}</code>
+                      <button type="button" className="flex-shrink-0" style={{ color: 'var(--text-3)' }}
+                        onClick={() => settings.webhookUrl && copyText(settings.webhookUrl, 'Link')}
+                        aria-label="Copy link">
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>
+                      You do not need this. Payments are confirmed automatically within seconds. Add it in AnyPay only if you want confirmations to be instant.
+                    </p>
+                  </div>
+                )}
+
+                <button type="submit" className="btn-secondary" disabled={savingPayment}>
+                  {savingPayment ? 'Saving…' : 'Save advanced options'}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       )}
 
