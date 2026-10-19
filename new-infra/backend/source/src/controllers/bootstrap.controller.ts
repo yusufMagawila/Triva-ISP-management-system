@@ -58,8 +58,18 @@ function buildBootstrapSyncScript(
   // Always refresh the hotspot login page so portal fixes propagate automatically.
   const loginHtmlUrl = `${apiUrl}/api/portal/router/${encodeURIComponent(router.id)}/hotspot/login.html`;
   const escapedLoginHtmlUrl = escapeRouterOsString(loginHtmlUrl);
+  // Write into the html-directory the hotspot profile actually serves from
+  // (flash/hotspot on flash-based boards, hotspot elsewhere).
+  const escapedHotspotNameForDir = escapeRouterOsString(router.hotspotName);
+  lines.push(':local trivaHtmlDir "hotspot"');
   lines.push(':do {');
-  lines.push(`  /tool fetch mode=https url="${escapedLoginHtmlUrl}" dst-path="hotspot/login.html" check-certificate=no keep-result=yes`);
+  lines.push(`  :local trivaHsId [/ip hotspot find where name="${escapedHotspotNameForDir}"]`);
+  lines.push('  :local trivaProfName [/ip hotspot get $trivaHsId profile]');
+  lines.push('  :local trivaDir [/ip hotspot profile get [/ip hotspot profile find where name=$trivaProfName] html-directory]');
+  lines.push('  :if ([:len $trivaDir] > 0) do={ :set trivaHtmlDir $trivaDir }');
+  lines.push('} on-error={}');
+  lines.push(':do {');
+  lines.push(`  /tool fetch mode=https url="${escapedLoginHtmlUrl}" dst-path=($trivaHtmlDir . "/login.html") check-certificate=no keep-result=yes`);
   lines.push('} on-error={');
   lines.push('  :log warning "TRIVA: login.html refresh failed"');
   lines.push('}');
