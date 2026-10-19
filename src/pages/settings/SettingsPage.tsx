@@ -3,7 +3,8 @@ import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import toast from 'react-hot-toast';
 import PortalLookSettings from './PortalLookSettings';
-import { Settings, KeyRound, CreditCard, Eye, EyeOff, AlertTriangle, CheckCircle, Zap, Copy } from 'lucide-react';
+import { Tabs } from '../../components/ui';
+import { Settings, KeyRound, CreditCard, Eye, EyeOff, AlertTriangle, CheckCircle, Zap, Copy, UserRound, Palette, ShieldCheck } from 'lucide-react';
 
 interface PaymentSettingsData {
   provider: 'ANYPAY';
@@ -61,6 +62,13 @@ export default function SettingsPage() {
 
   const isMerchant = user?.role === 'MERCHANT';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const [tab, setTab] = useState<'profile' | 'payments' | 'portal' | 'security'>('profile');
+  const tabs = [
+    { key: 'profile' as const, label: 'Profile', icon: UserRound },
+    { key: 'payments' as const, label: 'Payments', icon: CreditCard },
+    ...(isMerchant ? [{ key: 'portal' as const, label: 'Portal', icon: Palette }] : []),
+    { key: 'security' as const, label: 'Security', icon: ShieldCheck },
+  ];
 
   useEffect(() => {
     if (!isMerchant) return;
@@ -211,19 +219,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-7 space-y-6 max-w-2xl">
+    <div className="p-4 sm:p-7 space-y-0 max-w-3xl mx-auto [&>*+*]:mt-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>
+        <h1 className="text-[22px] sm:text-2xl font-semibold tracking-tight" style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}>
           Settings
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage your account</p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>Manage your account</p>
       </div>
 
+      <Tabs tabs={tabs} value={tab} onChange={setTab} />
+
       {/* Account Info */}
-      <div className="card p-6">
+      {tab === 'profile' && <div className="card p-6">
         <div className="flex items-center gap-3 mb-5">
-          <Settings className="w-4 h-4" style={{ color: '#aeaeb2' }} />
-          <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Account Info</h2>
+          <Settings className="w-4 h-4" style={{ color: 'var(--text-3)' }} />
+          <h2 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>Account Info</h2>
         </div>
         <dl className="space-y-3 text-sm">
           {[
@@ -233,20 +243,20 @@ export default function SettingsPage() {
             ...(user?.tenant ? [{ label: 'Shop', value: user.tenant.name }] : []),
           ].map(({ label, value }) => (
             <div key={label} className="flex gap-4">
-              <dt className="w-16 font-medium" style={{ color: '#aeaeb2' }}>{label}</dt>
-              <dd className="capitalize" style={{ color: '#1d1d1f' }}>{value}</dd>
+              <dt className="w-16 font-medium" style={{ color: 'var(--text-3)' }}>{label}</dt>
+              <dd className="capitalize" style={{ color: 'var(--text)' }}>{value}</dd>
             </div>
           ))}
         </dl>
-      </div>
+      </div>}
 
       {/* AnyPay — merchant gateway configuration */}
-      {isMerchant && (
+      {isMerchant && tab === 'payments' && (
         <div className="card p-6">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <CreditCard className="w-4 h-4" style={{ color: '#aeaeb2' }} />
-              <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Payments — AnyPay</h2>
+              <CreditCard className="w-4 h-4" style={{ color: 'var(--text-3)' }} />
+              <h2 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>Payments — AnyPay</h2>
             </div>
             {settings?.configured && (
               <button
@@ -254,21 +264,21 @@ export default function SettingsPage() {
                 onClick={handleTestGateway}
                 disabled={testing}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                style={{ background: '#f4f4f5', color: '#1d1d1f' }}
+                style={{ background: 'var(--surface-2)', color: 'var(--text)' }}
               >
                 <Zap className="w-3.5 h-3.5" />
                 {testing ? 'Testing…' : 'Test Connection'}
               </button>
             )}
           </div>
-          <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
+          <p className="text-sm mb-5" style={{ color: 'var(--text-2)' }}>
             Customer WiFi payments are collected through AnyPay into your account. Credentials are stored encrypted.
           </p>
 
           {/* Status badge */}
           {!isReady ? (
             <div className="flex items-start gap-2 rounded-xl p-3.5 mb-5 text-sm"
-              style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}>
+              style={{ background: 'color-mix(in srgb, var(--warning) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 35%, transparent)', color: 'color-mix(in srgb, var(--warning) 62%, var(--text))' }}>
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <span><strong>Payments not configured.</strong> Customers cannot pay until you add your AnyPay credentials.</span>
             </div>
@@ -281,10 +291,10 @@ export default function SettingsPage() {
           )}
 
           <form onSubmit={handleSavePaymentSettings} className="space-y-5">
-            <label className="flex items-center justify-between rounded-xl border px-4 py-3" style={{ borderColor: '#e5e5ea' }}>
+            <label className="flex items-center justify-between rounded-xl border px-4 py-3" style={{ borderColor: 'var(--border)' }}>
               <div>
-                <p className="text-sm font-medium" style={{ color: '#1d1d1f' }}>Accept payments</p>
-                <p className="text-xs" style={{ color: '#6e6e73' }}>Disable to pause customer payments without removing credentials.</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Accept payments</p>
+                <p className="text-xs" style={{ color: 'var(--text-2)' }}>Disable to pause customer payments without removing credentials.</p>
               </div>
               <input
                 type="checkbox"
@@ -297,7 +307,7 @@ export default function SettingsPage() {
             <div>
               <label className="label">
                 AnyPay API Key{' '}
-                {settings?.configured && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                {settings?.configured && <span className="text-xs ml-1" style={{ color: 'var(--success)' }}>(set — enter to replace)</span>}
               </label>
               <div className="relative">
                 <input
@@ -309,17 +319,17 @@ export default function SettingsPage() {
                   autoComplete="off"
                 />
                 <button type="button" onClick={() => setShowKeys((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#aeaeb2' }}>
+                  className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }}>
                   {showKeys ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Required. From anypaytanzania.com → API Keys (API-Key header).</p>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>Required. From anypaytanzania.com → API Keys (API-Key header).</p>
             </div>
 
             <div>
               <label className="label">
                 Access Token{' '}
-                {settings?.anypayAccessToken && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                {settings?.anypayAccessToken && <span className="text-xs ml-1" style={{ color: 'var(--success)' }}>(set — enter to replace)</span>}
               </label>
               <input
                 type={showKeys ? 'text' : 'password'}
@@ -329,7 +339,7 @@ export default function SettingsPage() {
                 onChange={(e) => setAnypayToken(e.target.value)}
                 autoComplete="off"
               />
-              <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Optional bearer token for accounts that require it.</p>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>Optional bearer token for accounts that require it.</p>
             </div>
 
             <div>
@@ -341,20 +351,20 @@ export default function SettingsPage() {
                 value={anypayBaseUrl}
                 onChange={(e) => setAnypayBaseUrl(e.target.value)}
               />
-              <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>Leave empty to use the default AnyPay endpoint.</p>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>Leave empty to use the default AnyPay endpoint.</p>
             </div>
 
             {settings?.webhookUrl && (
               <div>
                 <label className="label">Webhook URL</label>
-                <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: '#f5f5f7', border: '1px solid #e8e8ed' }}>
-                  <code className="text-xs break-all flex-1" style={{ color: '#1d1d1f' }}>{settings.webhookUrl}</code>
-                  <button type="button" className="flex-shrink-0" style={{ color: '#aeaeb2' }}
+                <div className="flex items-center gap-2 rounded-xl px-3 py-2.5" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                  <code className="text-xs break-all flex-1" style={{ color: 'var(--text)' }}>{settings.webhookUrl}</code>
+                  <button type="button" className="flex-shrink-0" style={{ color: 'var(--text-3)' }}
                     onClick={() => settings.webhookUrl && copyText(settings.webhookUrl, 'Webhook URL')}>
                     <Copy className="w-4 h-4" />
                   </button>
                 </div>
-                <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>
+                <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>
                   Paste this URL in your AnyPay dashboard so payment callbacks reach your hotspot.
                 </p>
               </div>
@@ -368,12 +378,12 @@ export default function SettingsPage() {
       )}
 
       {/* Platform AnyPay — SUPER_ADMIN only (activation + subscription revenue) */}
-      {isSuperAdmin && (
+      {isSuperAdmin && tab === 'payments' && (
         <div className="card p-6">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <CreditCard className="w-4 h-4" style={{ color: '#aeaeb2' }} />
-              <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Platform Payments — AnyPay</h2>
+              <CreditCard className="w-4 h-4" style={{ color: 'var(--text-3)' }} />
+              <h2 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>Platform Payments — AnyPay</h2>
             </div>
             {platform?.configured && platform.enabled && (
               <button
@@ -381,30 +391,30 @@ export default function SettingsPage() {
                 onClick={handleTestPlatform}
                 disabled={testingPlatform}
                 className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                style={{ background: '#f4f4f5', color: '#1d1d1f' }}
+                style={{ background: 'var(--surface-2)', color: 'var(--text)' }}
               >
                 <Zap className="w-3.5 h-3.5" />
                 {testingPlatform ? 'Testing…' : 'Test Connection'}
               </button>
             )}
           </div>
-          <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
+          <p className="text-sm mb-5" style={{ color: 'var(--text-2)' }}>
             Merchant activation and subscription fees are collected through this platform AnyPay account.
           </p>
 
           {!(platform?.configured && platform.enabled) && (
             <div className="flex items-start gap-2 rounded-xl p-3.5 mb-5 text-sm"
-              style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}>
+              style={{ background: 'color-mix(in srgb, var(--warning) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 35%, transparent)', color: 'color-mix(in srgb, var(--warning) 62%, var(--text))' }}>
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <span><strong>Platform payments not configured.</strong> New merchant activation and subscription renewals will be unavailable.</span>
             </div>
           )}
 
           <form onSubmit={handleSavePlatform} className="space-y-5">
-            <label className="flex items-center justify-between rounded-xl border px-4 py-3" style={{ borderColor: '#e5e5ea' }}>
+            <label className="flex items-center justify-between rounded-xl border px-4 py-3" style={{ borderColor: 'var(--border)' }}>
               <div>
-                <p className="text-sm font-medium" style={{ color: '#1d1d1f' }}>Enable platform payments</p>
-                <p className="text-xs" style={{ color: '#6e6e73' }}>Required for merchant activation and subscription payments.</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Enable platform payments</p>
+                <p className="text-xs" style={{ color: 'var(--text-2)' }}>Required for merchant activation and subscription payments.</p>
               </div>
               <input
                 type="checkbox"
@@ -417,7 +427,7 @@ export default function SettingsPage() {
             <div>
               <label className="label">
                 AnyPay API Key{' '}
-                {platform?.apiKeyMasked && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                {platform?.apiKeyMasked && <span className="text-xs ml-1" style={{ color: 'var(--success)' }}>(set — enter to replace)</span>}
               </label>
               <input
                 type={showKeys ? 'text' : 'password'}
@@ -432,7 +442,7 @@ export default function SettingsPage() {
             <div>
               <label className="label">
                 Access Token{' '}
-                {platform?.accessTokenMasked && <span className="text-xs ml-1" style={{ color: '#34c759' }}>(set — enter to replace)</span>}
+                {platform?.accessTokenMasked && <span className="text-xs ml-1" style={{ color: 'var(--success)' }}>(set — enter to replace)</span>}
               </label>
               <input
                 type={showKeys ? 'text' : 'password'}
@@ -462,13 +472,13 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {isMerchant && (
+      {isMerchant && tab === 'portal' && (
         <div className="card p-6">
           <div className="flex items-center gap-3 mb-2">
-            <Settings className="w-4 h-4" style={{ color: '#aeaeb2' }} />
-            <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Captive Portal Notice</h2>
+            <Settings className="w-4 h-4" style={{ color: 'var(--text-3)' }} />
+            <h2 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>Captive Portal Notice</h2>
           </div>
-          <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
+          <p className="text-sm mb-5" style={{ color: 'var(--text-2)' }}>
             Add a support message, contact number, or operator note that appears on all of your router captive portals.
           </p>
 
@@ -483,7 +493,7 @@ export default function SettingsPage() {
                 maxLength={60}
                 placeholder="Support Desk"
               />
-              <p className="text-xs mt-1.5" style={{ color: '#aeaeb2' }}>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--text-3)' }}>
                 Appears as the sender name above the notice.
               </p>
             </div>
@@ -497,7 +507,7 @@ export default function SettingsPage() {
                 maxLength={280}
                 placeholder="Need help? Call 07XXXXXXXX or visit the counter near the entrance."
               />
-              <div className="mt-1.5 flex items-center justify-between text-xs" style={{ color: '#aeaeb2' }}>
+              <div className="mt-1.5 flex items-center justify-between text-xs" style={{ color: 'var(--text-3)' }}>
                 <span>Leave empty to hide the notice from the portal.</span>
                 <span>{portalNoticeMessage.trim().length}/280</span>
               </div>
@@ -511,9 +521,9 @@ export default function SettingsPage() {
                   value={portalNoticeColor}
                   onChange={(e) => setPortalNoticeColor(e.target.value)}
                   className="h-11 w-14 rounded-lg border cursor-pointer"
-                  style={{ borderColor: '#e5e5ea', background: '#ffffff' }}
+                  style={{ borderColor: 'var(--border)', background: '#ffffff' }}
                 />
-                <div className="flex-1 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: '#e5e5ea', color: '#1d1d1f' }}>
+                <div className="flex-1 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: 'var(--border)', color: 'var(--text)' }}>
                   {portalNoticeColor.toUpperCase()}
                 </div>
               </div>
@@ -529,7 +539,7 @@ export default function SettingsPage() {
               <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: portalNoticeColor }}>
                 {portalNoticeName.trim() || 'Portal Notice Preview'}
               </p>
-              <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#1d1d1f' }}>
+              <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--text)' }}>
                 {portalNoticeMessage.trim() || 'Your support or announcement message will preview here.'}
               </p>
             </div>
@@ -541,13 +551,13 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {isMerchant && <PortalLookSettings />}
+      {isMerchant && tab === 'portal' && <PortalLookSettings />}
 
       {/* Change Password */}
-      <div className="card p-6">
+      {tab === 'security' && <div className="card p-6">
         <div className="flex items-center gap-3 mb-5">
-          <KeyRound className="w-4 h-4" style={{ color: '#aeaeb2' }} />
-          <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Change Password</h2>
+          <KeyRound className="w-4 h-4" style={{ color: 'var(--text-3)' }} />
+          <h2 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>Change Password</h2>
         </div>
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div>
@@ -566,7 +576,7 @@ export default function SettingsPage() {
             {saving ? 'Saving…' : 'Update Password'}
           </button>
         </form>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -151,14 +151,14 @@ export default function VouchersPage() {
   const LIMIT = 50;
 
   return (
-    <div className="p-7 space-y-6">
+    <div className="p-4 sm:p-7 space-y-6 max-w-[1280px] mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold" style={{ color: '#1d1d1f', letterSpacing: '-0.02em' }}>
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--text)', letterSpacing: '-0.02em' }}>
             Vouchers
           </h1>
-          <p className="mt-1 text-sm" style={{ color: '#6e6e73' }}>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-2)' }}>
             Create pre-paid voucher codes that customers redeem for WiFi access
           </p>
         </div>
@@ -175,8 +175,8 @@ export default function VouchersPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {(
           [
-            { label: 'Active', key: 'ACTIVE', color: '#34c759' },
-            { label: 'Redeemed', key: 'REDEEMED', color: '#0071e3' },
+            { label: 'Active', key: 'ACTIVE', color: 'var(--success)' },
+            { label: 'Redeemed', key: 'REDEEMED', color: 'var(--primary)' },
             { label: 'Expired', key: 'EXPIRED', color: '#f5a623' },
             { label: 'Cancelled', key: 'CANCELLED', color: '#8e8e93' },
           ] as const
@@ -187,7 +187,7 @@ export default function VouchersPage() {
             className="card p-4 text-left transition-all"
             style={statusFilter === key ? { outline: `2px solid ${color}`, outlineOffset: '2px' } : {}}
           >
-            <p className="text-sm font-medium" style={{ color: '#6e6e73' }}>{label}</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-2)' }}>{label}</p>
             <p className="text-2xl font-semibold mt-1" style={{ color }}>
               {stats[key]}
             </p>
@@ -199,12 +199,12 @@ export default function VouchersPage() {
       <div className="card overflow-hidden">
         {statusFilter && (
           <div className="px-4 pt-3 flex items-center gap-2">
-            <span className="text-xs" style={{ color: '#6e6e73' }}>
+            <span className="text-xs" style={{ color: 'var(--text-2)' }}>
               Filtering: {statusFilter}
             </span>
             <button
               className="text-xs underline"
-              style={{ color: '#0071e3' }}
+              style={{ color: 'var(--primary)' }}
               onClick={() => { setStatusFilter(''); setPage(1); }}
             >
               Clear
@@ -217,7 +217,7 @@ export default function VouchersPage() {
             <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : vouchers.length === 0 ? (
-          <div className="flex flex-col items-center py-16 gap-3" style={{ color: '#6e6e73' }}>
+          <div className="flex flex-col items-center py-16 gap-3" style={{ color: 'var(--text-2)' }}>
             <Ticket className="w-10 h-10 opacity-30" />
             <p className="text-sm">No vouchers yet. Create your first batch.</p>
           </div>
@@ -226,12 +226,12 @@ export default function VouchersPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     {['Code', 'Plan', 'Status', 'Created', 'Expires', 'Redeemed At', ''].map((h) => (
                       <th
                         key={h}
                         className="px-4 py-3 text-left font-medium text-xs uppercase tracking-wide"
-                        style={{ color: '#6e6e73' }}
+                        style={{ color: 'var(--text-2)' }}
                       >
                         {h}
                       </th>
@@ -243,7 +243,7 @@ export default function VouchersPage() {
                     <tr key={v.id} style={{ borderBottom: '1px solid #f8f8fa' }}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-semibold text-xs tracking-widest" style={{ color: '#1d1d1f' }}>
+                          <span className="font-mono font-semibold text-xs tracking-widest" style={{ color: 'var(--text)' }}>
                             {v.code}
                           </span>
                           <button
@@ -253,14 +253,14 @@ export default function VouchersPage() {
                             {copiedCode === v.code ? (
                               <Check className="w-3.5 h-3.5 text-green-500" />
                             ) : (
-                              <Copy className="w-3.5 h-3.5" style={{ color: '#6e6e73' }} />
+                              <Copy className="w-3.5 h-3.5" style={{ color: 'var(--text-2)' }} />
                             )}
                           </button>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <p style={{ color: '#1d1d1f' }}>{v.plan.name}</p>
-                        <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>
+                        <p style={{ color: 'var(--text)' }}>{v.plan.name}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-2)' }}>
                           <span className="inline-flex items-center gap-1">
                             <Clock className="w-3 h-3" />
                             {formatDuration(v.plan.durationMins)}
@@ -271,13 +271,13 @@ export default function VouchersPage() {
                       <td className="px-4 py-3">
                         <span className={statusBadge[v.status]}>{v.status}</span>
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#6e6e73' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-2)' }}>
                         {format(new Date(v.createdAt), 'MMM d, yyyy')}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#6e6e73' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-2)' }}>
                         {v.expiresAt ? format(new Date(v.expiresAt), 'MMM d, yyyy') : '—'}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: '#6e6e73' }}>
+                      <td className="px-4 py-3 text-xs" style={{ color: 'var(--text-2)' }}>
                         {v.redeemedAt ? (
                           <div>
                             <p>{format(new Date(v.redeemedAt), 'MMM d, HH:mm')}</p>
@@ -294,7 +294,7 @@ export default function VouchersPage() {
                             className="p-1.5 rounded-lg hover:bg-red-50 transition-colors"
                             title="Cancel voucher"
                           >
-                            <Ban className="w-3.5 h-3.5" style={{ color: '#ff3b30' }} />
+                            <Ban className="w-3.5 h-3.5" style={{ color: 'var(--danger)' }} />
                           </button>
                         )}
                       </td>
@@ -308,9 +308,9 @@ export default function VouchersPage() {
             {total > LIMIT && (
               <div
                 className="flex items-center justify-between px-4 py-3 text-sm"
-                style={{ borderTop: '1px solid #f0f0f5' }}
+                style={{ borderTop: '1px solid var(--border)' }}
               >
-                <span style={{ color: '#6e6e73' }}>
+                <span style={{ color: 'var(--text-2)' }}>
                   {(page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} of {total}
                 </span>
                 <div className="flex gap-2">
@@ -340,9 +340,9 @@ export default function VouchersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.4)' }}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="flex items-center justify-between p-5 pb-0">
-              <h2 className="text-lg font-semibold" style={{ color: '#1d1d1f' }}>Create Vouchers</h2>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>Create Vouchers</h2>
               <button onClick={() => { setShowCreate(false); setNewCodes([]); }}>
-                <X className="w-5 h-5" style={{ color: '#6e6e73' }} />
+                <X className="w-5 h-5" style={{ color: 'var(--text-2)' }} />
               </button>
             </div>
 
@@ -350,11 +350,11 @@ export default function VouchersPage() {
               <form onSubmit={handleCreate} className="p-5 space-y-4">
                 {/* Plan */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#1d1d1f' }}>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text)' }}>
                     WiFi Plan
                   </label>
                   {plans.length === 0 ? (
-                    <p className="text-sm" style={{ color: '#ff3b30' }}>
+                    <p className="text-sm" style={{ color: 'var(--danger)' }}>
                       No active plans found. Create a plan first.
                     </p>
                   ) : (
@@ -375,8 +375,8 @@ export default function VouchersPage() {
 
                 {/* Quantity */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#1d1d1f' }}>
-                    Quantity <span style={{ color: '#6e6e73', fontWeight: 400 }}>(1–100)</span>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text)' }}>
+                    Quantity <span style={{ color: 'var(--text-2)', fontWeight: 400 }}>(1–100)</span>
                   </label>
                   <input
                     type="number"
@@ -391,8 +391,8 @@ export default function VouchersPage() {
 
                 {/* Expiry (optional) */}
                 <div>
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: '#1d1d1f' }}>
-                    Expiry Date <span style={{ color: '#6e6e73', fontWeight: 400 }}>(optional)</span>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text)' }}>
+                    Expiry Date <span style={{ color: 'var(--text-2)', fontWeight: 400 }}>(optional)</span>
                   </label>
                   <input
                     type="date"
@@ -401,7 +401,7 @@ export default function VouchersPage() {
                     min={new Date().toISOString().split('T')[0]}
                     onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
                   />
-                  <p className="text-xs mt-1" style={{ color: '#6e6e73' }}>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-2)' }}>
                     Leave empty for vouchers that never expire
                   </p>
                 </div>
@@ -435,10 +435,10 @@ export default function VouchersPage() {
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-medium" style={{ color: '#1d1d1f' }}>Generated Codes</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Generated Codes</p>
                     <button
                       className="text-xs flex items-center gap-1"
-                      style={{ color: '#0071e3' }}
+                      style={{ color: 'var(--primary)' }}
                       onClick={copyAllCodes}
                     >
                       <Copy className="w-3 h-3" />
@@ -447,13 +447,13 @@ export default function VouchersPage() {
                   </div>
                   <div
                     className="rounded-xl p-3 space-y-1.5 overflow-y-auto"
-                    style={{ background: '#f5f5f7', maxHeight: '280px' }}
+                    style={{ background: 'var(--bg)', maxHeight: '280px' }}
                   >
                     {newCodes.map((code) => (
                       <div key={code} className="flex items-center justify-between">
                         <span
                           className="font-mono text-sm font-semibold tracking-widest"
-                          style={{ color: '#1d1d1f' }}
+                          style={{ color: 'var(--text)' }}
                         >
                           {code}
                         </span>
@@ -461,13 +461,13 @@ export default function VouchersPage() {
                           {copiedCode === code ? (
                             <Check className="w-3.5 h-3.5 text-green-500" />
                           ) : (
-                            <Copy className="w-3.5 h-3.5" style={{ color: '#6e6e73' }} />
+                            <Copy className="w-3.5 h-3.5" style={{ color: 'var(--text-2)' }} />
                           )}
                         </button>
                       </div>
                     ))}
                   </div>
-                  <p className="text-xs mt-2" style={{ color: '#6e6e73' }}>
+                  <p className="text-xs mt-2" style={{ color: 'var(--text-2)' }}>
                     Save these codes — give one to each customer in exchange for payment.
                   </p>
                 </div>

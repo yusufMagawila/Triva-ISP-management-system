@@ -112,12 +112,12 @@ export default function SubscriptionPage() {
     <div className="p-7 space-y-6 max-w-3xl">
       <div>
         <h1
-          className="text-2xl font-bold tracking-tight"
-          style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+          className="text-[22px] sm:text-2xl font-semibold tracking-tight"
+          style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}
         >
           Subscription
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage your TRIVA plan</p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>Manage your TRIVA plan</p>
       </div>
 
       {/* Current status */}
@@ -132,14 +132,14 @@ export default function SubscriptionPage() {
           <div className="flex items-center gap-4">
             <div className="flex-shrink-0">
               {isActive ? (
-                <CheckCircle2 className="w-9 h-9" style={{ color: '#34c759' }} />
+                <CheckCircle2 className="w-9 h-9" style={{ color: 'var(--success)' }} />
               ) : (
                 <AlertTriangle className="w-9 h-9" style={{ color: '#ef4444' }} />
               )}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-0.5">
-                <h2 className="text-base font-bold" style={{ color: '#1d1d1f' }}>
+                <h2 className="text-base font-bold" style={{ color: 'var(--text)' }}>
                   {PLAN_DETAILS[sub.plan].label} Plan
                 </h2>
                 <span
@@ -179,7 +179,7 @@ export default function SubscriptionPage() {
       {/* Plan selection + payment form */}
       {showPayForm && sub && (
         <div className="card p-6 space-y-6">
-          <h2 className="font-semibold" style={{ color: '#1d1d1f' }}>Choose a Plan</h2>
+          <h2 className="font-semibold" style={{ color: 'var(--text)' }}>Choose a Plan</h2>
 
           {/* Plan cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -192,7 +192,7 @@ export default function SubscriptionPage() {
                   onClick={() => setSelectedPlan(plan)}
                   className="text-left rounded-2xl p-4 transition-all"
                   style={{
-                    border: isSelected ? `2px solid ${detail.accent}` : '2px solid #f0f0f5',
+                    border: isSelected ? `2px solid ${detail.accent}` : '2px solid var(--border)',
                     background: isSelected ? detail.accent + '0d' : 'white',
                   }}
                 >
@@ -204,15 +204,15 @@ export default function SubscriptionPage() {
                       Recommended
                     </span>
                   )}
-                  <p className="font-bold mb-0.5" style={{ color: '#1d1d1f' }}>{detail.label}</p>
+                  <p className="font-bold mb-0.5" style={{ color: 'var(--text)' }}>{detail.label}</p>
                   <p className="text-xl font-bold mb-3" style={{ color: detail.accent }}>
                     {formatTZS(sub.planPrices[plan])}
-                    <span className="text-sm font-normal" style={{ color: '#6e6e73' }}>/mo</span>
+                    <span className="text-sm font-normal" style={{ color: 'var(--text-2)' }}>/mo</span>
                   </p>
                   <ul className="space-y-1">
                     {detail.features.map((f) => (
-                      <li key={f} className="flex items-center gap-1.5 text-xs" style={{ color: '#3a3a3c' }}>
-                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#34c759' }} />
+                      <li key={f} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text)' }}>
+                        <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--success)' }} />
                         {f}
                       </li>
                     ))}
@@ -226,7 +226,7 @@ export default function SubscriptionPage() {
           <form
             onSubmit={handlePay}
             className="space-y-4 pt-4"
-            style={{ borderTop: '1px solid #f0f0f5' }}
+            style={{ borderTop: '1px solid var(--border)' }}
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -246,7 +246,7 @@ export default function SubscriptionPage() {
               <div>
                 <label className="label">M-Pesa / Tigo / Airtel Number</label>
                 <div className="relative">
-                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#aeaeb2' }} />
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--text-3)' }} />
                   <input
                     type="tel"
                     className="input pl-9"
@@ -261,21 +261,21 @@ export default function SubscriptionPage() {
 
             <div
               className="rounded-2xl p-4 flex items-center justify-between"
-              style={{ background: '#f5f5f7' }}
+              style={{ background: 'var(--bg)' }}
             >
               <div>
-                <p className="text-xs mb-0.5" style={{ color: '#6e6e73' }}>Total to pay</p>
+                <p className="text-xs mb-0.5" style={{ color: 'var(--text-2)' }}>Total to pay</p>
                 <p
-                  className="text-2xl font-bold tracking-tight"
-                  style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+                  className="text-[22px] sm:text-2xl font-semibold tracking-tight"
+                  style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}
                 >
                   {formatTZS(totalAmount)}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: '#aeaeb2' }}>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
                   {PLAN_DETAILS[selectedPlan].label} · {months} month{months > 1 ? 's' : ''}
                 </p>
               </div>
-              <Shield className="w-9 h-9" style={{ color: '#d2d2d7' }} />
+              <Shield className="w-9 h-9" style={{ color: 'var(--border-strong)' }} />
             </div>
 
             <div className="flex gap-3">
@@ -293,13 +293,13 @@ export default function SubscriptionPage() {
       {/* What's included */}
       {sub && !showPayForm && (
         <div className="card p-6">
-          <h2 className="font-semibold mb-4 text-sm" style={{ color: '#1d1d1f' }}>
+          <h2 className="font-semibold mb-4 text-sm" style={{ color: 'var(--text)' }}>
             Your {PLAN_DETAILS[sub.plan].label} Plan Includes
           </h2>
           <ul className="space-y-2.5">
             {PLAN_DETAILS[sub.plan].features.map((f) => (
-              <li key={f} className="flex items-center gap-2.5 text-sm" style={{ color: '#3a3a3c' }}>
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: '#34c759' }} />
+              <li key={f} className="flex items-center gap-2.5 text-sm" style={{ color: 'var(--text)' }}>
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--success)' }} />
                 {f}
               </li>
             ))}

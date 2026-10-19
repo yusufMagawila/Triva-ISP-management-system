@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { Wifi, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import { AuthShell } from './Login';
 
 interface RegisterResponse {
   data: {
@@ -65,35 +66,22 @@ export default function RegisterPage() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: '#f5f5f7' }}
-    >
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"
-            style={{ background: '#0071e3' }}
-          >
-            <Wifi className="w-7 h-7 text-white" />
-          </div>
-          <h1
-            className="text-3xl font-bold tracking-tight"
-            style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
-          >
-            Create Your Shop
+    <AuthShell>
+      <div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight" style={{ color: 'var(--text)' }}>
+            Create your shop
           </h1>
-          <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>
+          <p className="text-sm mt-1.5" style={{ color: 'var(--text-2)' }}>
             30-day free trial — no card required
           </p>
         </div>
 
-        <div className="card p-8">
+        <div>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Shop info */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#aeaeb2' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-3)' }}>
                 Shop Details
               </p>
               <div>
@@ -110,8 +98,8 @@ export default function RegisterPage() {
             </div>
 
             {/* Account info */}
-            <div className="pt-2" style={{ borderTop: '1px solid #f0f0f5' }}>
-              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#aeaeb2' }}>
+            <div className="pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--text-3)' }}>
                 Your Account
               </p>
               <div className="space-y-4">
@@ -138,7 +126,7 @@ export default function RegisterPage() {
                   />
                 </div>
                 <div>
-                  <label className="label">Phone <span style={{ color: '#aeaeb2' }}>optional</span></label>
+                  <label className="label">Phone <span style={{ color: 'var(--text-3)' }}>optional</span></label>
                   <input
                     type="tel"
                     className="input"
@@ -162,7 +150,7 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-                      style={{ color: '#aeaeb2' }}
+                      style={{ color: 'var(--text-3)' }}
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -188,19 +176,19 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="text-center text-sm mt-5" style={{ color: '#6e6e73' }}>
+          <p className="text-center text-sm mt-5" style={{ color: 'var(--text-2)' }}>
             Already have an account?{' '}
-            <Link to="/login" className="font-medium hover:underline" style={{ color: '#0071e3' }}>
+            <Link to="/login" className="font-medium hover:underline" style={{ color: 'var(--primary)' }}>
               Sign in
             </Link>
           </p>
         </div>
 
-        <p className="text-center text-xs mt-5" style={{ color: '#aeaeb2' }}>
+        <p className="text-center text-xs mt-5" style={{ color: 'var(--text-3)' }}>
           By registering you agree to our Terms of Service.
         </p>
       </div>
-    </div>
+    </AuthShell>
   );
 }
 

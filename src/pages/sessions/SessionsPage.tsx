@@ -69,15 +69,15 @@ export default function SessionsPage() {
   }
 
   return (
-    <div className="p-7 space-y-6">
+    <div className="p-4 sm:p-7 space-y-6 max-w-[1280px] mx-auto">
       <div>
         <h1
-          className="text-2xl font-bold tracking-tight"
-          style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+          className="text-[22px] sm:text-2xl font-semibold tracking-tight"
+          style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}
         >
           Sessions
         </h1>
-        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Monitor all WiFi sessions</p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>Monitor all WiFi sessions</p>
       </div>
 
       {/* Filters */}
@@ -90,8 +90,8 @@ export default function SessionsPage() {
             }`}
             style={
               statusFilter === s
-                ? { background: '#0071e3', border: '1px solid #0071e3', color: 'white' }
-                : { border: '1px solid #d2d2d7', color: '#3a3a3c' }
+                ? { background: 'var(--primary)', border: '1px solid #0071e3', color: 'white' }
+                : { border: '1px solid var(--border-strong)', color: 'var(--text)' }
             }
             onClick={() => { setStatusFilter(s); setPage(1); }}
           >
@@ -107,22 +107,22 @@ export default function SessionsPage() {
           </div>
         ) : sessions.length === 0 ? (
           <div className="p-16 text-center">
-            <Activity className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: '#6e6e73' }} />
-            <p className="text-sm" style={{ color: '#aeaeb2' }}>No sessions found</p>
+            <Activity className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: 'var(--text-2)' }} />
+            <p className="text-sm" style={{ color: 'var(--text-3)' }}>No sessions found</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
-                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>MAC Address</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Plan</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Router</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Started</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Expires</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}></th>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>MAC Address</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Plan</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Router</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Started</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Expires</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -130,17 +130,17 @@ export default function SessionsPage() {
                     <tr
                       key={s.id}
                       className="transition-colors"
-                      style={{ borderBottom: '1px solid #f7f7f9' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
+                      style={{ borderBottom: '1px solid var(--border)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                     >
-                      <td className="px-6 py-3.5 font-mono text-xs" style={{ color: '#3a3a3c' }}>{s.macAddress}</td>
-                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.plan.name}</td>
-                      <td className="px-6 py-3.5" style={{ color: '#1d1d1f' }}>{s.router?.name ?? s.tplinkRouter?.name ?? s.omadaSite?.name ?? 'N/A'}</td>
-                      <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
+                      <td className="px-6 py-3.5 font-mono text-xs" style={{ color: 'var(--text)' }}>{s.macAddress}</td>
+                      <td className="px-6 py-3.5" style={{ color: 'var(--text)' }}>{s.plan.name}</td>
+                      <td className="px-6 py-3.5" style={{ color: 'var(--text)' }}>{s.router?.name ?? s.tplinkRouter?.name ?? s.omadaSite?.name ?? 'N/A'}</td>
+                      <td className="px-6 py-3.5 text-xs" style={{ color: 'var(--text-2)' }}>
                         {s.startsAt ? format(new Date(s.startsAt), 'MMM d HH:mm') : '—'}
                       </td>
-                      <td className="px-6 py-3.5 text-xs" style={{ color: '#6e6e73' }}>
+                      <td className="px-6 py-3.5 text-xs" style={{ color: 'var(--text-2)' }}>
                         {s.expiresAt ? format(new Date(s.expiresAt), 'MMM d HH:mm') : '—'}
                       </td>
                       <td className="px-6 py-3.5">
@@ -150,7 +150,7 @@ export default function SessionsPage() {
                         {s.status === 'ACTIVE' && (
                           <button
                             className="transition-colors hover:text-red-500"
-                            style={{ color: '#aeaeb2' }}
+                            style={{ color: 'var(--text-3)' }}
                             onClick={() => handleDisconnect(s.id)}
                             title="Disconnect"
                           >
@@ -166,9 +166,9 @@ export default function SessionsPage() {
             {total > 20 && (
               <div
                 className="px-6 py-4 flex items-center justify-between"
-                style={{ borderTop: '1px solid #f0f0f5' }}
+                style={{ borderTop: '1px solid var(--border)' }}
               >
-                <p className="text-xs" style={{ color: '#6e6e73' }}>{total} total sessions</p>
+                <p className="text-xs" style={{ color: 'var(--text-2)' }}>{total} total sessions</p>
                 <div className="flex gap-2">
                   <button className="btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button>
                   <button className="btn-secondary btn-sm" disabled={page * 20 >= total} onClick={() => setPage(page + 1)}>Next</button>

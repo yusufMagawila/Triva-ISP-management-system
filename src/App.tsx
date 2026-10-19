@@ -1,23 +1,23 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
 import { useSocketStore } from './store/socketStore';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
-import ActivatePage from './pages/Activate';
+const ActivatePage = lazy(() => import('./pages/Activate'));
 import DashboardLayout from './components/DashboardLayout';
-import MerchantDashboard from './pages/dashboard/MerchantDashboard';
-import AdminDashboard from './pages/dashboard/AdminDashboard';
-import RoutersPage from './pages/routers/RoutersPage';
-import PlansPage from './pages/plans/PlansPage';
-import SessionsPage from './pages/sessions/SessionsPage';
-import PaymentsPage from './pages/payments/PaymentsPage';
-import TenantsPage from './pages/admin/TenantsPage';
-import SettingsPage from './pages/settings/SettingsPage';
-import SubscriptionPage from './pages/subscription/SubscriptionPage';
-import VouchersPage from './pages/vouchers/VouchersPage';
-import InstallerJobsPage from './pages/installer/InstallerJobsPage';
-import InstallationDetailPage from './pages/installer/InstallationDetailPage';
+const MerchantDashboard = lazy(() => import('./pages/dashboard/MerchantDashboard'));
+const AdminDashboard = lazy(() => import('./pages/dashboard/AdminDashboard'));
+const RoutersPage = lazy(() => import('./pages/routers/RoutersPage'));
+const PlansPage = lazy(() => import('./pages/plans/PlansPage'));
+const SessionsPage = lazy(() => import('./pages/sessions/SessionsPage'));
+const PaymentsPage = lazy(() => import('./pages/payments/PaymentsPage'));
+const TenantsPage = lazy(() => import('./pages/admin/TenantsPage'));
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+const SubscriptionPage = lazy(() => import('./pages/subscription/SubscriptionPage'));
+const VouchersPage = lazy(() => import('./pages/vouchers/VouchersPage'));
+const InstallerJobsPage = lazy(() => import('./pages/installer/InstallerJobsPage'));
+const InstallationDetailPage = lazy(() => import('./pages/installer/InstallationDetailPage'));
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
@@ -67,6 +67,7 @@ export default function App() {
   }, [user?.tenantId, connect, disconnect]);
 
   return (
+    <Suspense fallback={<div className="min-h-dvh flex items-center justify-center" style={{ background: 'var(--bg)' }}><div className="spinner" /></div>}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -136,5 +137,6 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </Suspense>
   );
 }

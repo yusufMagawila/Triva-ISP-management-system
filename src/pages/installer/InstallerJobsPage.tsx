@@ -11,7 +11,7 @@ const STATUS_STYLES: Record<string, string> = {
   IN_PROGRESS: 'bg-blue-100 text-blue-700',
   WAITING_FOR_HARDWARE: 'bg-amber-100 text-amber-700',
   CONFIGURING: 'bg-violet-100 text-violet-700',
-  VERIFYING: 'bg-cyan-100 text-cyan-700',
+  VERIFYING: 'bg-blue-100 text-blue-700',
   COMPLETED: 'bg-emerald-100 text-emerald-700',
   FAILED: 'bg-red-100 text-red-700',
   CANCELLED: 'bg-slate-100 text-slate-400',
@@ -36,7 +36,7 @@ export default function InstallerJobsPage() {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-slate-900 text-white px-4 py-5">
         <div className="flex items-center gap-2">
-          <Wrench className="w-6 h-6 text-cyan-400" />
+          <Wrench className="w-6 h-6 text-orange-400" />
           <h1 className="text-lg font-bold tracking-wide">TRIVA INSTALLER</h1>
         </div>
         <p className="text-slate-400 text-sm mt-1">Today's installations</p>

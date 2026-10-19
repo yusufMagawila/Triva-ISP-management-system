@@ -79,10 +79,10 @@ export default function PortalLookSettings() {
   return (
     <div className="card p-6">
       <div className="flex items-center gap-3 mb-2">
-        <Palette className="w-4 h-4" style={{ color: '#aeaeb2' }} />
-        <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>Portal Look and Celebrations</h2>
+        <Palette className="w-4 h-4" style={{ color: 'var(--text-3)' }} />
+        <h2 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>Portal Look and Celebrations</h2>
       </div>
-      <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
+      <p className="text-sm mb-5" style={{ color: 'var(--text-2)' }}>
         Choose how your WiFi login page looks. Changes go live instantly, with no router update needed.
       </p>
 
@@ -95,12 +95,12 @@ export default function PortalLookSettings() {
             onClick={() => setTheme(t.key)}
             className="rounded-2xl overflow-hidden text-left transition"
             style={{
-              boxShadow: theme === t.key ? `0 0 0 3px ${t.from}` : 'inset 0 0 0 1px #e5e5ea',
+              boxShadow: theme === t.key ? `0 0 0 3px ${t.from}` : 'inset 0 0 0 1px var(--border)',
             }}
             aria-pressed={theme === t.key}
           >
             <div className="h-14" style={{ background: `linear-gradient(135deg, ${t.from}, ${t.to})` }} />
-            <div className="px-3 py-2 text-sm font-medium" style={{ color: '#1d1d1f' }}>{t.name}</div>
+            <div className="px-3 py-2 text-sm font-medium" style={{ color: 'var(--text)' }}>{t.name}</div>
           </button>
         ))}
       </div>
@@ -113,17 +113,17 @@ export default function PortalLookSettings() {
           {EVENTS.map((e) => <option key={e.key} value={e.key}>{e.label}</option>)}
         </optgroup>
       </select>
-      <p className="text-xs mb-6" style={{ color: '#aeaeb2' }}>
+      <p className="text-xs mb-6" style={{ color: 'var(--text-3)' }}>
         On national days and holidays the portal adds a greeting, festive colours and a tap-to-celebrate banner.
       </p>
 
       <label className="label">Live preview</label>
       {previewUrl ? (
-        <div className="mx-auto mb-5 w-[300px] max-w-full rounded-[2rem] border-4 overflow-hidden" style={{ borderColor: '#1d1d1f' }}>
+        <div className="mx-auto mb-5 w-[300px] max-w-full rounded-[2rem] border-4 overflow-hidden" style={{ borderColor: 'var(--text)' }}>
           <iframe title="Portal preview" src={previewUrl} className="w-full bg-white" style={{ height: 520 }} />
         </div>
       ) : (
-        <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
+        <p className="text-sm mb-5" style={{ color: 'var(--text-2)' }}>
           Add a router to see a live preview of your portal here.
         </p>
       )}

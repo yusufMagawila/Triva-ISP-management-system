@@ -51,24 +51,24 @@ export default function ActivatePage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: '#f5f5f7' }}
+      style={{ background: 'var(--bg)' }}
     >
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
           <div
             className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4 shadow-lg"
-            style={{ background: '#0071e3' }}
+            style={{ background: 'var(--primary)' }}
           >
             <Wifi className="w-7 h-7 text-white" />
           </div>
           <h1
             className="text-3xl font-bold tracking-tight"
-            style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+            style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}
           >
             TRIVA
           </h1>
-          <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>
             Activate Your Account
           </p>
         </div>
@@ -85,11 +85,11 @@ export default function ActivatePage() {
                 </div>
                 <h2
                   className="text-xl font-semibold tracking-tight"
-                  style={{ color: '#1d1d1f', letterSpacing: '-0.02em' }}
+                  style={{ color: 'var(--text)', letterSpacing: '-0.02em' }}
                 >
                   One-Time Activation Fee
                 </h2>
-                <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>
                   Pay once to unlock your hotspot management account
                 </p>
               </div>
@@ -97,22 +97,22 @@ export default function ActivatePage() {
               {/* Fee breakdown */}
               <div
                 className="rounded-2xl p-4 mb-5"
-                style={{ background: '#f0f6ff', border: '1px solid #dceeff' }}
+                style={{ background: 'var(--primary-soft)', border: '1px solid color-mix(in srgb, var(--primary) 22%, transparent)' }}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm" style={{ color: '#3a3a3c' }}>Account Activation</span>
-                  <span className="font-bold" style={{ color: '#1d1d1f' }}>TZS 35,000</span>
+                  <span className="text-sm" style={{ color: 'var(--text)' }}>Account Activation</span>
+                  <span className="font-bold" style={{ color: 'var(--text)' }}>TZS 35,000</span>
                 </div>
                 <div
                   className="flex items-center justify-between text-xs pt-2 mt-2"
-                  style={{ borderTop: '1px solid #dceeff', color: '#6e6e73' }}
+                  style={{ borderTop: '1px solid color-mix(in srgb, var(--primary) 22%, transparent)', color: 'var(--text-2)' }}
                 >
                   <span>Includes first month (BASIC plan)</span>
-                  <span className="font-medium" style={{ color: '#34c759' }}>+ 30 days free</span>
+                  <span className="font-medium" style={{ color: 'var(--success)' }}>+ 30 days free</span>
                 </div>
               </div>
 
-              <div className="space-y-2.5 text-sm mb-5" style={{ color: '#3a3a3c' }}>
+              <div className="space-y-2.5 text-sm mb-5" style={{ color: 'var(--text)' }}>
                 {[
                   'Full access to your TRIVA merchant dashboard',
                   'Connect MikroTik routers with zero-touch provisioning',
@@ -120,7 +120,7 @@ export default function ActivatePage() {
                   'After 30 days, renew from TZS 15,000/month',
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-2.5">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#34c759' }} />
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
                     <span>{item}</span>
                   </div>
                 ))}
@@ -132,7 +132,7 @@ export default function ActivatePage() {
                   <div className="relative">
                     <span
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium"
-                      style={{ color: '#6e6e73' }}
+                      style={{ color: 'var(--text-2)' }}
                     >
                       +255
                     </span>
@@ -161,17 +161,17 @@ export default function ActivatePage() {
               </div>
               <h2
                 className="text-xl font-semibold mb-2 tracking-tight"
-                style={{ color: '#1d1d1f', letterSpacing: '-0.02em' }}
+                style={{ color: 'var(--text)', letterSpacing: '-0.02em' }}
               >
                 Awaiting Payment
               </h2>
-              <p className="text-sm mb-5" style={{ color: '#6e6e73' }}>
-                A payment prompt was sent to <strong style={{ color: '#1d1d1f' }}>{phone}</strong>. Enter your PIN to complete, then tap the button below.
+              <p className="text-sm mb-5" style={{ color: 'var(--text-2)' }}>
+                A payment prompt was sent to <strong style={{ color: 'var(--text)' }}>{phone}</strong>. Enter your PIN to complete, then tap the button below.
               </p>
 
               <div
                 className="rounded-xl p-3.5 text-sm mb-5"
-                style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}
+                style={{ background: 'color-mix(in srgb, var(--warning) 14%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 35%, transparent)', color: 'color-mix(in srgb, var(--warning) 62%, var(--text))' }}
               >
                 It may take up to 30 seconds after paying for confirmation.
               </div>
@@ -187,7 +187,7 @@ export default function ActivatePage() {
               <button
                 onClick={() => setPaid(false)}
                 className="mt-3 text-sm hover:underline block w-full"
-                style={{ color: '#6e6e73' }}
+                style={{ color: 'var(--text-2)' }}
               >
                 Use a different number
               </button>
@@ -195,8 +195,8 @@ export default function ActivatePage() {
           )}
         </div>
 
-        <p className="text-center text-sm mt-5" style={{ color: '#aeaeb2' }}>
-          Logged in as <strong style={{ color: '#6e6e73' }}>{user?.email}</strong>{' '}·{' '}
+        <p className="text-center text-sm mt-5" style={{ color: 'var(--text-3)' }}>
+          Logged in as <strong style={{ color: 'var(--text-2)' }}>{user?.email}</strong>{' '}·{' '}
           <button
             onClick={() => { localStorage.clear(); window.location.href = '/login'; }}
             className="underline"

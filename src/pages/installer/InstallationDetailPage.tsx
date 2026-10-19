@@ -183,10 +183,10 @@ export default function InstallationDetailPage() {
 
         {/* Scan result */}
         {scanResult && (
-          <section className="bg-cyan-50 border border-cyan-200 rounded-xl p-4">
+          <section className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             {scanResult.result === 'FOUND' && scanResult.device ? (
               <>
-                <p className="font-semibold text-cyan-800">✓ DEVICE IDENTIFIED</p>
+                <p className="font-semibold text-blue-800">✓ DEVICE IDENTIFIED</p>
                 <p className="text-sm mt-1">{scanResult.device.vendor} {scanResult.device.model ?? ''}</p>
                 <p className="text-xs font-mono text-slate-600 mt-1">
                   Serial: {scanResult.device.serialNumber ?? '—'}<br />MAC: {scanResult.device.macAddress ?? '—'}
@@ -196,7 +196,7 @@ export default function InstallationDetailPage() {
                     <AlertTriangle className="w-4 h-4" /> This device is already assigned to another site.
                   </p>
                 ) : (
-                  <button onClick={assignFound} disabled={busy === 'assign'} className="mt-3 w-full bg-cyan-600 text-white rounded-lg py-2.5 font-medium">
+                  <button onClick={assignFound} disabled={busy === 'assign'} className="mt-3 w-full bg-blue-600 text-white rounded-lg py-2.5 font-medium">
                     {busy === 'assign' ? 'Assigning…' : 'Assign to Installation'}
                   </button>
                 )}
@@ -209,7 +209,7 @@ export default function InstallationDetailPage() {
                   {scanResult.identity.macAddress && <>MAC: {scanResult.identity.macAddress}<br /></>}
                   {scanResult.identity.vendorHint && <>Vendor: {scanResult.identity.vendorHint}</>}
                 </p>
-                <button onClick={registerAndAssign} disabled={busy === 'register'} className="mt-3 w-full bg-cyan-600 text-white rounded-lg py-2.5 font-medium">
+                <button onClick={registerAndAssign} disabled={busy === 'register'} className="mt-3 w-full bg-blue-600 text-white rounded-lg py-2.5 font-medium">
                   {busy === 'register' ? 'Registering…' : 'Register + Assign to Installation'}
                 </button>
               </>
@@ -241,7 +241,7 @@ export default function InstallationDetailPage() {
         {/* Diagnostic report */}
         {diag && (
           <section className="bg-white border rounded-xl p-4">
-            <p className="font-semibold flex items-center gap-1"><Stethoscope className="w-4 h-4 text-cyan-600" /> {diag.headline}</p>
+            <p className="font-semibold flex items-center gap-1"><Stethoscope className="w-4 h-4 text-blue-600" /> {diag.headline}</p>
             <p className="text-xs mt-0.5 text-slate-500">Severity: {diag.severity}</p>
             <ul className="mt-2 text-sm list-disc list-inside space-y-0.5">
               {diag.likelyCauses.map((c, i) => <li key={i}>{c}</li>)}
@@ -283,7 +283,7 @@ export default function InstallationDetailPage() {
             <button onClick={() => setOnboarding(true)} className="flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-lg py-3 text-sm font-medium">
               <Sparkles className="w-4 h-4" /> Setup
             </button>
-            <button onClick={() => setScanning(true)} className="flex items-center justify-center gap-1.5 bg-cyan-600 text-white rounded-lg py-3 text-sm font-medium">
+            <button onClick={() => setScanning(true)} className="flex items-center justify-center gap-1.5 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium">
               <ScanLine className="w-4 h-4" /> Scan
             </button>
             <button onClick={runPlan} disabled={busy === 'plan'} className="flex items-center justify-center gap-1.5 bg-violet-600 text-white rounded-lg py-3 text-sm font-medium disabled:opacity-50">

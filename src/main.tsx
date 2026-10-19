@@ -3,7 +3,11 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import App from './App';
+import '@fontsource-variable/inter';
 import './index.css';
+import { initTheme } from './store/uiStore';
+
+initTheme();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -13,7 +17,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         position="top-right"
         toastOptions={{
           duration: 4000,
-          style: { borderRadius: '10px', background: '#1f2937', color: '#fff' },
+          style: { borderRadius: '10px', background: '#0b0d12', color: '#fff', fontSize: '14px' },
         }}
       />
     </BrowserRouter>

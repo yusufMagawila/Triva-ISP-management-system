@@ -180,7 +180,7 @@ function MikrotikRoutersTab() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm" style={{ color: '#6e6e73' }}>Create zero-touch MikroTik router assets and let each device self-provision from TRIVA</p>
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>Create zero-touch MikroTik router assets and let each device self-provision from TRIVA</p>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4" /> Add MikroTik Router
         </button>
@@ -189,7 +189,7 @@ function MikrotikRoutersTab() {
       {/* Add Router Form */}
       {showForm && (
         <div className="card p-6">
-          <h2 className="font-semibold mb-5" style={{ color: '#1d1d1f' }}>Create Router Asset</h2>
+          <h2 className="font-semibold mb-5" style={{ color: 'var(--text)' }}>Create Router Asset</h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Router Name</label>
@@ -214,7 +214,7 @@ function MikrotikRoutersTab() {
               <label className="label">Location (optional)</label>
               <input className="input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Shop floor, 2nd floor..." />
             </div>
-            <div className="md:col-span-2 rounded-xl px-4 py-3 text-sm" style={{ background: '#f0f6ff', border: '1px solid #dceeff', color: '#1d4b8a' }}>
+            <div className="md:col-span-2 rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--primary-soft)', border: '1px solid color-mix(in srgb, var(--primary) 22%, transparent)', color: '#1d4b8a' }}>
               TRIVA now assigns the control-plane IP, API account, and bootstrap identity automatically. The router must reach <span className="font-semibold">{API_BASE}/bootstrap/router</span> on its own; no public Winbox or forwarded API port is assumed.
             </div>
             <div className="md:col-span-2 flex gap-3">
@@ -232,9 +232,9 @@ function MikrotikRoutersTab() {
         </div>
       ) : routers.length === 0 ? (
         <div className="card p-16 text-center">
-          <Router className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: '#6e6e73' }} />
-          <p className="font-medium text-sm" style={{ color: '#3a3a3c' }}>No router assets yet</p>
-          <p className="text-sm mt-1" style={{ color: '#aeaeb2' }}>Create the first router asset, then let the device self-provision from TRIVA</p>
+          <Router className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: 'var(--text-2)' }} />
+          <p className="font-medium text-sm" style={{ color: 'var(--text)' }}>No router assets yet</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>Create the first router asset, then let the device self-provision from TRIVA</p>
         </div>
       ) : (
         <>
@@ -243,8 +243,8 @@ function MikrotikRoutersTab() {
               <div key={r.id} className="card p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>{r.name}</h3>
-                    <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>Control plane {r.ipAddress}:{r.apiPort}</p>
+                    <h3 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{r.name}</h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-2)' }}>Control plane {r.ipAddress}:{r.apiPort}</p>
                   </div>
                   <div className="flex items-center gap-1">
                   {r.status === 'ONLINE' ? (
@@ -259,17 +259,17 @@ function MikrotikRoutersTab() {
               </div>
 
               {r.location && (
-                <p className="text-xs mb-3" style={{ color: '#6e6e73' }}>📍 {r.location}</p>
+                <p className="text-xs mb-3" style={{ color: 'var(--text-2)' }}>📍 {r.location}</p>
               )}
 
-              <div className="mb-3 rounded-xl px-3 py-2.5 text-xs" style={{ background: '#f5f5f7' }}>
-                <p className="font-semibold mb-1" style={{ color: '#1d1d1f' }}>{r.provisionedAt ? 'Provisioned asset' : 'Awaiting first bootstrap'}</p>
-                <p className="mt-1" style={{ color: '#3a3a3c' }}>Hotspot: {r.hotspotName}</p>
-                <p className="mt-1" style={{ color: '#3a3a3c' }}>Serial: {r.serialNumber ?? 'Will bind on first contact'}</p>
-                <p className="mt-1" style={{ color: '#3a3a3c' }}>MAC: {r.hardwareMac ?? 'Will bind on first contact'}</p>
+              <div className="mb-3 rounded-xl px-3 py-2.5 text-xs" style={{ background: 'var(--bg)' }}>
+                <p className="font-semibold mb-1" style={{ color: 'var(--text)' }}>{r.provisionedAt ? 'Provisioned asset' : 'Awaiting first bootstrap'}</p>
+                <p className="mt-1" style={{ color: 'var(--text)' }}>Hotspot: {r.hotspotName}</p>
+                <p className="mt-1" style={{ color: 'var(--text)' }}>Serial: {r.serialNumber ?? 'Will bind on first contact'}</p>
+                <p className="mt-1" style={{ color: 'var(--text)' }}>MAC: {r.hardwareMac ?? 'Will bind on first contact'}</p>
               </div>
 
-              <div className="flex items-center gap-2 text-xs mb-4" style={{ color: '#6e6e73' }}>
+              <div className="flex items-center gap-2 text-xs mb-4" style={{ color: 'var(--text-2)' }}>
                 <Activity className="w-3.5 h-3.5" />
                 <span>{r._count.sessions} total sessions</span>
                 {(r.lastBootstrapAt || r.lastSeenAt) && (
@@ -309,9 +309,9 @@ function MikrotikRoutersTab() {
           <div className="card p-6 space-y-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: '#6e6e73' }}>Zero-Touch Provisioning</p>
-                <h2 className="text-xl font-semibold mt-1" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>{selectedRouter.name} setup</h2>
-                <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>Full-width Winbox commands and portal details for this router asset.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-2)' }}>Zero-Touch Provisioning</p>
+                <h2 className="text-xl font-semibold mt-1" style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}>{selectedRouter.name} setup</h2>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Full-width Winbox commands and portal details for this router asset.</p>
               </div>
               <button className="btn-secondary btn-sm" onClick={() => setShowSetup(null)}>Close</button>
             </div>
@@ -371,34 +371,34 @@ function MikrotikRoutersTab() {
             <div className="grid grid-cols-1 gap-4">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-xs" style={{ color: '#6e6e73' }}>Step 1: Preflight checks before bootstrap import</p>
+                  <p className="text-xs" style={{ color: 'var(--text-2)' }}>Step 1: Preflight checks before bootstrap import</p>
                   <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => copyText(getHotspotPreflightCommands(selectedRouter), 'Preflight commands')}>Copy commands</button>
                 </div>
-                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#111111', color: '#f5f5f7' }}>{getHotspotPreflightCommands(selectedRouter)}</pre>
+                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#0b0d12', color: '#e6e9f0' }}>{getHotspotPreflightCommands(selectedRouter)}</pre>
               </div>
 
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-xs" style={{ color: '#6e6e73' }}>Step 2: Run bootstrap import commands on MikroTik terminal</p>
+                  <p className="text-xs" style={{ color: 'var(--text-2)' }}>Step 2: Run bootstrap import commands on MikroTik terminal</p>
                   <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => copyText(getBootstrapInstallCommands(selectedRouter), 'Bootstrap commands')}>Copy commands</button>
                 </div>
-                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#111111', color: '#f5f5f7' }}>{getBootstrapInstallCommands(selectedRouter)}</pre>
+                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#0b0d12', color: '#e6e9f0' }}>{getBootstrapInstallCommands(selectedRouter)}</pre>
               </div>
 
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-xs" style={{ color: '#6e6e73' }}>Step 3: Verify scheduler + scripts after import</p>
+                  <p className="text-xs" style={{ color: 'var(--text-2)' }}>Step 3: Verify scheduler + scripts after import</p>
                   <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => copyText(getBootstrapVerificationCommands(), 'Verification commands')}>Copy commands</button>
                 </div>
-                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#111111', color: '#f5f5f7' }}>{getBootstrapVerificationCommands()}</pre>
+                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#0b0d12', color: '#e6e9f0' }}>{getBootstrapVerificationCommands()}</pre>
               </div>
 
               <div>
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-xs" style={{ color: '#6e6e73' }}>Step 4: Recovery commands if portal is up but flow is broken</p>
+                  <p className="text-xs" style={{ color: 'var(--text-2)' }}>Step 4: Recovery commands if portal is up but flow is broken</p>
                   <button className="text-xs font-medium text-brand-600 hover:text-brand-700" onClick={() => copyText(getBootstrapRecoveryCommands(selectedRouter), 'Recovery commands')}>Copy commands</button>
                 </div>
-                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#111111', color: '#f5f5f7' }}>{getBootstrapRecoveryCommands(selectedRouter)}</pre>
+                <pre className="rounded-2xl px-4 py-4 overflow-x-auto text-[12px] leading-6 whitespace-pre-wrap" style={{ background: '#0b0d12', color: '#e6e9f0' }}>{getBootstrapRecoveryCommands(selectedRouter)}</pre>
               </div>
             </div>
 
@@ -411,9 +411,9 @@ function MikrotikRoutersTab() {
             </div>
 
             <div>
-              <p className="text-xs mb-2" style={{ color: '#6e6e73' }}>Portal URL for your custom HotSpot redirect page</p>
-              <div className="flex items-center gap-2 rounded-xl px-3 py-3" style={{ background: '#f5f5f7', border: '1px solid #e8e8ed' }}>
-                <code className="text-xs break-all flex-1" style={{ color: '#1d1d1f' }}>
+              <p className="text-xs mb-2" style={{ color: 'var(--text-2)' }}>Portal URL for your custom HotSpot redirect page</p>
+              <div className="flex items-center gap-2 rounded-xl px-3 py-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                <code className="text-xs break-all flex-1" style={{ color: 'var(--text)' }}>
                   {`${PORTAL_BASE}/?router=${selectedRouter.id}`}
                 </code>
                 <button
@@ -436,13 +436,13 @@ export default function RoutersPage() {
   const [tab, setTab] = useState<VendorTab>('mikrotik');
 
   return (
-    <div className="p-7 space-y-6">
+    <div className="p-4 sm:p-7 space-y-6 max-w-[1280px] mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>Routers</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage router assets by vendor. Each device self-provisions from TRIVA.</p>
+        <h1 className="text-[22px] sm:text-2xl font-semibold tracking-tight" style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}>Routers</h1>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>Manage router assets by vendor. Each device self-provisions from TRIVA.</p>
       </div>
 
-      <div className="flex gap-1 border-b" style={{ borderColor: '#e8e8ed' }}>
+      <div className="flex gap-1 border-b" style={{ borderColor: 'var(--border)' }}>
         <button
           className={`px-4 py-2.5 text-sm font-medium transition-colors -mb-px border-b-2 ${
             tab === 'mikrotik' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500 hover:text-gray-700'

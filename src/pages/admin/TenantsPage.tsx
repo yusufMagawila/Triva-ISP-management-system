@@ -97,16 +97,16 @@ export default function TenantsPage() {
   }
 
   return (
-    <div className="p-7 space-y-6">
+    <div className="p-4 sm:p-7 space-y-6 max-w-[1280px] mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1
-            className="text-2xl font-bold tracking-tight"
-            style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}
+            className="text-[22px] sm:text-2xl font-semibold tracking-tight"
+            style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}
           >
             Tenants
           </h1>
-          <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>Manage all shops on the platform</p>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>Manage all shops on the platform</p>
         </div>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
           <Plus className="w-4 h-4" /> New Tenant
@@ -115,7 +115,7 @@ export default function TenantsPage() {
 
       {showForm && (
         <div className="card p-6">
-          <h2 className="font-semibold mb-5" style={{ color: '#1d1d1f' }}>Create New Tenant</h2>
+          <h2 className="font-semibold mb-5" style={{ color: 'var(--text)' }}>Create New Tenant</h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div><label className="label">Shop Name</label><input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required /></div>
             <div><label className="label">Slug</label><input className="input" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} required placeholder="my-shop" /></div>
@@ -143,12 +143,12 @@ export default function TenantsPage() {
       {passwordTenant && (
         <div className="card p-6">
           <div className="flex items-center gap-3 mb-5">
-            <KeyRound className="w-4 h-4" style={{ color: '#aeaeb2' }} />
+            <KeyRound className="w-4 h-4" style={{ color: 'var(--text-3)' }} />
             <div>
-              <h2 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>
+              <h2 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>
                 Reset Tenant Password
               </h2>
-              <p className="text-sm mt-0.5" style={{ color: '#6e6e73' }}>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>
                 Update the merchant login password for {passwordTenant.name}.
               </p>
             </div>
@@ -205,12 +205,12 @@ export default function TenantsPage() {
           <div className="overflow-x-auto">
             <table className="w-full table-fixed text-xs">
               <thead>
-                <tr style={{ borderBottom: '1px solid #f0f0f5' }}>
-                  <th className="w-[34%] px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Shop</th>
-                  <th className="w-[22%] px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Subscription</th>
-                  <th className="w-[10%] px-3 py-2 text-center text-xs font-medium" style={{ color: '#aeaeb2' }}>Routers</th>
-                  <th className="w-[14%] px-3 py-2 text-left text-xs font-medium" style={{ color: '#aeaeb2' }}>Status</th>
-                  <th className="w-[20%] px-3 py-2 text-right text-xs font-medium" style={{ color: '#aeaeb2' }}>Actions</th>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  <th className="w-[34%] px-3 py-2 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Shop</th>
+                  <th className="w-[22%] px-3 py-2 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Subscription</th>
+                  <th className="w-[10%] px-3 py-2 text-center text-xs font-medium" style={{ color: 'var(--text-3)' }}>Routers</th>
+                  <th className="w-[14%] px-3 py-2 text-left text-xs font-medium" style={{ color: 'var(--text-3)' }}>Status</th>
+                  <th className="w-[20%] px-3 py-2 text-right text-xs font-medium" style={{ color: 'var(--text-3)' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -218,31 +218,31 @@ export default function TenantsPage() {
                   <tr
                     key={t.id}
                     className="transition-colors"
-                    style={{ borderBottom: '1px solid #f7f7f9' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#fafafa')}
+                    style={{ borderBottom: '1px solid var(--border)' }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = '')}
                   >
                     <td className="px-3 py-3 align-top">
                       <div className="min-w-0">
-                        <p className="truncate font-medium" style={{ color: '#1d1d1f' }} title={t.name}>
+                        <p className="truncate font-medium" style={{ color: 'var(--text)' }} title={t.name}>
                           {t.name}
                         </p>
-                        <p className="mt-0.5 truncate text-[11px]" style={{ color: '#6e6e73' }} title={t.email}>
+                        <p className="mt-0.5 truncate text-[11px]" style={{ color: 'var(--text-2)' }} title={t.email}>
                           {t.email}
                         </p>
                       </div>
                     </td>
                     <td className="px-3 py-3 align-top">
                       <div className="min-w-0">
-                        <p className="font-medium text-xs" style={{ color: '#3a3a3c' }}>
+                        <p className="font-medium text-xs" style={{ color: 'var(--text)' }}>
                           {t.subscription?.plan ?? 'No plan'}
                         </p>
-                        <p className="mt-0.5 text-[11px]" style={{ color: '#6e6e73' }}>
+                        <p className="mt-0.5 text-[11px]" style={{ color: 'var(--text-2)' }}>
                           {t.subscription ? `Expires ${format(new Date(t.subscription.expiresAt), 'MMM d')}` : 'Not subscribed'}
                         </p>
                       </div>
                     </td>
-                    <td className="px-3 py-3 align-top text-center text-xs" style={{ color: '#3a3a3c' }}>{t._count.routers}</td>
+                    <td className="px-3 py-3 align-top text-center text-xs" style={{ color: 'var(--text)' }}>{t._count.routers}</td>
                     <td className="px-3 py-3 align-top">
                       <span className={t.status === 'ACTIVE' ? 'badge-green' : 'badge-red'}>{t.status}</span>
                     </td>

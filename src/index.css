@@ -1,107 +1,278 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, system-ui, sans-serif;
-  --color-brand-50: #f0f6ff;
-  --color-brand-100: #dceeff;
-  --color-brand-200: #b3d6ff;
-  --color-brand-300: #80b9ff;
-  --color-brand-400: #4d97ff;
-  --color-brand-500: #1a74ef;
-  --color-brand-600: #0071e3;
-  --color-brand-700: #005cb8;
-  --color-brand-800: #00478d;
-  --color-brand-900: #003268;
+  --font-sans: "Inter Variable", Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --color-brand-50: #eff4ff;
+  --color-brand-100: #dbe6ff;
+  --color-brand-200: #b8cdff;
+  --color-brand-300: #8aaefc;
+  --color-brand-400: #5b8bf7;
+  --color-brand-500: #3b6ff0;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e3fae;
+  --color-brand-900: #1e3a8a;
   --tracking-tight: -0.022em;
+}
+
+/* ---------------------------------------------------------------------------
+   Design tokens — blue / white / black / orange.
+   Every colour in the app should come from here so light/dark and future
+   branding stay consistent.
+   ------------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+  --bg: #f6f7fa;
+  --surface: #ffffff;
+  --surface-2: #f1f3f8;
+  --border: #e6e9f0;
+  --border-strong: #d3d9e5;
+  --text: #0b0d12;
+  --text-2: #586172;
+  --text-3: #8c95a8;
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: color-mix(in srgb, var(--primary) 11%, transparent);
+  --accent: #ff7a1a;
+  --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #e5484d;
+
+  --sidebar-bg: #0b0d12;
+  --sidebar-text: #a7b0c3;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active: rgba(255, 255, 255, 0.1);
+
+  --shadow-card: 0 1px 2px rgba(11, 13, 18, 0.04), 0 0 0 1px var(--border);
+  --shadow-pop: 0 12px 32px rgba(11, 13, 18, 0.14), 0 0 0 1px var(--border);
+  --ring: color-mix(in srgb, var(--primary) 32%, transparent);
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #090b0f;
+  --surface: #11141b;
+  --surface-2: #181c26;
+  --border: #212737;
+  --border-strong: #2e3548;
+  --text: #eef1f8;
+  --text-2: #9aa4b9;
+  --text-3: #66708a;
+
+  --primary: #5b8bff;
+  --primary-hover: #7aa2ff;
+  --accent: #ff8a3d;
+
+  --success: #34d27b;
+  --warning: #fbbf24;
+  --danger: #ff6b70;
+
+  --sidebar-bg: #06070a;
+  --sidebar-text: #8f99ae;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--border);
 }
 
 @layer base {
   * {
-    border-color: var(--color-gray-100);
+    border-color: var(--border);
+  }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   body {
     @apply font-sans;
-    background-color: #f5f5f7;
-    color: #1d1d1f;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg);
+    color: var(--text);
+    font-feature-settings: "cv11", "ss01";
   }
   h1, h2, h3, h4, h5, h6 {
     letter-spacing: -0.02em;
   }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 28%, transparent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
-  /* Buttons — Apple pill style */
+  /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-all duration-200 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-40;
-    background-color: #0071e3;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all duration-150 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+    background-color: var(--primary);
+    box-shadow: 0 1px 2px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
   }
-  .btn-primary:hover {
-    background-color: #0077ed;
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--primary-hover);
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-5 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-150 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(11, 13, 18, 0.05), 0 0 0 1px var(--border-strong);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-150 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+    background: var(--accent);
+    color: #1a0f05;
+    box-shadow: 0 1px 2px rgba(255, 122, 26, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .btn-accent:hover:not(:disabled) {
+    filter: brightness(1.06);
   }
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-red-500 px-5 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-red-600 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-all duration-150 focus:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40;
+    background: var(--danger);
+  }
+  .btn-danger:hover:not(:disabled) {
+    filter: brightness(0.94);
   }
   .btn-sm {
-    @apply px-3.5 py-1.5 text-xs;
+    @apply px-3 py-1.5 text-xs;
   }
 
-  /* Input — Apple form field style */
+  /* Inputs */
   .input {
-    @apply block w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm placeholder-gray-400 transition-all duration-150 focus:outline-none;
-    border-color: #d2d2d7;
-    color: #1d1d1f;
+    @apply block w-full rounded-lg px-3 py-2 text-sm transition-all duration-150 focus:outline-none;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+  }
+  .input::placeholder {
+    color: var(--text-3);
   }
   .input:focus {
-    border-color: #0071e3;
-    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--ring);
   }
-
-  /* Label */
   .label {
-    @apply block text-sm font-medium mb-1.5;
-    color: #1d1d1f;
+    @apply block text-[13px] font-medium mb-1.5;
+    color: var(--text);
   }
 
-  /* Card — Apple surface */
+  /* Surfaces */
   .card {
-    @apply bg-white rounded-2xl;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+    @apply rounded-xl;
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
   }
 
   /* Badges */
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
   .badge-green {
-    @apply inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    color: var(--success);
   }
   .badge-yellow {
-    @apply inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    background: color-mix(in srgb, var(--warning) 18%, transparent);
+    color: color-mix(in srgb, var(--warning) 70%, var(--text));
   }
   .badge-red {
-    @apply inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-600;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    color: var(--danger);
   }
   .badge-blue {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-    background-color: #e8f0fd;
-    color: #0071e3;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    background: var(--primary-soft);
+    color: var(--primary);
+  }
+  .badge-orange {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    background: var(--accent-soft);
+    color: var(--accent);
   }
   .badge-gray {
-    @apply inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+    background: var(--surface-2);
+    color: var(--text-2);
   }
 
-  /* Spinner */
   .spinner {
-    @apply animate-spin w-7 h-7 rounded-full border-2 border-gray-200;
-    border-top-color: #0071e3;
+    @apply animate-spin w-7 h-7 rounded-full border-2;
+    border-color: var(--border-strong);
+    border-top-color: var(--primary);
+  }
+
+  .skeleton {
+    @apply rounded-md;
+    background: linear-gradient(90deg, var(--surface-2) 25%, color-mix(in srgb, var(--surface-2) 55%, var(--surface)) 50%, var(--surface-2) 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s infinite linear;
+  }
+
+  .kbd {
+    @apply inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium;
+    background: var(--surface-2);
+    color: var(--text-2);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+
+  .table-row {
+    transition: background-color 0.12s;
+  }
+  .table-row:hover {
+    background: var(--surface-2);
+  }
+}
+
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to { background-position: 400px 0; }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fade-up { animation: fade-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pop-in { animation: pop-in 0.16s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Safe areas for the mobile tab bar */
+.safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+
+/* ---------------------------------------------------------------------------
+   Dark-mode shims for Tailwind utilities still used by older pages.
+   ------------------------------------------------------------------------ */
+.dark .bg-white { background-color: var(--surface); }
+.dark .bg-gray-50, .dark .bg-slate-50 { background-color: var(--bg); }
+.dark .bg-gray-100, .dark .bg-slate-100 { background-color: var(--surface-2); }
+.dark .text-gray-900, .dark .text-gray-800, .dark .text-gray-700, .dark .text-slate-800, .dark .text-slate-700 { color: var(--text); }
+.dark .text-gray-600, .dark .text-gray-500, .dark .text-slate-600, .dark .text-slate-500 { color: var(--text-2); }
+.dark .text-gray-400, .dark .text-slate-400 { color: var(--text-3); }
+.dark .border-gray-100, .dark .border-gray-200, .dark .border-gray-300,
+.dark .border-slate-200, .dark .border { border-color: var(--border); }
+.dark .hover\:bg-gray-50:hover { background-color: var(--surface-2); }
+.dark .bg-green-50 { background-color: color-mix(in srgb, var(--success) 14%, transparent); }
+.dark .bg-amber-50 { background-color: color-mix(in srgb, var(--warning) 16%, transparent); }
+.dark .bg-red-50 { background-color: color-mix(in srgb, var(--danger) 14%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -109,7 +109,7 @@ export default function OmadaSitesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <p className="text-sm" style={{ color: '#6e6e73' }}>
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>
           Create Omada site assets and let customers self-provision via RADIUS authentication through TRIVA.
         </p>
         <button className="btn-primary" onClick={() => setShowForm(true)}>
@@ -125,7 +125,7 @@ export default function OmadaSitesPage() {
       {/* Add Site Form */}
       {showForm && (
         <div className="card p-6">
-          <h2 className="font-semibold mb-5" style={{ color: '#1d1d1f' }}>Create Omada Site Asset</h2>
+          <h2 className="font-semibold mb-5" style={{ color: 'var(--text)' }}>Create Omada Site Asset</h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="label">Site Name</label>
@@ -150,7 +150,7 @@ export default function OmadaSitesPage() {
               <label className="label">Location (optional)</label>
               <input className="input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Shop floor, 2nd floor..." />
             </div>
-            <div className="md:col-span-2 rounded-xl px-4 py-3 text-sm" style={{ background: '#f0f6ff', border: '1px solid #dceeff', color: '#1d4b8a' }}>
+            <div className="md:col-span-2 rounded-xl px-4 py-3 text-sm" style={{ background: 'var(--primary-soft)', border: '1px solid color-mix(in srgb, var(--primary) 22%, transparent)', color: '#1d4b8a' }}>
               TRIVA generates a per-site RADIUS shared secret automatically. After creating the site, download the Custom Portal Page zip and configure the Omada Controller using the setup guide.
             </div>
             <div className="md:col-span-2 flex gap-3">
@@ -168,9 +168,9 @@ export default function OmadaSitesPage() {
         </div>
       ) : sites.length === 0 ? (
         <div className="card p-16 text-center">
-          <Wifi className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: '#6e6e73' }} />
-          <p className="font-medium text-sm" style={{ color: '#3a3a3c' }}>No Omada sites yet</p>
-          <p className="text-sm mt-1" style={{ color: '#aeaeb2' }}>Create the first Omada site asset, then configure the Omada Controller</p>
+          <Wifi className="w-12 h-12 mx-auto mb-3 opacity-20" style={{ color: 'var(--text-2)' }} />
+          <p className="font-medium text-sm" style={{ color: 'var(--text)' }}>No Omada sites yet</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-3)' }}>Create the first Omada site asset, then configure the Omada Controller</p>
         </div>
       ) : (
         <>
@@ -179,8 +179,8 @@ export default function OmadaSitesPage() {
               <div key={s.id} className="card p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-sm" style={{ color: '#1d1d1f' }}>{s.name}</h3>
-                    <p className="text-xs mt-0.5" style={{ color: '#6e6e73' }}>
+                    <h3 className="font-semibold text-sm" style={{ color: 'var(--text)' }}>{s.name}</h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-2)' }}>
                       {s.ssidName ? `SSID: ${s.ssidName}` : 'SSID not set'}
                     </p>
                   </div>
@@ -197,19 +197,19 @@ export default function OmadaSitesPage() {
                 </div>
 
                 {s.location && (
-                  <p className="text-xs mb-3" style={{ color: '#6e6e73' }}>📍 {s.location}</p>
+                  <p className="text-xs mb-3" style={{ color: 'var(--text-2)' }}>📍 {s.location}</p>
                 )}
 
-                <div className="mb-3 rounded-xl px-3 py-2.5 text-xs" style={{ background: '#f5f5f7' }}>
-                  <p className="font-semibold mb-1" style={{ color: '#1d1d1f' }}>
+                <div className="mb-3 rounded-xl px-3 py-2.5 text-xs" style={{ background: 'var(--bg)' }}>
+                  <p className="font-semibold mb-1" style={{ color: 'var(--text)' }}>
                     {s.provisionedAt ? 'Provisioned' : 'Awaiting Omada Controller setup'}
                   </p>
-                  <p className="mt-1" style={{ color: '#3a3a3c' }}>Vendor: TP-Link Omada (RADIUS)</p>
-                  <p className="mt-1" style={{ color: '#3a3a3c' }}>Controller: {s.controllerUrl ?? 'Not set'}</p>
-                  <p className="mt-1" style={{ color: '#3a3a3c' }}>RADIUS IP: {s.controllerIp ?? 'Any (wildcard)'}</p>
+                  <p className="mt-1" style={{ color: 'var(--text)' }}>Vendor: TP-Link Omada (RADIUS)</p>
+                  <p className="mt-1" style={{ color: 'var(--text)' }}>Controller: {s.controllerUrl ?? 'Not set'}</p>
+                  <p className="mt-1" style={{ color: 'var(--text)' }}>RADIUS IP: {s.controllerIp ?? 'Any (wildcard)'}</p>
                 </div>
 
-                <div className="flex items-center gap-2 text-xs mb-4" style={{ color: '#6e6e73' }}>
+                <div className="flex items-center gap-2 text-xs mb-4" style={{ color: 'var(--text-2)' }}>
                   <Activity className="w-3.5 h-3.5" />
                   <span>{s._count.activeSessions} active · {s._count.sessions} total</span>
                   {s.lastSeenAt && (
@@ -248,9 +248,9 @@ export default function OmadaSitesPage() {
             <div className="card p-6 space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: '#6e6e73' }}>Omada Controller Setup</p>
-                  <h2 className="text-xl font-semibold mt-1" style={{ color: '#1d1d1f', letterSpacing: '-0.03em' }}>{selectedSite.name} setup</h2>
-                  <p className="text-sm mt-1" style={{ color: '#6e6e73' }}>Configure the Omada Controller using these settings.</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-2)' }}>Omada Controller Setup</p>
+                  <h2 className="text-xl font-semibold mt-1" style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}>{selectedSite.name} setup</h2>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Configure the Omada Controller using these settings.</p>
                 </div>
                 <button className="btn-secondary btn-sm" onClick={() => setShowSetup(null)}>Close</button>
               </div>
@@ -347,9 +347,9 @@ export default function OmadaSitesPage() {
 
               {/* Portal URL */}
               <div>
-                <p className="text-xs mb-2" style={{ color: '#6e6e73' }}>Captive Portal URL for this site</p>
-                <div className="flex items-center gap-2 rounded-xl px-3 py-3" style={{ background: '#f5f5f7', border: '1px solid #e8e8ed' }}>
-                  <code className="text-xs break-all flex-1" style={{ color: '#1d1d1f' }}>
+                <p className="text-xs mb-2" style={{ color: 'var(--text-2)' }}>Captive Portal URL for this site</p>
+                <div className="flex items-center gap-2 rounded-xl px-3 py-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                  <code className="text-xs break-all flex-1" style={{ color: 'var(--text)' }}>
                     {`https://portal.trivaconnect.site/captive-portal-omada/?siteId=${selectedSite.id}`}
                   </code>
                   <button

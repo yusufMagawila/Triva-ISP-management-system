@@ -92,7 +92,7 @@ export default function DeviceScanner({ onScan, onClose }: Props) {
             <button
               disabled={!manual.trim()}
               onClick={() => onScan(manual.trim())}
-              className="mt-3 w-full bg-cyan-600 disabled:bg-slate-300 text-white rounded-lg py-3 font-medium"
+              className="mt-3 w-full bg-blue-600 disabled:bg-slate-300 text-white rounded-lg py-3 font-medium"
             >
               Identify Device
             </button>
