@@ -88,37 +88,36 @@ function buildBootstrapSyncScript(
     const escapedMac = escapeRouterOsString(session.macAddress);
     const escapedHotspotName = escapeRouterOsString(router.hotspotName);
     const uptime = escapeRouterOsString(MikroTikService.minutesToUptime(session.plan.durationMins));
+    // Inline the ack URL — a :local redeclared inside a loop aborts the
+    // whole /import on RouterOS, which silently killed user creation AND
+    // the ack whenever more than one session was pending.
     const ackUrl = `${apiUrl}/bootstrap/sync/${encodeURIComponent(router.provisioningKey)}/ack/${encodeURIComponent(session.id)}`;
 
-    lines.push(`:local ackUrl \"${ackUrl}\"`);
-
+    lines.push(':do {');
     if (session.plan.downloadKbps) {
       const profileName = escapeRouterOsString(`plan_${session.plan.id.slice(0, 8)}`);
       const uploadKbps = session.plan.uploadKbps ?? session.plan.downloadKbps;
       const rateLimit = escapeRouterOsString(`${uploadKbps}k/${session.plan.downloadKbps}k`);
-      lines.push(`:if ([:len [/ip hotspot user/profile find where name=\"${profileName}\"]] = 0) do={`);
-      lines.push(`  /ip hotspot user/profile add name=\"${profileName}\" shared-users=1 rate-limit=\"${rateLimit}\"`);
-      lines.push('} else={');
-      lines.push(`  /ip hotspot user/profile set [/ip hotspot user/profile find where name=\"${profileName}\"] shared-users=1 rate-limit=\"${rateLimit}\"`);
-      lines.push('}');
-      lines.push(`:if ([:len [/ip hotspot user find where comment=\"${escapedComment}\"]] = 0) do={`);
-      lines.push(`  /ip hotspot user add server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" profile=\"${profileName}\" comment=\"${escapedComment}\"`);
-      lines.push('} else={');
-      lines.push(`  /ip hotspot user set [/ip hotspot user find where comment=\"${escapedComment}\"] server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" profile=\"${profileName}\" comment=\"${escapedComment}\"`);
-      lines.push('}');
+      lines.push(`  :if ([:len [/ip hotspot user/profile find where name=\"${profileName}\"]] = 0) do={`);
+      lines.push(`    /ip hotspot user/profile add name=\"${profileName}\" shared-users=1 rate-limit=\"${rateLimit}\"`);
+      lines.push('  } else={');
+      lines.push(`    /ip hotspot user/profile set [/ip hotspot user/profile find where name=\"${profileName}\"] shared-users=1 rate-limit=\"${rateLimit}\"`);
+      lines.push('  }');
+      lines.push(`  :if ([:len [/ip hotspot user find where comment=\"${escapedComment}\"]] = 0) do={`);
+      lines.push(`    /ip hotspot user add server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" profile=\"${profileName}\" comment=\"${escapedComment}\"`);
+      lines.push('  } else={');
+      lines.push(`    /ip hotspot user set [/ip hotspot user find where comment=\"${escapedComment}\"] server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" profile=\"${profileName}\" comment=\"${escapedComment}\"`);
+      lines.push('  }');
     } else {
-      lines.push(`:if ([:len [/ip hotspot user find where comment=\"${escapedComment}\"]] = 0) do={`);
-      lines.push(`  /ip hotspot user add server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" comment=\"${escapedComment}\"`);
-      lines.push('} else={');
-      lines.push(`  /ip hotspot user set [/ip hotspot user find where comment=\"${escapedComment}\"] server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" comment=\"${escapedComment}\"`);
-      lines.push('}');
+      lines.push(`  :if ([:len [/ip hotspot user find where comment=\"${escapedComment}\"]] = 0) do={`);
+      lines.push(`    /ip hotspot user add server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" comment=\"${escapedComment}\"`);
+      lines.push('  } else={');
+      lines.push(`    /ip hotspot user set [/ip hotspot user find where comment=\"${escapedComment}\"] server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" comment=\"${escapedComment}\"`);
+      lines.push('  }');
     }
+    lines.push(`} on-error={ :log warning \"TRIVA sync user-add failed for ${session.id}\" }`);
 
-    lines.push(':do {');
-    lines.push('  /tool fetch mode=https url=$ackUrl keep-result=no check-certificate=no');
-    lines.push('} on-error={');
-    lines.push(`  :log warning \"TRIVA sync ack failed for ${session.id}\"`);
-    lines.push('}');
+    lines.push(`:do { /tool fetch mode=https url=\"${ackUrl}\" keep-result=no check-certificate=no } on-error={ :log warning \"TRIVA sync ack failed for ${session.id}\" }`);
     lines.push('');
   }
 
