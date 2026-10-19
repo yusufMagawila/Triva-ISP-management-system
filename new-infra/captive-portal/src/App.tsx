@@ -144,12 +144,15 @@ export default function App() {
       }
       setInfo(data);
       if (params.hotspotError) {
-        // Router rejected the hotspot login (usually: user not synced yet) —
-        // take them back to the voucher sheet with a retry hint instead of
-        // silently landing on the plans page.
-        setVoucherError('Still activating your access — tap Redeem again in a few seconds.');
-        setScreen('voucher');
-        return;
+        // Router rejected the hotspot login (usually: user not synced yet).
+        if (params.voucher) {
+          // Voucher flow — take them back to the sheet with a retry hint.
+          setVoucherError('Still activating your access — tap Redeem again in a few seconds.');
+          setScreen('voucher');
+          return;
+        }
+        // Payment flow — the session exists; show plans with the session card.
+        announce('Still activating your access — it usually takes a few seconds.');
       }
       setScreen(
         // Returning from router login (?connected=1): land on the success page.
@@ -221,19 +224,34 @@ export default function App() {
       return;
     }
 
-    // MikroTik / TP-Link — if the router gave us a login URL and we have
-    // credentials, auto-submit the hotspot login form (login-by=http-pap).
-    if (params.linkLogin && session.credentials) {
+    // MikroTik / TP-Link — the hotspot user may still be on its way to the
+    // router (direct push failed → pull-sync, up to ~15s). Wait for the
+    // session to be ACTIVE before posting the login form, or the router
+    // rejects it and bounces the browser back to the plans page.
+    if (params.linkLogin) {
       setConnecting(true);
       announce('Payment confirmed. Connecting you now.');
-      submitHotspotLogin(params.linkLogin, session.credentials.username, session.credentials.password, connectedUrl());
-      // The router will take over from here (it navigates away). Give it a
-      // moment, then show the success screen as a fallback.
-      setTimeout(() => {
-        setConnecting(false);
-        setScreen('success');
-      }, 6000);
-      return;
+      let st = session;
+      const deadline = Date.now() + 30_000;
+      while (st.status !== 'ACTIVE' && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2500));
+        try {
+          st = await getSessionStatus(session.id);
+        } catch { /* keep polling */ }
+      }
+      const creds = st.credentials ?? session.credentials;
+      if (creds) {
+        setSuccessSession(st);
+        submitHotspotLogin(params.linkLogin, creds.username, creds.password, connectedUrl());
+        // The router will take over from here (it navigates away). Give it a
+        // moment, then show the success screen as a fallback.
+        setTimeout(() => {
+          setConnecting(false);
+          setScreen('success');
+        }, 6000);
+        return;
+      }
+      setConnecting(false);
     }
     setScreen('success');
   }
