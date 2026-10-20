@@ -44,6 +44,9 @@ export function startStalePendingCleanupJob(): void {
         where: {
           status: 'PENDING',
           createdAt: { lt: staleThreshold },
+          // Never expire a session the customer has already paid for (or
+          // redeemed a voucher for) — it is waiting for the router sync.
+          NOT: { payment: { is: { status: 'COMPLETED' } } },
         },
         data: { status: 'EXPIRED' },
       });
