@@ -98,10 +98,10 @@ function buildBootstrapSyncScript(
       const profileName = escapeRouterOsString(`plan_${session.plan.id.slice(0, 8)}`);
       const uploadKbps = session.plan.uploadKbps ?? session.plan.downloadKbps;
       const rateLimit = escapeRouterOsString(`${uploadKbps}k/${session.plan.downloadKbps}k`);
-      lines.push(`  :if ([:len [/ip hotspot user/profile find where name=\"${profileName}\"]] = 0) do={`);
-      lines.push(`    /ip hotspot user/profile add name=\"${profileName}\" shared-users=1 rate-limit=\"${rateLimit}\"`);
+      lines.push(`  :if ([:len [/ip hotspot user profile find where name=\"${profileName}\"]] = 0) do={`);
+      lines.push(`    /ip hotspot user profile add name=\"${profileName}\" shared-users=1 rate-limit=\"${rateLimit}\"`);
       lines.push('  } else={');
-      lines.push(`    /ip hotspot user/profile set [/ip hotspot user/profile find where name=\"${profileName}\"] shared-users=1 rate-limit=\"${rateLimit}\"`);
+      lines.push(`    /ip hotspot user profile set [/ip hotspot user profile find where name=\"${profileName}\"] shared-users=1 rate-limit=\"${rateLimit}\"`);
       lines.push('  }');
       lines.push(`  :if ([:len [/ip hotspot user find where comment=\"${escapedComment}\"]] = 0) do={`);
       lines.push(`    /ip hotspot user add server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" profile=\"${profileName}\" comment=\"${escapedComment}\"`);
@@ -115,9 +115,10 @@ function buildBootstrapSyncScript(
       lines.push(`    /ip hotspot user set [/ip hotspot user find where comment=\"${escapedComment}\"] server=\"${escapedHotspotName}\" name=\"${escapedUsername}\" password=\"${escapedPassword}\" mac-address=\"${escapedMac}\" limit-uptime=\"${uptime}\" comment=\"${escapedComment}\"`);
       lines.push('  }');
     }
-    lines.push(`} on-error={ :log warning \"TRIVA sync user-add failed for ${session.id}\" }`);
-
-    lines.push(`:do { /tool fetch mode=https url=\"${ackUrl}\" keep-result=no check-certificate=no } on-error={ :log warning \"TRIVA sync ack failed for ${session.id}\" }`);
+    // Ack only when the user was really added — a failed add must leave the
+    // session PENDING so the next sync retries it.
+    lines.push(`  /tool fetch mode=https url=\"${ackUrl}\" keep-result=no check-certificate=no`);
+    lines.push(`} on-error={ :log warning \"TRIVA sync failed for ${session.id}\" }`);
     lines.push('');
   }
 

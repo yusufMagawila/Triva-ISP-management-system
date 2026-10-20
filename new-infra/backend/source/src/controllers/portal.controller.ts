@@ -149,10 +149,10 @@ function buildRouterHotspotSyncScript(
       const profileName = escapeRouterOsString(`plan_${session.plan.id.slice(0, 8)}`);
       const uploadKbps = session.plan.uploadKbps ?? session.plan.downloadKbps;
       const rateLimit = escapeRouterOsString(`${uploadKbps}k/${session.plan.downloadKbps}k`);
-      lines.push(`:if ([:len [/ip hotspot user/profile find where name="${profileName}"]] = 0) do={`);
-      lines.push(`  /ip hotspot user/profile add name="${profileName}" shared-users=1 rate-limit="${rateLimit}"`);
+      lines.push(`:if ([:len [/ip hotspot user profile find where name="${profileName}"]] = 0) do={`);
+      lines.push(`  /ip hotspot user profile add name="${profileName}" shared-users=1 rate-limit="${rateLimit}"`);
       lines.push('} else={');
-      lines.push(`  /ip hotspot user/profile set [/ip hotspot user/profile find where name="${profileName}"] shared-users=1 rate-limit="${rateLimit}"`);
+      lines.push(`  /ip hotspot user profile set [/ip hotspot user profile find where name="${profileName}"] shared-users=1 rate-limit="${rateLimit}"`);
       lines.push('}');
       lines.push(`:if ([:len [/ip hotspot user find where comment="${escapedComment}"]] = 0) do={`);
       lines.push(`  /ip hotspot user add server="${escapedHotspotName}" name="${escapedUsername}" password="${escapedPassword}" mac-address="${escapedMac}" limit-uptime="${uptime}" profile="${profileName}" comment="${escapedComment}"`);
