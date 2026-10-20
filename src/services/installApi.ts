@@ -51,6 +51,16 @@ export const installApi = {
   listInstallations: () => unwrap<Installation[]>(api.get('/install/installations')),
   getInstallation: (id: string) => unwrap<Installation>(api.get(`/install/installations/${id}`)),
   listSites: () => unwrap<Array<{ id: string; name: string }>>(api.get('/install/sites')),
+  createCustomer: (body: { name: string; phone?: string; contactName?: string }) =>
+    unwrap<{ id: string; name: string }>(api.post('/install/customers', body)),
+  createSite: (body: { customerId?: string; name: string; address?: string }) =>
+    unwrap<{ id: string; name: string }>(api.post('/install/sites', body)),
+  createInstallation: (siteId: string) =>
+    unwrap<Installation>(api.post('/install/installations', { siteId })),
+  getBootstrap: (id: string) =>
+    unwrap<{ routerId: string | null; commands: string | null }>(api.get(`/install/installations/${id}/bootstrap`)),
+  getReadiness: (id: string) =>
+    unwrap<Readiness>(api.get(`/install/installations/${id}/readiness`)),
   transition: (id: string, to: string, failureReason?: string) =>
     unwrap<Installation>(api.post(`/install/installations/${id}/transition`, { to, failureReason })),
 
@@ -99,3 +109,6 @@ export interface OnboardingProfile {
 export type OnboardingTurn =
   | { status: 'asking'; question: string }
   | { status: 'ready'; message: string; profile: OnboardingProfile };
+
+export interface ReadinessCheck { key: string; label: string; status: 'pass' | 'fail' | 'warn'; detail: string }
+export interface Readiness { ready: boolean; routerId: string | null; checks: ReadinessCheck[] }

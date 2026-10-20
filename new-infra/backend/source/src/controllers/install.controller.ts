@@ -22,6 +22,7 @@ import { sanitizeSecrets } from '../lib/sanitize';
 import { issueInstallerToken, revokeInstallerToken } from '../services/installer-token.service';
 import { CONTRACT_VERSION, type ContractBody } from '../lib/installation-contract';
 import { createError } from '../middleware/errorHandler';
+import { getBootstrapCommand, computeReadiness } from '../services/installation/readiness.service';
 
 // ─── Lifecycle state machine ─────────────────────────────────────────────────
 
@@ -735,6 +736,30 @@ export async function aiDiagnose(req: AuthRequest, res: Response, next: NextFunc
       metadata: { severity: report.severity, headline: report.headline },
     });
     res.json({ success: true, data: report });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Router setup command + readiness ────────────────────────────────────────
+
+/** GET /installations/:id/bootstrap — the one-line command to run on the router. */
+export async function getInstallationBootstrap(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const installation = await scopedInstallation(req, req.params.id);
+    const data = await getBootstrapCommand(installation.tenantId, installation.siteId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** GET /installations/:id/readiness — "is this router ready to leave?" checklist. */
+export async function getInstallationReadiness(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const installation = await scopedInstallation(req, req.params.id);
+    const data = await computeReadiness(installation.tenantId, installation.siteId);
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }

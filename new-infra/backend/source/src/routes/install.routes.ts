@@ -29,6 +29,8 @@ router.get('/installations/:id', requireRole(...FIELD_ROLES), ctrl.getInstallati
 router.put('/installations/:id/contract', requireRole(...FIELD_ROLES), ctrl.updateContract);
 router.post('/installations/:id/validate', requireRole(...FIELD_ROLES), ctrl.validateInstallation);
 router.post('/installations/:id/execute', requireRole(...FIELD_ROLES), ctrl.executeInstallation);
+router.get('/installations/:id/bootstrap', requireRole(...FIELD_ROLES), ctrl.getInstallationBootstrap);
+router.get('/installations/:id/readiness', requireRole(...FIELD_ROLES), ctrl.getInstallationReadiness);
 router.post('/installations/:id/transition', requireRole(...FIELD_ROLES), ctrl.transitionInstallation);
 router.post('/installations/:id/diagnostics', requireRole(...FIELD_ROLES), ctrl.runDiagnostic);
 router.get('/installations/:id/audit', requireRole(...FIELD_ROLES), ctrl.getInstallationAudit);

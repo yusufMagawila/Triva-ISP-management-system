@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { installApi, Installation, DeviceRecord, IdentifyResult } from '../../services/installApi';
 import DeviceScanner from './DeviceScanner';
 import OnboardingChat from './OnboardingChat';
+import RouterSetupCard from './RouterSetupCard';
 
 const CHECK_STEPS = ['Scanned', 'Detected', 'Assigned', 'Provisioned', 'Verified'];
 
@@ -161,6 +162,8 @@ export default function InstallationDetailPage() {
             })}
           </div>
         </section>
+
+        <RouterSetupCard installationId={job.id} />
 
         {/* Devices at this site */}
         {devices.length > 0 && (

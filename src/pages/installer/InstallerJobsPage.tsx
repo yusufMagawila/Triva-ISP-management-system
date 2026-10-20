@@ -3,7 +3,8 @@
  */
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wrench, ChevronRight, RefreshCw } from 'lucide-react';
+import { Wrench, ChevronRight, RefreshCw, Plus } from 'lucide-react';
+import NewInstallationSheet from './NewInstallationSheet';
 import { installApi, Installation } from '../../services/installApi';
 
 const STATUS_STYLES: Record<string, string> = {
@@ -21,6 +22,7 @@ export default function InstallerJobsPage() {
   const [jobs, setJobs] = useState<Installation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
 
   const load = () => {
@@ -43,6 +45,9 @@ export default function InstallerJobsPage() {
       </header>
 
       <main className="p-4 space-y-3 max-w-lg mx-auto">
+        <button onClick={() => setCreating(true)} className="w-full bg-orange-500 text-white rounded-xl py-3.5 font-semibold flex items-center justify-center gap-2 shadow-sm">
+          <Plus className="w-5 h-5" /> New installation
+        </button>
         {loading && <p className="text-center text-slate-500 py-10">Loading jobs…</p>}
         {error && (
           <div className="bg-red-50 text-red-700 rounded-lg p-3 text-sm">
@@ -87,6 +92,7 @@ export default function InstallerJobsPage() {
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </main>
+      {creating && <NewInstallationSheet onClose={() => setCreating(false)} onCreated={(id) => navigate(`/installer/jobs/${id}`)} />}
     </div>
   );
 }

@@ -18,6 +18,7 @@ const SubscriptionPage = lazy(() => import('./pages/subscription/SubscriptionPag
 const VouchersPage = lazy(() => import('./pages/vouchers/VouchersPage'));
 const InstallerJobsPage = lazy(() => import('./pages/installer/InstallerJobsPage'));
 const InstallationDetailPage = lazy(() => import('./pages/installer/InstallationDetailPage'));
+const HandoverSheetPage = lazy(() => import('./pages/installer/HandoverSheetPage'));
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuthStore();
@@ -96,6 +97,16 @@ export default function App() {
           <PrivateRoute>
             <InstallerRoute>
               <InstallationDetailPage />
+            </InstallerRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/installer/jobs/:id/handover"
+        element={
+          <PrivateRoute>
+            <InstallerRoute>
+              <HandoverSheetPage />
             </InstallerRoute>
           </PrivateRoute>
         }
