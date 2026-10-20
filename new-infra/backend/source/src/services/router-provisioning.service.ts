@@ -147,6 +147,26 @@ export function buildRouterBootstrapScript(router: BootstrapRouter, apiUrl: stri
   }
 }
 
+# Factory router: no hotspot server exists yet, so create one on the LAN
+# bridge using the existing LAN address and DHCP pool. Skipped entirely if
+# any hotspot server is already configured, so existing setups are untouched.
+:if ([:len [/ip hotspot find]] = 0) do={
+  :do {
+    :local trivaLanIf "bridge"
+    :if ([:len [/interface bridge find where name="bridge"]] = 0) do={ :set trivaLanIf "ether2" }
+    :local trivaLanAddr [/ip address get [find where interface=$trivaLanIf] address]
+    :local trivaLanIp [:pick $trivaLanAddr 0 [:find $trivaLanAddr "/"]]
+    :local trivaLanPool [/ip dhcp-server get [find where interface=$trivaLanIf] address-pool]
+    :if ([:len [/ip hotspot profile find where name="triva-hs"]] = 0) do={
+      /ip hotspot profile add name="triva-hs" hotspot-address=$trivaLanIp login-by=http-pap,http-chap,cookie
+    }
+    /ip hotspot add name=$trivaHotspotName interface=$trivaLanIf address-pool=$trivaLanPool profile="triva-hs" disabled=no
+    :log info "TRIVA hotspot server created"
+  } on-error={
+    :log warning "TRIVA hotspot create failed"
+  }
+}
+
 :local trivaHotspotServerId [/ip hotspot find where name=$trivaHotspotName]
 :if ([:len $trivaHotspotServerId] > 0) do={
   :local trivaHotspotProfile [/ip hotspot get $trivaHotspotServerId profile]
