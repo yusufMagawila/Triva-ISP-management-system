@@ -12,6 +12,7 @@
  * every request/result.
  */
 
+import { isValidSsid } from '../../lib/wifi';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../config/prisma';
@@ -73,6 +74,10 @@ const hotspotProfileParams = z.object({
   profileName: z.string().trim().regex(/^[A-Za-z0-9_-]{1,64}$/),
   downloadKbps: z.number().int().positive().max(1_000_000).optional(),
   uploadKbps: z.number().int().positive().max(1_000_000).optional(),
+}).strict();
+
+const wifiNameParams = z.object({
+  ssid: z.string().refine(isValidSsid, 'WiFi name: 1-32 letters, digits, spaces, - _ .'),
 }).strict();
 
 const brandingParams = z.object({
@@ -326,6 +331,33 @@ const ACTION_REGISTRY: ActionDef[] = [
       // URLs contain the provisioning key — a capability to pull a script,
       // not a stored credential. The script itself is generated at fetch time.
       return { bootstrapUrls: buildRouterBootstrapUrls(router, apiUrl) };
+    },
+  },
+  {
+    type: 'SET_WIFI_NAME',
+    implemented: true,
+    paramsSchema: wifiNameParams,
+    mutates: true,
+    rollback: 'Re-save the previous wifiSsid captured in preState; the router applies it on its next sync.',
+    captureState: async (_p, ctx) => {
+      const r = await prisma.router.findFirst({
+        where: { tenantId: ctx.installation.tenantId, siteId: ctx.installation.siteId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, wifiSsid: true },
+      });
+      return { routerId: r?.id ?? null, wifiSsid: r?.wifiSsid ?? null };
+    },
+    run: async (p, ctx) => {
+      const router = await prisma.router.findFirst({
+        where: { tenantId: ctx.installation.tenantId, siteId: ctx.installation.siteId },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true },
+      });
+      if (!router) forbidden('Register the router for this site before setting its WiFi name');
+      // The router applies this on its next pull-sync and confirms it, so the
+      // backend never needs inbound access to the device.
+      await prisma.router.update({ where: { id: router!.id }, data: { wifiSsid: p.ssid as string } });
+      return { routerId: router!.id, ssid: p.ssid, appliedBy: 'router pull-sync (within seconds)' };
     },
   },
   {

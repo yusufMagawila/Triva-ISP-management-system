@@ -15,7 +15,7 @@ const GOOD_TENANT = {
   status: 'ACTIVE', portalNoticeName: 'Baraka Cafe', anypayEnabled: true,
   anypayApiKeyEnc: 'enc', anypayApiKey: null, subscription: null,
 };
-const ONLINE_ROUTER = { id: 'r1', name: 'Lab', lastSeenAt: new Date(), provisioningKey: 'key-1' };
+const ONLINE_ROUTER = { id: 'r1', name: 'Lab', lastSeenAt: new Date(), provisioningKey: 'key-1', wifiSsid: 'Baraka', wifiSsidApplied: 'Baraka' };
 
 const realFetch = global.fetch;
 beforeEach(() => {
@@ -100,5 +100,17 @@ describe('getBootstrapCommand', () => {
   it('returns nothing when the site has no router', async () => {
     prismaMock.router.findFirst.mockResolvedValue(null as never);
     expect(await getBootstrapCommand('t1', 's1')).toEqual({ routerId: null, commands: null });
+  });
+});
+
+describe('wifi readiness line', () => {
+  it('warns (does not block) when the name is queued or unset', async () => {
+    prismaMock.router.findFirst.mockResolvedValue({ ...ONLINE_ROUTER, wifiSsidApplied: null } as never);
+    let r = await computeReadiness('t1', 's1');
+    expect(r.checks.find((c) => c.key === 'wifi')?.status).toBe('warn');
+    expect(r.ready).toBe(true);
+    prismaMock.router.findFirst.mockResolvedValue({ ...ONLINE_ROUTER, wifiSsid: null, wifiSsidApplied: null } as never);
+    r = await computeReadiness('t1', 's1');
+    expect(r.checks.find((c) => c.key === 'wifi')?.status).toBe('warn');
   });
 });

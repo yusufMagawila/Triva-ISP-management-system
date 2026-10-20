@@ -101,6 +101,7 @@ export interface OnboardingProfile {
   shopName: string;
   welcomeMessage?: string;
   brandColor?: string;
+  wifiName?: string;
   plans: Array<{
     name: string; description?: string; price: number; durationMins: number;
     downloadKbps?: number; uploadKbps?: number; dataLimitMb?: number;

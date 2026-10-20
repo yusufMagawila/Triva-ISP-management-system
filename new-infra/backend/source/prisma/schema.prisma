@@ -288,6 +288,8 @@ model Router {
   lastSeenAt      DateTime?
   lastBootstrapAt DateTime?
   lastBootstrapIp String?
+  wifiSsid        String?      // desired WiFi name, applied by the router pull-sync
+  wifiSsidApplied String?      // last name the router confirmed
   provisionedAt   DateTime?
   sessions        Session[]
   device          Device?
@@ -321,6 +323,8 @@ model TpLinkRouter {
   lastSeenAt      DateTime?
   lastBootstrapAt DateTime?
   lastBootstrapIp String?
+  wifiSsid        String?      // desired WiFi name, applied by the router pull-sync
+  wifiSsidApplied String?      // last name the router confirmed
   provisionedAt   DateTime?
   sessions        Session[]
   device          Device?

@@ -703,6 +703,7 @@ export async function onboardApply(req: AuthRequest, res: Response, next: NextFu
         },
       },
       { type: 'CREATE_PLANS', params: { plans: profile.plans } },
+      ...(profile.wifiName ? [{ type: 'SET_WIFI_NAME', params: { ssid: profile.wifiName } }] : []),
     ];
 
     const { results, allOk } = await executeActions(installation.id, actions, {

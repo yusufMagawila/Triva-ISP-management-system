@@ -108,6 +108,7 @@ export default function OnboardingChat({
             <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 space-y-2">
               <p className="font-semibold text-violet-800 text-sm">Review before going live</p>
               <p className="text-sm"><span className="text-slate-500">Shop:</span> <b>{profile.shopName}</b></p>
+              {profile.wifiName && <p className="text-sm"><span className="text-slate-500">WiFi name:</span> <b>{profile.wifiName}</b></p>}
               {profile.welcomeMessage && <p className="text-sm text-slate-600">“{profile.welcomeMessage}”</p>}
               <ul className="space-y-1">
                 {profile.plans.map((p, i) => (

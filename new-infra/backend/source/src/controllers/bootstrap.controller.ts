@@ -3,6 +3,7 @@ import { prisma } from '../config/prisma';
 import { logger } from '../config/logger';
 import { sessionService } from '../services/session.service';
 import { MikroTikService } from '../services/mikrotik.service';
+import { isValidSsid } from '../lib/wifi';
 import {
   buildRouterBootstrapScript,
   buildRouterBootstrapUrls,
@@ -26,7 +27,7 @@ function getProvisioningKey(req: Request): string | undefined {
   return undefined;
 }
 
-function buildBootstrapSyncScript(
+export function buildBootstrapSyncScript(
   router: { id: string; name: string; hotspotName: string; provisioningKey: string },
   pendingSessions: Array<{
     id: string;
@@ -43,7 +44,8 @@ function buildBootstrapSyncScript(
   removableSessions: Array<{
     id: string;
     hotspotUsername: string;
-  }>
+  }>,
+  wifiSsid?: string | null
 ): string {
   const apiUrl = process.env.APP_URL ?? 'https://triva.pandabus.live';
   const lines = [
@@ -81,6 +83,18 @@ function buildBootstrapSyncScript(
     lines.push('}');
   }
   lines.push('');
+
+  // WiFi name: only emitted while the router has not yet confirmed it. The
+  // value is validated against a narrow pattern (no quotes, $, backslash), and
+  // the ack runs only if the interface change succeeded.
+  if (wifiSsid && isValidSsid(wifiSsid)) {
+    const wifiAckUrl = `${apiUrl}/bootstrap/sync/${encodeURIComponent(router.provisioningKey)}/wifi-ack`;
+    lines.push(':do {');
+    lines.push(`  /interface wireless set [find where name~"wlan"] ssid="${wifiSsid}"`);
+    lines.push(`  /tool fetch mode=https url="${wifiAckUrl}" keep-result=no check-certificate=no`);
+    lines.push('} on-error={ :log warning "TRIVA wifi name apply failed" }');
+    lines.push('');
+  }
 
   if (pendingSessions.length === 0 && removableSessions.length === 0) {
     lines.push(':put "TRIVA sync: no changes"');
@@ -359,6 +373,8 @@ export async function getBootstrapSyncScript(
         id: true,
         name: true,
         hotspotName: true,
+        wifiSsid: true,
+        wifiSsidApplied: true,
         provisioningKey: true,
         tenant: {
           select: {
@@ -426,7 +442,12 @@ export async function getBootstrapSyncScript(
     };
 
     res.setHeader('Cache-Control', 'no-store');
-    res.type('text/plain').send(buildBootstrapSyncScript(syncRouter, pendingSessions, removableSessions));
+    res.type('text/plain').send(buildBootstrapSyncScript(
+        syncRouter,
+        pendingSessions,
+        removableSessions,
+        router.wifiSsid && router.wifiSsid !== router.wifiSsidApplied ? router.wifiSsid : null
+      ));
   } catch (err) {
     next(err);
   }
@@ -471,6 +492,25 @@ export async function acknowledgeBootstrapSyncActivation(
       expiresAt,
     });
 
+    res.type('text/plain').send('OK');
+  } catch (err) {
+    next(err);
+  }
+}
+/** The router confirms it applied the desired WiFi name. */
+export async function acknowledgeBootstrapWifi(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const provisioningKey = getProvisioningKey(req);
+    const router = await prisma.router.findFirst({
+      where: { provisioningKey },
+      select: { id: true, tenantId: true, wifiSsid: true },
+    });
+    if (!router) {
+      res.status(404).type('text/plain').send('Router not found');
+      return;
+    }
+    await prisma.router.update({ where: { id: router.id }, data: { wifiSsidApplied: router.wifiSsid } });
+    logger.info('Router confirmed WiFi name', { routerId: router.id });
     res.type('text/plain').send('OK');
   } catch (err) {
     next(err);

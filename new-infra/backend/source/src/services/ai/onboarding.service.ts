@@ -10,6 +10,7 @@
 import { z } from 'zod';
 import { getAIProvider, AIUnavailableError, AIMalformedResponseError } from './ai-provider';
 import { sanitizeSecrets } from '../../lib/sanitize';
+import { SSID_PATTERN } from '../../lib/wifi';
 
 export const MAX_PLANS = 8;
 
@@ -27,6 +28,7 @@ export const onboardingProfileSchema = z.object({
   shopName: z.string().trim().min(2).max(60),
   welcomeMessage: z.string().trim().max(280).optional(),
   brandColor: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  wifiName: z.string().trim().regex(SSID_PATTERN).optional(),
   plans: z.array(onboardingPlanSchema).min(1).max(MAX_PLANS),
 }).strict();
 
@@ -52,13 +54,14 @@ const ONBOARDING_SYSTEM = `You are the Triva setup assistant helping an installe
 Collect, in as few questions as possible (one short question at a time):
 1. Shop / business name.
 2. Internet packages the shop will sell: name, price (TZS), duration (minutes/hours/days) and optionally speed limit in Kbps or data cap in MB.
-3. Optionally a short welcome message and a brand colour (hex).
+3. The WiFi network name customers will see (suggest the shop name; letters, digits, spaces, - _ . only, max 32 characters).
+4. Optionally a short welcome message and a brand colour (hex).
 
 Hard rules — violated output is rejected:
 - Return ONLY JSON, no prose outside JSON.
 - While information is missing: {"status":"asking","question":"<one short question>"}.
 - When you have the shop name and at least one package: {"status":"ready","message":"<short confirmation>","profile":{...}}.
-- profile matches this shape exactly: {"shopName":string,"welcomeMessage"?:string,"brandColor"?:"#rrggbb","plans":[{"name":string,"description"?:string,"price":number,"durationMins":integer,"downloadKbps"?:integer,"uploadKbps"?:integer,"dataLimitMb"?:integer}]}.
+- profile matches this shape exactly: {"shopName":string,"welcomeMessage"?:string,"brandColor"?:"#rrggbb","wifiName"?:string,"plans":[{"name":string,"description"?:string,"price":number,"durationMins":integer,"downloadKbps"?:integer,"uploadKbps"?:integer,"dataLimitMb"?:integer}]}.
 - Convert durations to minutes (1 hour=60, 1 day=1440, 1 week=10080, 1 month=43200). Prices are numbers in TZS with no currency symbol.
 - Never invent prices or durations the installer did not give you. If unsure, ask.
 - Never ask for passwords, API keys, payment credentials or router logins. Payment setup happens elsewhere.

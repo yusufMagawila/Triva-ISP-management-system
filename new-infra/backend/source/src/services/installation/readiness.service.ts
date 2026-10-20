@@ -97,6 +97,17 @@ export async function computeReadiness(tenantId: string, siteId: string): Promis
           ? 'No heartbeat for over 3 minutes. Check the internet cable, then re-run the setup command.'
           : 'The router has not contacted us yet. Run the setup command on the router.'
     );
+    const wifiConfirmed = Boolean(router.wifiSsid && router.wifiSsid === router.wifiSsidApplied);
+    add(
+      'wifi',
+      'WiFi name set on the router',
+      wifiConfirmed ? 'pass' : 'warn',
+      wifiConfirmed
+        ? router.wifiSsid!
+        : router.wifiSsid
+          ? `"${router.wifiSsid}" is queued and applies on the router's next sync.`
+          : 'Not set — the router keeps its factory WiFi name. Run the AI setup and give it a name.'
+    );
   }
 
   const sub = tenant?.subscription;
