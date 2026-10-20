@@ -57,6 +57,8 @@ export const installApi = {
     unwrap<{ id: string; name: string }>(api.post('/install/sites', body)),
   createInstallation: (siteId: string) =>
     unwrap<Installation>(api.post('/install/installations', { siteId })),
+  ensureRouter: (id: string) =>
+    unwrap<{ routerId: string | null; created: boolean }>(api.post(`/install/installations/${id}/router`)),
   getBootstrap: (id: string) =>
     unwrap<{ routerId: string | null; commands: string | null }>(api.get(`/install/installations/${id}/bootstrap`)),
   getReadiness: (id: string) =>

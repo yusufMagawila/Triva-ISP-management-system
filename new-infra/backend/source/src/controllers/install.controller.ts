@@ -693,6 +693,15 @@ export async function onboardApply(req: AuthRequest, res: Response, next: NextFu
     }
     const profile = parsed.data!;
 
+    // The WiFi name is stored on the site's router record, so make sure it exists.
+    if (profile.wifiName) {
+      await ensureSiteRouter(
+        installation,
+        { userId: req.user!.userId, role: req.user!.role },
+        req.user!.scope === 'install' ? { installationId: req.user!.installationId, siteId: req.user!.siteId } : undefined
+      );
+    }
+
     const actions = [
       {
         type: 'APPLY_PORTAL_BRANDING',
@@ -761,6 +770,70 @@ export async function getInstallationReadiness(req: AuthRequest, res: Response, 
     const installation = await scopedInstallation(req, req.params.id);
     const data = await computeReadiness(installation.tenantId, installation.siteId);
     res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// ─── Ensure the site has a MikroTik router record ────────────────────────────
+
+/**
+ * Scanning a device only writes an inventory record. The router asset (which
+ * carries the provisioning key behind the setup command) comes from the
+ * REGISTER_ROUTER action. This runs it through the audited executor, once.
+ */
+async function ensureSiteRouter(
+  installation: { id: string; tenantId: string; siteId: string },
+  actor: { userId: string; role: string },
+  scope?: { installationId?: string | null; siteId?: string | null }
+): Promise<{ routerId: string | null; created: boolean }> {
+  const existing = await prisma.router.findFirst({
+    where: { tenantId: installation.tenantId, siteId: installation.siteId },
+    select: { id: true },
+  });
+  if (existing) return { routerId: existing.id, created: false };
+
+  const [site, device] = await Promise.all([
+    prisma.site.findUnique({ where: { id: installation.siteId }, select: { name: true } }),
+    prisma.device.findFirst({
+      where: { tenantId: installation.tenantId, siteId: installation.siteId, vendor: 'MIKROTIK' },
+      orderBy: { createdAt: 'desc' },
+      select: { serialNumber: true, macAddress: true },
+    }),
+  ]);
+  if (!device) return { routerId: null, created: false };
+
+  const { results } = await executeActions(
+    installation.id,
+    [{
+      type: 'REGISTER_ROUTER',
+      params: {
+        name: site?.name?.slice(0, 100) || 'Router',
+        ...(device.serialNumber && device.serialNumber.length >= 4 ? { serialNumber: device.serialNumber } : {}),
+        ...(device.macAddress ? { hardwareMac: device.macAddress } : {}),
+      },
+    }],
+    { actor: { ...actor, tenantId: installation.tenantId }, tokenScope: scope }
+  );
+  const r = results[0];
+  if (!r || r.status !== 'OK') {
+    httpError(409, r?.error ?? 'Could not create the router record for this site');
+  }
+  const created = await prisma.router.findFirst({
+    where: { tenantId: installation.tenantId, siteId: installation.siteId },
+    select: { id: true },
+  });
+  return { routerId: created?.id ?? null, created: true };
+}
+
+/** POST /installations/:id/router — create the router record (idempotent). */
+export async function ensureInstallationRouter(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const installation = await scopedInstallation(req, req.params.id);
+    if (TERMINAL.has(installation.status)) httpError(409, `Installation is ${installation.status}`);
+    const scope = req.user!.scope === 'install' ? { installationId: req.user!.installationId, siteId: req.user!.siteId } : undefined;
+    const out = await ensureSiteRouter(installation, { userId: req.user!.userId, role: req.user!.role }, scope);
+    res.json({ success: true, data: out });
   } catch (err) {
     next(err);
   }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Copy, Check, CheckCircle2, XCircle, AlertTriangle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -16,10 +16,21 @@ export default function RouterSetupCard({ installationId }: { installationId: st
   const [commands, setCommands] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [copied, setCopied] = useState(false);
+  const triedEnsure = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
-      const [b, r] = await Promise.all([installApi.getBootstrap(installationId), installApi.getReadiness(installationId)]);
+      let b = await installApi.getBootstrap(installationId);
+      // A scanned device has no router record (and no setup command) until
+      // one is created; do it once, automatically.
+      if (!b.commands && !triedEnsure.current) {
+        triedEnsure.current = true;
+        try {
+          const r = await installApi.ensureRouter(installationId);
+          if (r.routerId) b = await installApi.getBootstrap(installationId);
+        } catch { /* no scanned router yet — the card says so */ }
+      }
+      const r = await installApi.getReadiness(installationId);
       setCommands(b.commands);
       setReadiness(r);
     } catch { /* keep the last known state */ }
@@ -59,7 +70,21 @@ export default function RouterSetupCard({ installationId }: { installationId: st
               </button>
             </>
           ) : (
-            <p className="text-sm text-slate-500">Scan the router first. Its setup command will appear here.</p>
+            <>
+              <p className="text-sm text-slate-500">Scan the router first, then create its setup command.</p>
+              <button
+                onClick={async () => {
+                  try {
+                    const r = await installApi.ensureRouter(installationId);
+                    if (!r.routerId) toast.error('Scan and assign the router to this site first');
+                    await refresh();
+                  } catch (e) { toast.error((e as Error).message || 'Could not create the setup command'); }
+                }}
+                className="w-full border rounded-lg py-2.5 text-sm font-medium"
+              >
+                Create setup command
+              </button>
+            </>
           )}
         </div>
       )}
