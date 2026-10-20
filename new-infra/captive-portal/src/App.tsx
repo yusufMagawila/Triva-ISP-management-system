@@ -139,6 +139,19 @@ export default function App() {
             ? await getRouterPortalInfo(params.routerId, params.mac || undefined)
             : null;
       if (!data) {
+        // Opened without a router (e.g. a bookmark): show this phone's last
+        // session and its countdown, if it is still running.
+        try {
+          const last = localStorage.getItem('triva-last-session');
+          if (last) {
+            const st = await getSessionStatus(last);
+            if (st.status === 'ACTIVE' && st.expiresAt && new Date(st.expiresAt).getTime() > Date.now()) {
+              setSuccessSession(st);
+              setScreen('success');
+              return;
+            }
+          }
+        } catch { /* fall through */ }
         setScreen('unavailable');
         return;
       }
@@ -197,6 +210,14 @@ export default function App() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Keep the session id on this phone so the countdown page can be reopened
+  // any time (see the no-router branch in load()).
+  useEffect(() => {
+    if (screen !== 'success') return;
+    const id = successSession?.id ?? info?.activeSession?.id;
+    if (id) { try { localStorage.setItem('triva-last-session', id); } catch { /* ignore */ } }
+  }, [screen, successSession, info]);
 
   const tracking = usePaymentTracking(
     sessionId,
@@ -298,7 +319,10 @@ export default function App() {
 
   /** Remember the session so a bounced/reloaded page can finish connecting. */
   function rememberSession(sessionId: string) {
-    try { sessionStorage.setItem('triva-pending-session', sessionId); } catch { /* private mode */ }
+    try {
+      sessionStorage.setItem('triva-pending-session', sessionId);
+      localStorage.setItem('triva-last-session', sessionId);
+    } catch { /* private mode */ }
   }
 
   function submitHotspotLogin(loginUrl: string, username: string, password: string, dst: string | null) {
@@ -499,7 +523,7 @@ export default function App() {
             vendor={params.vendor ?? 'generic'}
             connecting={connecting}
             redirecting={redirecting}
-            onDone={() => setScreen('plans')}
+            onDone={() => (info ? setScreen('plans') : void load())}
           />
         )}
       </main>

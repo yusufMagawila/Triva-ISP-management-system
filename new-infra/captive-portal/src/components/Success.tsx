@@ -77,6 +77,12 @@ export function SuccessScreen({ plan, amount, expiresAt, vendor, connecting, red
         {vendor === 'omada' && redirecting ? 'Continue' : 'Done'}
       </button>
 
+      {!connecting && !redirecting && expiry && (
+        <p className="mt-4 text-[12px] max-w-[300px]" style={{ color: 'var(--ink-3)' }}>
+          Tip: bookmark this page. Open it any time to see how much time you have left.
+        </p>
+      )}
+
       {(connecting || redirecting) && (
         <p className="mt-4 text-[12px]" style={{ color: 'var(--ink-3)' }} role="status">
           {vendor === 'omada'
