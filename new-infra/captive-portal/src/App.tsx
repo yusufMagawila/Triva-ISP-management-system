@@ -143,15 +143,40 @@ export default function App() {
         return;
       }
       setInfo(data);
+
+      // Resume a purchase that was interrupted (router login bounced, page
+      // reloaded). The session id is remembered from the moment we paid/redeemed.
+      let pending: string | null = null;
+      try { pending = sessionStorage.getItem('triva-pending-session'); } catch { /* ignore */ }
+      if (pending && !data.activeSession && (params.connected || params.hotspotError)) {
+        try {
+          const st = await getSessionStatus(pending);
+          if (st.status === 'ACTIVE' && st.credentials) {
+            setSuccessSession(st);
+            if (params.hotspotError && params.linkLogin) {
+              // Router said no (user not there yet) but the session is live
+              // now — log in again, once.
+              const tried = sessionStorage.getItem('triva-login-retry');
+              if (tried !== pending) {
+                sessionStorage.setItem('triva-login-retry', pending);
+                setScreen('success');
+                setConnecting(true);
+                submitHotspotLogin(params.linkLogin, st.credentials.username, st.credentials.password, connectedUrl());
+                return;
+              }
+            }
+            setScreen('success');
+            return;
+          }
+        } catch { /* fall through to normal screens */ }
+      }
+
       if (params.hotspotError) {
-        // Router rejected the hotspot login (usually: user not synced yet).
         if (params.voucher) {
-          // Voucher flow — take them back to the sheet with a retry hint.
           setVoucherError('Still activating your access — tap Redeem again in a few seconds.');
           setScreen('voucher');
           return;
         }
-        // Payment flow — the session exists; show plans with the session card.
         announce('Still activating your access — it usually takes a few seconds.');
       }
       setScreen(
@@ -241,6 +266,7 @@ export default function App() {
       }
       const creds = st.credentials ?? session.credentials;
       if (creds) {
+        rememberSession(session.id);
         setSuccessSession(st);
         submitHotspotLogin(params.linkLogin, creds.username, creds.password, connectedUrl());
         // The router will take over from here (it navigates away). Give it a
@@ -263,7 +289,16 @@ export default function App() {
     const url = new URL(window.location.origin + window.location.pathname);
     url.searchParams.set('router', params.routerId ?? '');
     url.searchParams.set('connected', '1');
+    // The device MAC is how the portal recognises the active session after
+    // the router redirects back — without it the plans page showed instead.
+    if (params.mac) url.searchParams.set('mac', params.mac);
+    if (params.ip) url.searchParams.set('ip', params.ip);
     return url.toString();
+  }
+
+  /** Remember the session so a bounced/reloaded page can finish connecting. */
+  function rememberSession(sessionId: string) {
+    try { sessionStorage.setItem('triva-pending-session', sessionId); } catch { /* private mode */ }
   }
 
   function submitHotspotLogin(loginUrl: string, username: string, password: string, dst: string | null) {
@@ -377,6 +412,7 @@ export default function App() {
         setRedeemActivating(false);
 
         if (st?.status === 'ACTIVE' && st.credentials) {
+          rememberSession(res.sessionId);
           setSuccessSession(st);
           if (params.linkLogin) {
             setScreen('success');
