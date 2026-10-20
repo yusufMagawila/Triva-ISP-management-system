@@ -91,7 +91,7 @@ export class MikroTikAdapter implements DeviceAdapter {
    * Apply a typed provisioning plan. Supported keys:
    *   hotspotServer: { name, interface, addressPool, profile }
    *   hotspotProfiles: [{ profileName, downloadKbps, uploadKbps }]
-   *   managementBypass: { address }   // ip-binding — MUST precede hotspot enable
+   *   managementBypass: { address, macAddress }   // MAC-pinned ip-binding — MUST precede hotspot enable
    * Anything else is rejected — the adapter never executes raw commands.
    */
   async provision(conn: AdapterConnection, plan: Record<string, unknown>): Promise<ProvisionResult> {
@@ -105,8 +105,13 @@ export class MikroTikAdapter implements DeviceAdapter {
     const steps: ProvisionResult['steps'] = [];
     try {
       if (plan.managementBypass) {
-        const b = plan.managementBypass as { address: string };
-        await svc.addHotspotIpBinding(b.address, 'bypassed', 'triva-mgmt-bypass');
+        const b = plan.managementBypass as { address: string; macAddress?: string };
+        // An address-only bypass hands free internet to whichever device DHCP
+        // gives that address to later — always pin it to the host's MAC.
+        if (!b.macAddress || !/^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/.test(b.macAddress)) {
+          throw new Error('managementBypass requires a valid macAddress');
+        }
+        await svc.addHotspotIpBinding(b.address, 'bypassed', 'triva-mgmt-bypass', b.macAddress.toUpperCase());
         steps.push({ step: 'managementBypass', ok: true, detail: b.address });
       }
       if (plan.hotspotServer) {

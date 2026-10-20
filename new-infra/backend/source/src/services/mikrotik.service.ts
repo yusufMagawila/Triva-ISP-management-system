@@ -124,15 +124,15 @@ export class MikroTikService {
    * its interface — otherwise all management TCP is intercepted and the API
    * locks out. Idempotent: skips if a matching binding already exists.
    */
-  async addHotspotIpBinding(address: string, type: 'bypassed' | 'regular' | 'blocked', comment?: string): Promise<void> {
+  async addHotspotIpBinding(address: string, type: 'bypassed' | 'regular' | 'blocked', comment?: string, macAddress?: string): Promise<void> {
     let api: any = null;
     try {
       api = await this.connect();
       const existing = (await api.write('/ip/hotspot/ip-binding/print', [`?address=${address}`])) as RouterOSResponse[];
       if (existing.length > 0) {
-        await api.write('/ip/hotspot/ip-binding/set', [`=.id=${existing[0]['.id']}`, `=type=${type}`, ...(comment ? [`=comment=${comment}`] : [])]);
+        await api.write('/ip/hotspot/ip-binding/set', [`=.id=${existing[0]['.id']}`, `=type=${type}`, ...(macAddress ? [`=mac-address=${macAddress}`] : []), ...(comment ? [`=comment=${comment}`] : [])]);
       } else {
-        await api.write('/ip/hotspot/ip-binding/add', [`=address=${address}`, `=type=${type}`, ...(comment ? [`=comment=${comment}`] : [])]);
+        await api.write('/ip/hotspot/ip-binding/add', [`=address=${address}`, `=type=${type}`, ...(macAddress ? [`=mac-address=${macAddress}`] : []), ...(comment ? [`=comment=${comment}`] : [])]);
       }
     } finally {
       if (api) await api.close();
