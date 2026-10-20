@@ -68,11 +68,18 @@ function buildBootstrapSyncScript(
   lines.push('  :local trivaDir [/ip hotspot profile get [/ip hotspot profile find where name=$trivaProfName] html-directory]');
   lines.push('  :if ([:len $trivaDir] > 0) do={ :set trivaHtmlDir $trivaDir }');
   lines.push('} on-error={}');
-  lines.push(':do {');
-  lines.push(`  /tool fetch mode=https url="${escapedLoginHtmlUrl}" dst-path=($trivaHtmlDir . "/login.html") check-certificate=no keep-result=yes`);
-  lines.push('} on-error={');
-  lines.push('  :log warning "TRIVA: login.html refresh failed"');
-  lines.push('}');
+  // login.html = portal entry; alogin.html + status.html replace the stock
+  // "You are logged in" / status pages with the portal's countdown page.
+  const escapedPagesBaseUrl = escapedLoginHtmlUrl.replace(/login\.html$/, '');
+  // Plain per-page blocks (same syntax already proven on RouterOS 6.49) —
+  // no loops/arrays, so a parser quirk can't break the whole sync.
+  for (const page of ['login.html', 'alogin.html', 'status.html']) {
+    lines.push(':do {');
+    lines.push(`  /tool fetch mode=https url="${escapedPagesBaseUrl}${page}" dst-path=($trivaHtmlDir . "/${page}") check-certificate=no keep-result=yes`);
+    lines.push('} on-error={');
+    lines.push(`  :log warning "TRIVA: ${page} refresh failed"`);
+    lines.push('}');
+  }
   lines.push('');
 
   if (pendingSessions.length === 0 && removableSessions.length === 0) {

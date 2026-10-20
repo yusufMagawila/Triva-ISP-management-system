@@ -95,6 +95,46 @@ function buildHotspotLoginHtml(routerId: string, portalBaseUrl: string): string 
 </html>`;
 }
 
+/**
+ * Replaces the router's stock "You are logged in" (alogin.html) and /status
+ * (status.html) pages. A logged-in customer is sent to the portal's connected
+ * page, which shows the plan and a live countdown — so "how much time do I
+ * have left" is always one visit to the router's status address away.
+ */
+function buildHotspotStatusHtml(routerId: string, portalBaseUrl: string): string {
+  const portalEntryUrl = `${portalBaseUrl}?pv=${PORTAL_ENTRY_VERSION}`;
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="cache-control" content="no-store" />
+  <meta http-equiv="pragma" content="no-cache" />
+  <meta http-equiv="expires" content="0" />
+  <title>TRIVA WiFi</title>
+</head>
+<body>
+<script>
+(function () {
+  try {
+    var url = new URL('${portalEntryUrl}');
+    url.searchParams.set('router', '${routerId}');
+    url.searchParams.set('connected', '1');
+    url.searchParams.set('mac', '$(mac)');
+    url.searchParams.set('ip', '$(ip)');
+    window.location.replace(url.toString());
+  } catch (e) {
+    window.location.replace('${portalEntryUrl}&router=${routerId}&connected=1');
+  }
+})();
+</script>
+<noscript>
+  <p style="font-family:sans-serif;text-align:center;padding:40px">You are connected. Time left: $(session-time-left)</p>
+</noscript>
+</body>
+</html>`;
+}
+
 function escapeRouterOsString(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
@@ -546,6 +586,28 @@ export async function getRouterHotspotLoginPage(
 
     const portalBaseUrl = `${env.PORTAL_URL}/captive-portal/`;
     res.type('html').send(buildHotspotLoginHtml(router.id, portalBaseUrl));
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** Public endpoint: router-specific alogin.html / status.html (see buildHotspotStatusHtml). */
+export async function getRouterHotspotStatusPage(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { routerId } = req.params;
+    const router = await prisma.router.findUnique({
+      where: { id: routerId },
+      select: { id: true, tenant: { select: { status: true } } },
+    });
+    if (!router || router.tenant.status !== 'ACTIVE') {
+      res.status(404).type('text/plain').send('Router not available');
+      return;
+    }
+    res.type('html').send(buildHotspotStatusHtml(router.id, `${env.PORTAL_URL}/captive-portal/`));
   } catch (err) {
     next(err);
   }

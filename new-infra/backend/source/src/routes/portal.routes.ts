@@ -4,6 +4,7 @@ import {
 	getPortalInfo,
 	checkSessionStatus,
 	getRouterHotspotLoginPage,
+	getRouterHotspotStatusPage,
 	getRouterHotspotSyncScript,
 	acknowledgeRouterHotspotSyncActivation,
 	getTpLinkSplashPage,
@@ -19,6 +20,8 @@ router.get('/router/:routerId', getPortalInfo);
 router.get('/router/:routerId/hotspot/login.html', getRouterHotspotLoginPage);
 router.get('/router/:routerId/hotspot/flogin.html', getRouterHotspotLoginPage);
 router.get('/router/:routerId/hotspot/rlogin.html', getRouterHotspotLoginPage);
+router.get('/router/:routerId/hotspot/alogin.html', getRouterHotspotStatusPage);
+router.get('/router/:routerId/hotspot/status.html', getRouterHotspotStatusPage);
 router.get('/router/:routerId/hotspot/sync.rsc', getRouterHotspotSyncScript);
 router.get('/router/:routerId/hotspot/sync/ack', acknowledgeRouterHotspotSyncActivation);
 router.get('/tplink/:routerId/splash.html', getTpLinkSplashPage);
