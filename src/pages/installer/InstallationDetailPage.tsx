@@ -27,6 +27,7 @@ export default function InstallationDetailPage() {
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [scanning, setScanning] = useState(false);
   const [onboarding, setOnboarding] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [scanResult, setScanResult] = useState<IdentifyResult | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [plan, setPlan] = useState<{ plan: { summary: string; actions: Array<{ type: string; reason?: string; params?: Record<string, unknown> }>; warnings: string[]; requiresApproval: boolean } } | null>(null);
@@ -67,7 +68,7 @@ export default function InstallationDetailPage() {
     try {
       const ident = scanResult.identity;
       const dev = await installApi.registerDevice({
-        vendor: ident.vendorHint ?? 'OTHER',
+        vendor: ident.vendorHint ?? 'MIKROTIK',
         deviceType: 'ROUTER',
         serialNumber: ident.serialNumber,
         macAddress: ident.macAddress,
@@ -282,19 +283,28 @@ export default function InstallationDetailPage() {
       {/* Action bar */}
       {!terminal && (
         <div className="fixed bottom-0 inset-x-0 bg-white border-t p-3">
-          <div className="max-w-lg mx-auto grid grid-cols-4 gap-2">
-            <button onClick={() => setOnboarding(true)} className="flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-lg py-3 text-sm font-medium">
-              <Sparkles className="w-4 h-4" /> Setup
-            </button>
-            <button onClick={() => setScanning(true)} className="flex items-center justify-center gap-1.5 bg-blue-600 text-white rounded-lg py-3 text-sm font-medium">
-              <ScanLine className="w-4 h-4" /> Scan
-            </button>
-            <button onClick={runPlan} disabled={busy === 'plan'} className="flex items-center justify-center gap-1.5 bg-violet-600 text-white rounded-lg py-3 text-sm font-medium disabled:opacity-50">
-              <Sparkles className="w-4 h-4" /> {busy === 'plan' ? 'Planning…' : 'Plan'}
-            </button>
-            <button onClick={runDiagnose} disabled={busy === 'diag'} className="flex items-center justify-center gap-1.5 bg-slate-700 text-white rounded-lg py-3 text-sm font-medium disabled:opacity-50">
-              <Play className="w-4 h-4" /> {busy === 'diag' ? 'Checking…' : 'Diagnose'}
-            </button>
+          <div className="max-w-lg mx-auto space-y-2">
+            {showMore && (
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={runPlan} disabled={busy === 'plan'} className="flex items-center justify-center gap-1.5 bg-violet-600 text-white rounded-lg py-2.5 text-sm font-medium disabled:opacity-50">
+                  <Sparkles className="w-4 h-4" /> {busy === 'plan' ? 'Planning…' : 'Advanced plan'}
+                </button>
+                <button onClick={runDiagnose} disabled={busy === 'diag'} className="flex items-center justify-center gap-1.5 bg-slate-700 text-white rounded-lg py-2.5 text-sm font-medium disabled:opacity-50">
+                  <Play className="w-4 h-4" /> {busy === 'diag' ? 'Checking…' : 'Diagnose'}
+                </button>
+              </div>
+            )}
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <button onClick={() => setScanning(true)} className="flex items-center justify-center gap-1.5 bg-blue-600 text-white rounded-lg py-3 text-sm font-semibold">
+                <ScanLine className="w-4 h-4" /> 1. Scan router
+              </button>
+              <button onClick={() => setOnboarding(true)} className="flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-lg py-3 text-sm font-semibold">
+                <Sparkles className="w-4 h-4" /> 2. Shop setup
+              </button>
+              <button onClick={() => setShowMore((v) => !v)} aria-label="More tools" className="px-3 rounded-lg border text-slate-500 text-sm">
+                {showMore ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
         </div>
       )}

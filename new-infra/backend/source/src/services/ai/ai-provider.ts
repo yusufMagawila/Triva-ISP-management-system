@@ -61,6 +61,21 @@ class GeminiProvider implements AIProvider {
 
   async generateJson(opts: AIGenerateOptions): Promise<unknown> {
     if (!this.available) throw new AIUnavailableError();
+    // One automatic retry: the provider occasionally returns a truncated or
+    // wrapped reply, or a transient 503 under load. A second try almost always works.
+    try {
+      return await this.generateJsonOnce(opts);
+    } catch (err) {
+      const transient =
+        err instanceof AIMalformedResponseError &&
+        /not valid JSON|empty response|HTTP (429|500|502|503|504)/.test(err.message);
+      if (!transient) throw err;
+      logger.warn('AI request failed, retrying once', { reason: err.message.slice(0, 120) });
+      return this.generateJsonOnce(opts);
+    }
+  }
+
+  private async generateJsonOnce(opts: AIGenerateOptions): Promise<unknown> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
 
     const res = await fetch(url, {
@@ -72,7 +87,7 @@ class GeminiProvider implements AIProvider {
         generationConfig: {
           responseMimeType: 'application/json',
           temperature: 0.2,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
         },
       }),
     });
@@ -94,17 +109,34 @@ class GeminiProvider implements AIProvider {
     }
 
     const data = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; finishReason?: string }>;
     };
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const candidate = data.candidates?.[0];
+    const text = candidate?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
     if (!text) throw new AIMalformedResponseError('AI provider returned empty response');
 
-    try {
-      return JSON.parse(text);
-    } catch {
+    const parsed = parseJsonLoose(text);
+    if (parsed === undefined) {
+      logger.warn('AI reply was not valid JSON', {
+        finishReason: (candidate as { finishReason?: string } | undefined)?.finishReason,
+        length: text.length,
+      });
       throw new AIMalformedResponseError('AI response was not valid JSON', text.slice(0, 300));
     }
+    return parsed;
   }
+}
+
+/** JSON.parse that also accepts ```json fences and leading/trailing prose. */
+export function parseJsonLoose(text: string): unknown {
+  const attempts = [text.trim(), text.replace(/^```(?:json)?\s*|\s*```$/gi, '').trim()];
+  const first = text.indexOf('{');
+  const last = text.lastIndexOf('}');
+  if (first >= 0 && last > first) attempts.push(text.slice(first, last + 1));
+  for (const a of attempts) {
+    try { return JSON.parse(a); } catch { /* try next */ }
+  }
+  return undefined;
 }
 
 // ─── Local deterministic provider (testing / no-key fallback) ────────────────

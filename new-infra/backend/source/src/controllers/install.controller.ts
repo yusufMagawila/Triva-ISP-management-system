@@ -796,12 +796,12 @@ async function ensureSiteRouter(
   const [site, device] = await Promise.all([
     prisma.site.findUnique({ where: { id: installation.siteId }, select: { name: true } }),
     prisma.device.findFirst({
-      where: { tenantId: installation.tenantId, siteId: installation.siteId, vendor: 'MIKROTIK' },
+      where: { tenantId: installation.tenantId, siteId: installation.siteId, deviceType: 'ROUTER', vendor: { in: ['MIKROTIK', 'OTHER'] } },
       orderBy: { createdAt: 'desc' },
       select: { serialNumber: true, macAddress: true },
     }),
   ]);
-  if (!device) return { routerId: null, created: false };
+  // No scanned device is fine: the router record is then created without a hardware identity.
 
   const { results } = await executeActions(
     installation.id,
@@ -809,8 +809,8 @@ async function ensureSiteRouter(
       type: 'REGISTER_ROUTER',
       params: {
         name: site?.name?.slice(0, 100) || 'Router',
-        ...(device.serialNumber && device.serialNumber.length >= 4 ? { serialNumber: device.serialNumber } : {}),
-        ...(device.macAddress ? { hardwareMac: device.macAddress } : {}),
+        ...(device?.serialNumber && device.serialNumber.length >= 4 ? { serialNumber: device.serialNumber } : {}),
+        ...(device?.macAddress ? { hardwareMac: device.macAddress } : {}),
       },
     }],
     { actor: { ...actor, tenantId: installation.tenantId }, tokenScope: scope }
