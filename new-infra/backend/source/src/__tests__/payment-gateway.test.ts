@@ -34,6 +34,18 @@ describe('Payment gateway parsing and status mapping', () => {
     expect(status?.transaction_id).toBe('txn-1');
   });
 
+  it('maps the current AnyPay payment_status field', async () => {
+    mockedAxios.create.mockReturnValue({
+      get: jest.fn().mockResolvedValue({
+        data: { data: { payment_status: 'COMPLETED', transid: 'txn-2' } },
+      }),
+    } as any);
+    const gateway = new AnypayGateway('access::apikey');
+    const status = await gateway.getTransactionStatus('order-124');
+    expect(status?.status).toBe('SUCCESS');
+    expect(status?.transaction_id).toBe('txn-2');
+  });
+
   it('maps AnyPay failed/cancelled/pending statuses', async () => {
     const get = jest.fn()
       .mockResolvedValueOnce({ data: { data: { selcom_payment_status: 'FAILED' } } })
