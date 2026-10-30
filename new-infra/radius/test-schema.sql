@@ -3,9 +3,9 @@ CREATE TABLE tenants (id text PRIMARY KEY, status text);
 CREATE TABLE omada_sites (id text PRIMARY KEY, "tenantId" text, "controllerIp" text);
 CREATE TABLE sessions (id text PRIMARY KEY, "tenantId" text, "omadaSiteId" text, status text, "expiresAt" timestamptz);
 CREATE TABLE radius_users (id text PRIMARY KEY, tenant_id text, session_id text, username text, password text, status text, expires_at timestamptz);
-INSERT INTO nas VALUES (1, '172.30.250.30', 'lab', 'other', 'isolated-radius-test', NULL);
+INSERT INTO nas VALUES (1, '192.0.2.30', 'lab', 'other', 'isolated-radius-test', NULL);
 INSERT INTO tenants VALUES ('tenant-1', 'ACTIVE'), ('tenant-2', 'ACTIVE');
-INSERT INTO omada_sites VALUES ('site-1', 'tenant-1', '172.30.250.30'), ('site-2', 'tenant-2', '192.0.2.99');
+INSERT INTO omada_sites VALUES ('site-1', 'tenant-1', '192.0.2.30'), ('site-2', 'tenant-2', '192.0.2.99');
 INSERT INTO sessions VALUES
 ('active', 'tenant-1', 'site-1', 'ACTIVE', now() + interval '5 minutes'),
 ('expired', 'tenant-1', 'site-1', 'ACTIVE', now() - interval '1 minute'),

@@ -23,6 +23,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      client:
+        condition: service_healthy
     healthcheck:
       test: [CMD, pgrep, -x, freeradius]
       interval: 2s
@@ -30,18 +32,25 @@ services:
       retries: 30
     networks: [test]
   client:
-    build: .
-    entrypoint: [python3, /tests/integration.py]
+    build:
+      context: .
+      target: test-client
+    entrypoint: [python3, -u, /tests/integration.py]
+    environment:
+      PGHOST: postgres
+      PGUSER: radius_test
+      PGPASSWORD: isolated-test-only
+      PGDATABASE: radius_test
     volumes:
       - ./integration.py:/tests/integration.py:ro
     depends_on:
-      radius:
+      postgres:
         condition: service_healthy
-    networks:
-      test:
-        ipv4_address: 172.30.250.30
+    healthcheck:
+      test: [CMD, test, -f, /tmp/nas-ready]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+    networks: [test]
 networks:
   test:
-    ipam:
-      config:
-        - subnet: 172.30.250.0/24

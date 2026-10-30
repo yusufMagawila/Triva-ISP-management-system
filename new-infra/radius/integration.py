@@ -1,6 +1,21 @@
+import pathlib
 import re
+import socket
 import subprocess
 import time
+
+import psycopg2
+
+
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+    probe.connect(('postgres', 5432))
+    source_ip = probe.getsockname()[0]
+with psycopg2.connect(connect_timeout=10) as connection:
+    with connection.cursor() as cursor:
+        cursor.execute('UPDATE nas SET nasname = %s WHERE id = 1', (source_ip,))
+        cursor.execute('UPDATE omada_sites SET "controllerIp" = %s WHERE id = %s', (source_ip, 'site-1'))
+pathlib.Path('/tmp/nas-ready').touch()
+print('Fixture NAS registered; waiting for RADIUS startup')
 
 
 def request(username, password):
@@ -9,7 +24,7 @@ def request(username, password):
     return result.stdout + result.stderr
 
 
-for attempt in range(15):
+for attempt in range(60):
     accepted = request('triva_0000000000000001', 'test-password')
     if 'Received Access-Accept' in accepted:
         break

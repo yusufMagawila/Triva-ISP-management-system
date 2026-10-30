@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends freeradius freeradius-postgresql freeradius-utils python3 procps ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY sql.conf /etc/freeradius/3.0/mods-available/triva_sql
 COPY site.conf /etc/freeradius/3.0/sites-available/triva
@@ -6,3 +6,8 @@ RUN rm /etc/freeradius/3.0/sites-enabled/default && ln -s ../sites-available/tri
 RUN install -d -o freerad -g freerad /var/log/freeradius/radacct
 COPY entrypoint.py /opt/triva/entrypoint.py
 ENTRYPOINT ["python3", "/opt/triva/entrypoint.py"]
+
+FROM runtime AS test-client
+RUN apt-get update && apt-get install -y --no-install-recommends python3-psycopg2 && rm -rf /var/lib/apt/lists/*
+
+FROM runtime AS production
