@@ -5,6 +5,8 @@
  */
 
 import crypto from 'crypto';
+import { isIPv4 } from 'net';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { logger } from '../config/logger';
 import { getPlanConfig } from '../config/plans';
@@ -144,25 +146,34 @@ export async function upsertNasClient(
   siteId: string,
   controllerIp: string | null | undefined,
   radiusSecretEnc: string | null,
-  siteName: string
+  siteName: string,
+  db: Prisma.TransactionClient = prisma
 ): Promise<void> {
+  if (!controllerIp) return;
+  if (!isIPv4(controllerIp) || controllerIp === '0.0.0.0') {
+    throw Object.assign(new Error('Set the exact IPv4 source address that sends this site\'s RADIUS requests.'), { statusCode: 400 });
+  }
   const radiusSecret = radiusSecretEnc ? decryptRouterCredential(radiusSecretEnc) : '';
   if (!radiusSecret) return;
-  const nasname = controllerIp || '%';
-  await prisma.$executeRaw`
+  const nasname = controllerIp;
+  const count = await db.$executeRaw`
     INSERT INTO nas (nasname, shortname, type, secret, description)
-    VALUES (${nasname}, ${'omada-' + siteName}, 'other', ${radiusSecret}, ${'Omada site: ' + siteName + ' (' + siteId + ')'})
+    VALUES (${nasname}, ${'omada-' + siteId.slice(0, 26)}, 'other', ${radiusSecret}, ${'Omada site: ' + siteName.slice(0, 120) + ' (' + siteId + ')'})
     ON CONFLICT (nasname) DO UPDATE SET
       secret = EXCLUDED.secret,
       shortname = EXCLUDED.shortname,
       description = EXCLUDED.description
+    WHERE nas.description LIKE ${'%(' + siteId + ')'}
   `;
+  if (count === 0) {
+    throw Object.assign(new Error('This RADIUS source IP is already registered to another site. Use a distinct source IP or VPN address; its secret was not overwritten.'), { statusCode: 409 });
+  }
 }
 
-export async function removeNasClient(controllerIp: string | null | undefined, siteId: string): Promise<void> {
-  const nasname = controllerIp || '%';
-  await prisma.$executeRaw`
-    DELETE FROM nas WHERE nasname = ${nasname} AND description LIKE ${'%' + siteId + '%'}
+export async function removeNasClient(controllerIp: string | null | undefined, siteId: string, db: Prisma.TransactionClient = prisma): Promise<void> {
+  if (!controllerIp) return;
+  await db.$executeRaw`
+    DELETE FROM nas WHERE nasname = ${controllerIp} AND description LIKE ${'%(' + siteId + ')'}
   `;
 }
 
@@ -184,26 +195,26 @@ export interface OmadaSiteAssetParams {
 export async function createOmadaSiteAsset(tenantId: string, params: OmadaSiteAssetParams) {
   await assertRouterQuota(tenantId);
 
-  const site = await prisma.omadaSite.create({
-    data: {
-      tenantId,
-      name: params.name,
-      controllerUrl: params.controllerUrl ?? null,
-      controllerIp: params.controllerIp ?? null,
-      radiusSecret: '',
-      radiusSecretEnc: encryptRouterCredential(generateRadiusSecret()),
-      ssidName: params.ssidName ?? null,
-      hotspotName: params.hotspotName ?? 'omada1',
-      location: params.location ?? null,
-      siteId: params.siteId ?? null,
-      status: 'OFFLINE',
-    },
-  });
+  return prisma.$transaction(async (db) => {
+    const site = await db.omadaSite.create({
+      data: {
+        tenantId,
+        name: params.name,
+        controllerUrl: params.controllerUrl ?? null,
+        controllerIp: params.controllerIp ?? null,
+        radiusSecret: '',
+        radiusSecretEnc: encryptRouterCredential(generateRadiusSecret()),
+        ssidName: params.ssidName ?? null,
+        hotspotName: params.hotspotName ?? 'omada1',
+        location: params.location ?? null,
+        siteId: params.siteId ?? null,
+        status: 'OFFLINE',
+      },
+    });
 
-  await upsertNasClient(site.id, site.controllerIp, site.radiusSecretEnc, site.name).catch((err) => {
-    logger.warn('Failed to register NAS client', { siteId: site.id, err });
-  });
+    await upsertNasClient(site.id, site.controllerIp, site.radiusSecretEnc, site.name, db);
 
-  logger.info('Omada site asset created', { siteId: site.id, tenantId });
-  return site;
+    logger.info('Omada site asset created', { siteId: site.id, tenantId });
+    return site;
+  });
 }

@@ -104,8 +104,11 @@ export class AnypayGateway implements PaymentGateway {
       const data = response.data?.data;
       if (!data) return null;
 
-      const raw = (data.selcom_payment_status as string)?.toUpperCase();
-      if (raw === 'COMPLETED') return { status: 'SUCCESS', transaction_id: data.selcom_transid };
+      const raw = String(data.payment_status ?? data.selcom_payment_status ?? data.status ?? '').toUpperCase();
+      const transactionId = data.selcom_transid ?? data.transid ?? data.reference ?? undefined;
+      if (raw === 'COMPLETED' || raw === 'SUCCESS' || raw === 'PAID') {
+        return { status: 'SUCCESS', transaction_id: transactionId };
+      }
       if (raw === 'FAILED') return { status: 'FAILED' };
       if (raw === 'CANCELLED') return { status: 'CANCELLED' };
       if (raw === 'PENDING' || raw === 'PROCESSING') return { status: 'PENDING' };

@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import {
   listOmadaSites,
   getOmadaSite,
+  getOmadaSetup,
   createOmadaSite,
   updateOmadaSite,
   markOmadaSiteProvisioned,
@@ -33,6 +34,7 @@ router.post(
 );
 
 router.get('/:id', getOmadaSite);
+router.get('/:id/setup', getOmadaSetup);
 
 router.patch(
   '/:id',

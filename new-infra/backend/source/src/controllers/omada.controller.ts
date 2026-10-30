@@ -86,11 +86,11 @@ export async function getOmadaPortalInfo(
     // Check for existing active session
     let activeSession = null;
     if (macAddress) {
-      activeSession = await sessionService.getActiveSessionByMac(macAddress, tenantId);
+      activeSession = await sessionService.getActiveSessionByMac(macAddress, resolvedTenantId);
     }
 
     const plans = await prisma.plan.findMany({
-      where: { tenantId, status: 'ACTIVE' },
+      where: { tenantId: resolvedTenantId, status: 'ACTIVE' },
       select: {
         id: true,
         name: true,
@@ -196,7 +196,7 @@ export async function initiateOmadaPayment(
       return;
     }
 
-    const plan = await prisma.plan.findFirst({ where: { id: planId, tenantId, status: 'ACTIVE' } });
+    const plan = await prisma.plan.findFirst({ where: { id: planId, tenantId: resolvedTenantId, status: 'ACTIVE' } });
     if (!plan) {
       res.status(404).json({ success: false, error: 'Plan not found' });
       return;
@@ -269,6 +269,7 @@ export async function initiateOmadaPayment(
       });
     } catch (err) {
       await prisma.payment.update({ where: { id: payment.id }, data: { status: 'FAILED' } });
+      await prisma.session.update({ where: { id: session.id }, data: { status: 'EXPIRED' } }).catch(() => {});
       res.status(502).json({
         success: false,
         error: 'The payment provider could not be reached. Please try again.',
