@@ -14,6 +14,8 @@ with psycopg2.connect(connect_timeout=10) as connection:
     with connection.cursor() as cursor:
         cursor.execute('UPDATE nas SET nasname = %s WHERE id = 1', (source_ip,))
         cursor.execute('UPDATE omada_sites SET "controllerIp" = %s WHERE id = %s', (source_ip, 'site-1'))
+        cursor.execute('UPDATE sessions SET "expiresAt" = NOW() + CASE WHEN id = %s THEN INTERVAL \'-1 minute\' ELSE INTERVAL \'5 minutes\' END', ('expired',))
+        cursor.execute('UPDATE radius_users SET expires_at = NOW() + INTERVAL \'1 hour\'')
 pathlib.Path('/tmp/nas-ready').touch()
 print('Fixture NAS registered; waiting for RADIUS startup')
 
