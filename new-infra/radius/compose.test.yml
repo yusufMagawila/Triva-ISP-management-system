@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: radius_test
+      POSTGRES_PASSWORD: isolated-test-only
+      POSTGRES_DB: radius_test
+    volumes:
+      - ./test-schema.sql:/docker-entrypoint-initdb.d/test.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U radius_test -d radius_test"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks: [test]
+  radius:
+    build: .
+    environment:
+      DB_HOST: postgres
+      DB_USER: radius_test
+      DB_PASSWORD: isolated-test-only
+      DB_NAME: radius_test
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, pgrep, -x, freeradius]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    networks: [test]
+  client:
+    build: .
+    entrypoint: [python3, /tests/integration.py]
+    volumes:
+      - ./integration.py:/tests/integration.py:ro
+    depends_on:
+      radius:
+        condition: service_healthy
+    networks:
+      test:
+        ipv4_address: 172.30.250.30
+networks:
+  test:
+    ipam:
+      config:
+        - subnet: 172.30.250.0/24

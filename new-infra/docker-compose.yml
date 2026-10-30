@@ -57,6 +57,8 @@ services:
       PORTAL_URL: ${PORTAL_URL}
       APP_URL: ${APP_URL}
       DASHBOARD_URL: ${DASHBOARD_URL}
+      OMADA_CONTROLLER_URL: ${OMADA_CONTROLLER_URL:-}
+      RADIUS_PUBLIC_HOST: ${RADIUS_PUBLIC_HOST:-}
       AI_PROVIDER: ${AI_PROVIDER:-deterministic}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
@@ -195,9 +197,78 @@ services:
       - triva
     entrypoint: ["/bin/sh", "/scripts/backup.sh"]
 
+  omada-controller:
+    image: mbentley/omada-controller:5.15.24.19@sha256:908a4e38ff273b0be77db5525237cf039f724c169f33d3be8b32f3acf34bbe2b
+    restart: unless-stopped
+    profiles: [omada]
+    stop_grace_period: 60s
+    environment:
+      TZ: Africa/Dar_es_Salaam
+    ports:
+      - "${OMADA_ADMIN_BIND:-127.0.0.1}:8043:8043/tcp"
+      - "8088:8088/tcp"
+      - "8843:8843/tcp"
+      - "29810:29810/udp"
+      - "29811-29816:29811-29816/tcp"
+    volumes:
+      - omada_data:/opt/tplink/EAPController/data
+      - omada_logs:/opt/tplink/EAPController/logs
+      - omada_work:/opt/tplink/EAPController/work
+    networks: [triva]
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+        reservations:
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  radius:
+    build:
+      context: ./radius
+    restart: unless-stopped
+    profiles: [omada]
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_USER: ${DB_USER:-triva_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-triva_db}
+    ports:
+      - "${RADIUS_BIND_ADDRESS:-127.0.0.1}:1812:1812/udp"
+      - "${RADIUS_BIND_ADDRESS:-127.0.0.1}:1813:1813/udp"
+    volumes:
+      - radius_accounting:/var/log/freeradius/radacct
+    networks: [triva]
+    healthcheck:
+      test: ["CMD", "pgrep", "-x", "freeradius"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
 volumes:
   triva_pgdata:
   triva_backups:
+  omada_data:
+  omada_logs:
+  omada_work:
+  radius_accounting:
   # certbot-certs:
 
 networks:

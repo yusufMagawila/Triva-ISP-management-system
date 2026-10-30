@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
+import { isIPv4 } from 'net';
 import { prisma } from '../config/prisma';
 import { logger } from '../config/logger';
 import { env } from '../config/env';
 import { AuthRequest } from '../types';
+import { decryptRouterCredential } from '../lib/crypto';
+import { recordAudit } from '../services/audit.service';
 import {
   createOmadaSiteAsset,
   removeNasClient,
@@ -196,25 +199,55 @@ export async function updateOmadaSite(
       return;
     }
 
-    const updated = await prisma.omadaSite.update({
-      where: { id },
-      data: {
-        ...(name !== undefined ? { name } : {}),
-        ...(controllerUrl !== undefined ? { controllerUrl } : {}),
-        ...(controllerIp !== undefined ? { controllerIp } : {}),
-        ...(ssidName !== undefined ? { ssidName } : {}),
-        ...(location !== undefined ? { location } : {}),
-      },
+    const updated = await prisma.$transaction(async (db) => {
+      const site = await db.omadaSite.update({
+        where: { id },
+        data: {
+          ...(name !== undefined ? { name } : {}),
+          ...(controllerUrl !== undefined ? { controllerUrl } : {}),
+          ...(controllerIp !== undefined ? { controllerIp } : {}),
+          ...(ssidName !== undefined ? { ssidName } : {}),
+          ...(location !== undefined ? { location } : {}),
+        },
+      });
+      // Update NAS client if controllerIp or name changed
+      await upsertNasClient(site.id, site.controllerIp, site.radiusSecretEnc, site.name, db);
+      if (existing.controllerIp !== site.controllerIp) {
+        await removeNasClient(existing.controllerIp, site.id, db);
+      }
+      return site;
     });
 
-    // Update NAS client if controllerIp or name changed
-    if (controllerIp !== undefined || name !== undefined) {
-      await upsertNasClient(updated.id, updated.controllerIp, updated.radiusSecretEnc, updated.name).catch((err) => {
-        logger.warn('Failed to update NAS client', { siteId: updated.id, err });
-      });
-    }
+    res.json({ success: true, data: { ...updated, radiusSecret: undefined, radiusSecretEnc: undefined } });
+  } catch (err) {
+    next(err);
+  }
+}
 
-    res.json({ success: true, data: updated });
+export async function getOmadaSetup(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const site = await prisma.omadaSite.findFirst({
+      where: { id: req.params.id, ...(req.user!.role !== 'SUPER_ADMIN' ? { tenantId: req.user!.tenantId! } : {}) },
+    });
+    if (!site) {
+      res.status(404).json({ success: false, error: 'Omada site not found' });
+      return;
+    }
+    if (!site.controllerIp || !isIPv4(site.controllerIp) || site.controllerIp === '0.0.0.0' || !env.RADIUS_PUBLIC_HOST) {
+      res.status(409).json({ success: false, error: 'Set RADIUS_PUBLIC_HOST on the deployment and the site\'s exact RADIUS request source IPv4 address before setup.' });
+      return;
+    }
+    await recordAudit({ tenantId: site.tenantId, userId: req.user!.userId, action: 'OMADA_SETUP_VIEWED', targetType: 'OmadaSite', targetId: site.id });
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ success: true, data: {
+      controllerUrl: site.controllerUrl || env.OMADA_CONTROLLER_URL || null,
+      portalUrl: `${env.PORTAL_URL.replace(/\/+$/, '')}/captive-portal-omada/?siteId=${encodeURIComponent(site.id)}`,
+      radiusHost: env.RADIUS_PUBLIC_HOST,
+      radiusSecret: site.radiusSecretEnc ? decryptRouterCredential(site.radiusSecretEnc) : site.radiusSecret,
+      radiusSourceIp: site.controllerIp,
+      authPort: 1812,
+      accountingPort: 1813,
+    } });
   } catch (err) {
     next(err);
   }
@@ -243,10 +276,10 @@ export async function markOmadaSiteProvisioned(
 
     const updated = await prisma.omadaSite.update({
       where: { id },
-      data: { provisionedAt: new Date(), status: 'ONLINE' },
+      data: { provisionedAt: new Date() },
     });
 
-    res.json({ success: true, data: updated });
+    res.json({ success: true, data: { ...updated, radiusSecret: undefined, radiusSecretEnc: undefined } });
   } catch (err) {
     next(err);
   }

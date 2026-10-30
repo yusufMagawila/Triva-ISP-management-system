@@ -13,6 +13,8 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default('http://localhost:5173'),
   PORTAL_URL: z.string().default('http://localhost:5174'),
   DASHBOARD_URL: z.string().optional(),
+  OMADA_CONTROLLER_URL: z.union([z.string().url(), z.literal('')]).optional(),
+  RADIUS_PUBLIC_HOST: z.string().default(''),
   // Backend public URL (used for webhook registration)
   APP_URL: z.string().url(),
   // Platform webhook shared secret (activation/subscription callbacks)

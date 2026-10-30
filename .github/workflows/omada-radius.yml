@@ -1,0 +1,21 @@
+name: Omada RADIUS validation
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'new-infra/radius/**'
+      - 'new-infra/docker-compose.yml'
+      - 'new-infra/backend/source/src/services/device-registry.service.ts'
+      - '.github/workflows/omada-radius.yml'
+permissions:
+  contents: read
+jobs:
+  radius:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose syntax
+        run: docker compose -f new-infra/docker-compose.yml --profile omada config --quiet
+      - name: Build and exercise isolated RADIUS stack
+        run: docker compose -p triva-radius-test -f new-infra/radius/compose.test.yml up --build --abort-on-container-exit --exit-code-from client

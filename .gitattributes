@@ -1,0 +1,5 @@
+new-infra/radius/** text eol=lf
+new-infra/scripts/** text eol=lf
+.github/** text eol=lf
+*.sh text eol=lf
+*.py text eol=lf

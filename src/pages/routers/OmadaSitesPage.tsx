@@ -4,14 +4,21 @@ import toast from 'react-hot-toast';
 import { Wifi, WifiOff, Plus, Trash2, Activity, Copy, Info, Download, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? 'http://localhost:4000').replace(/\/+$/, '');
+interface OmadaSetup {
+  controllerUrl: string | null;
+  portalUrl: string;
+  radiusHost: string;
+  radiusSecret: string;
+  radiusSourceIp: string;
+  authPort: number;
+  accountingPort: number;
+}
 
 interface OmadaSiteData {
   id: string;
   name: string;
   controllerUrl: string | null;
   controllerIp: string | null;
-  radiusSecret: string;
   ssidName: string | null;
   hotspotName: string;
   location: string | null;
@@ -27,6 +34,18 @@ export default function OmadaSitesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showSetup, setShowSetup] = useState<string | null>(null);
+  const [setup, setSetup] = useState<OmadaSetup | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setSetup(null);
+    if (showSetup) {
+      api.get<{ data: OmadaSetup }>(`/omada-sites/${showSetup}/setup`)
+        .then((res) => { if (active) setSetup(res.data.data); })
+        .catch((err) => { if (active) toast.error(err?.response?.data?.error ?? 'Failed to load setup settings'); });
+    }
+    return () => { active = false; };
+  }, [showSetup]);
   const [form, setForm] = useState({
     name: '',
     controllerUrl: '',
@@ -142,9 +161,9 @@ export default function OmadaSitesPage() {
               <p className="text-xs text-gray-500 mt-1">The Omada Controller web URL. Used for reference and redirect back after payment.</p>
             </div>
             <div>
-              <label className="label">Controller IP (optional)</label>
-              <input className="input" value={form.controllerIp} onChange={(e) => setForm({ ...form, controllerIp: e.target.value })} placeholder="192.168.1.100" />
-              <p className="text-xs text-gray-500 mt-1">If set, only this IP can send RADIUS auth requests. Leave empty to allow any IP (wildcard).</p>
+              <label className="label">RADIUS request source IPv4</label>
+              <input className="input" value={form.controllerIp} onChange={(e) => setForm({ ...form, controllerIp: e.target.value })} required placeholder="Site public or VPN IPv4" />
+              <p className="text-xs text-gray-500 mt-1">The exact source address seen by FreeRADIUS, which may be the AP/gateway NAT address rather than the controller. No wildcard access.</p>
             </div>
             <div className="md:col-span-2">
               <label className="label">Location (optional)</label>
@@ -206,7 +225,7 @@ export default function OmadaSitesPage() {
                   </p>
                   <p className="mt-1" style={{ color: 'var(--text)' }}>Vendor: TP-Link Omada (RADIUS)</p>
                   <p className="mt-1" style={{ color: 'var(--text)' }}>Controller: {s.controllerUrl ?? 'Not set'}</p>
-                  <p className="mt-1" style={{ color: 'var(--text)' }}>RADIUS IP: {s.controllerIp ?? 'Any (wildcard)'}</p>
+                  <p className="mt-1" style={{ color: 'var(--text)' }}>RADIUS IP: {s.controllerIp || 'Not configured — authentication unavailable'}</p>
                 </div>
 
                 <div className="flex items-center gap-2 text-xs mb-4" style={{ color: 'var(--text-2)' }}>
@@ -244,13 +263,14 @@ export default function OmadaSitesPage() {
             ))}
           </div>
 
-          {selectedSite && (
+          {selectedSite && setup && (
             <div className="card p-6 space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-2)' }}>Omada Controller Setup</p>
                   <h2 className="text-xl font-semibold mt-1" style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}>{selectedSite.name} setup</h2>
-                  <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Configure the Omada Controller using these settings.</p>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>Controller: {setup.controllerUrl || 'Set OMADA_CONTROLLER_URL in the deployment'}</p>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>After adding or changing a RADIUS source/secret, an operator must restart only the radius service to reload NAS clients. Source: {setup.radiusSourceIp}. Configuration acknowledgement is not proof of internet access.</p>
                 </div>
                 <button className="btn-secondary btn-sm" onClick={() => setShowSetup(null)}>Close</button>
               </div>
@@ -265,8 +285,8 @@ export default function OmadaSitesPage() {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Server IP</p>
                       <div className="flex items-center gap-2 bg-white/80 border border-green-200 rounded-lg px-3 py-2">
-                        <code className="text-xs text-gray-700 break-all flex-1">api.trivaconnect.site</code>
-                        <button className="flex-shrink-0 text-gray-400 hover:text-brand-600" onClick={() => copyText('api.trivaconnect.site', 'Server IP')}>
+                        <code className="text-xs text-gray-700 break-all flex-1">{setup.radiusHost}</code>
+                        <button className="flex-shrink-0 text-gray-400 hover:text-brand-600" onClick={() => copyText(setup.radiusHost, 'Server IP')}>
                           <Copy className="w-4 h-4" />
                         </button>
                       </div>
@@ -295,8 +315,8 @@ export default function OmadaSitesPage() {
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Shared Secret (generated for this site)</p>
                       <div className="flex items-center gap-2 bg-white/80 border border-green-200 rounded-lg px-3 py-2">
-                        <code className="text-xs text-gray-700 break-all flex-1">{selectedSite.radiusSecret}</code>
-                        <button className="flex-shrink-0 text-gray-400 hover:text-brand-600" onClick={() => copyText(selectedSite.radiusSecret, 'RADIUS secret')}>
+                        <code className="text-xs text-gray-700 break-all flex-1">{setup.radiusSecret}</code>
+                        <button className="flex-shrink-0 text-gray-400 hover:text-brand-600" onClick={() => copyText(setup.radiusSecret, 'RADIUS secret')}>
                           <Copy className="w-4 h-4" />
                         </button>
                       </div>
@@ -350,11 +370,11 @@ export default function OmadaSitesPage() {
                 <p className="text-xs mb-2" style={{ color: 'var(--text-2)' }}>Captive Portal URL for this site</p>
                 <div className="flex items-center gap-2 rounded-xl px-3 py-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
                   <code className="text-xs break-all flex-1" style={{ color: 'var(--text)' }}>
-                    {`https://portal.trivaconnect.site/captive-portal-omada/?siteId=${selectedSite.id}`}
+                    {setup.portalUrl}
                   </code>
                   <button
                     className="flex-shrink-0 text-gray-400 hover:text-brand-600"
-                    onClick={() => copyText(`https://portal.trivaconnect.site/captive-portal-omada/?siteId=${selectedSite.id}`, 'Portal URL')}
+                    onClick={() => copyText(setup.portalUrl, 'Portal URL')}
                   >
                     <Copy className="w-4 h-4" />
                   </button>
@@ -375,8 +395,8 @@ export default function OmadaSitesPage() {
               {/* Critical hosts */}
               <div className="text-xs text-gray-600 space-y-1 bg-rose-50 border border-rose-100 rounded-xl p-4">
                 <p className="font-semibold text-rose-800 mb-1.5">Critical hosts that must be reachable</p>
-                <p>① api.trivaconnect.site (TRIVA backend + RADIUS)</p>
-                <p>② portal.trivaconnect.site (captive portal)</p>
+                <p>① {setup.radiusHost} (RADIUS over UDP 1812/1813; not an HTTP proxy)</p>
+                <p>② {new URL(setup.portalUrl).host} (portal and its API must be accessible before login)</p>
                 <p>③ anypaytanzania.com / *.anypaytanzania.com (AnyPay payment gateway)</p>
               </div>
             </div>
