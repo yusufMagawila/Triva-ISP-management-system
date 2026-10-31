@@ -19,6 +19,10 @@ api.interceptors.request.use((config) => {
   } catch {
     // ignore parse errors
   }
+  if (config.url?.startsWith('/install/devices')) {
+    const installationId = window.location.pathname.match(/^\/installer\/jobs\/([^/]+)/)?.[1];
+    if (installationId) config.headers['X-Installation-Id'] = installationId;
+  }
   return config;
 });
 

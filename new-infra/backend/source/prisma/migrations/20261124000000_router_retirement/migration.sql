@@ -1,0 +1,1 @@
+ALTER TABLE "routers" ADD COLUMN "retiredAt" TIMESTAMP(3);

@@ -79,6 +79,61 @@ export async function verifyInstallScope(req: AuthRequest, res: Response, next: 
   }
 }
 
+export async function resolveInstallationContext(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) return void res.status(401).json({ success: false, error: 'Unauthorized' });
+    if (req.user.role === 'INSTALLER') {
+      const actor = await prisma.user.findUnique({ where: { id: req.user.userId } });
+      if (!actor?.isActive || actor.role !== 'INSTALLER') {
+        return void res.status(403).json({ success: false, error: 'Installer account is disabled' });
+      }
+    }
+    req.body ??= {};
+    const routeId = req.path.match(/^\/installations\/([^/]+)/)?.[1];
+    const headerId = req.get('x-installation-id');
+    if (routeId && headerId && routeId !== headerId) {
+      return void res.status(403).json({ success: false, error: 'Installation context mismatch' });
+    }
+    const id = routeId ?? headerId ?? (req.path.startsWith('/devices') ? req.user.installationId : undefined);
+    if (!id) {
+      if (req.user.role === 'INSTALLER' && req.path.startsWith('/devices')) return void res.status(403).json({ success: false, error: 'Open an assigned installation before scanning a device' });
+      return next();
+    }
+    const job = await prisma.installation.findUnique({ where: { id } });
+    const user = req.user;
+    if (!job || (user.role === 'INSTALLER' ? job.installerId !== user.userId : user.role !== 'SUPER_ADMIN' && job.tenantId !== user.tenantId)
+      || (user.scope === 'install' && (user.tenantId !== job.tenantId || (user.installationId && user.installationId !== id) || (user.siteId && user.siteId !== job.siteId)))) {
+      return void res.status(403).json({ success: false, error: 'Installation is not assigned to you' });
+    }
+    if (headerId && !routeId && !req.path.startsWith('/devices')) {
+      return void res.status(403).json({ success: false, error: 'Use installation-scoped endpoints' });
+    }
+    if (req.path.startsWith('/devices')) {
+      if ((req.body.siteId && req.body.siteId !== job.siteId) || (req.body.installationId && req.body.installationId !== id)) {
+        return void res.status(403).json({ success: false, error: 'Device must belong to this installation site' });
+      }
+      const deviceId = req.path.match(/^\/devices\/([^/]+)/)?.[1];
+      if (deviceId && !['identify', 'register'].includes(deviceId)) {
+        const device = await prisma.device.findUnique({ where: { id: deviceId } });
+        if (!device || device.tenantId !== job.tenantId || (device.siteId && device.siteId !== job.siteId)) {
+          return void res.status(403).json({ success: false, error: 'Device is not available to this installation' });
+        }
+      }
+      req.query.siteId = job.siteId;
+      if (req.path === '/devices/register') req.body.siteId = job.siteId;
+    }
+    if (user.role === 'INSTALLER' || user.scope === 'install') {
+      req.user = { ...user, tenantId: job.tenantId, scope: 'install', installationId: job.id, siteId: job.siteId };
+    } else {
+      req.query.tenantId = job.tenantId;
+      if (req.body.tenantId) req.body.tenantId = job.tenantId;
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
 export function requireTenant(req: AuthRequest, res: Response, next: NextFunction): void {
   // Super admins can bypass tenant requirement (they specify tenantId via query param)
   if (req.user?.role === 'SUPER_ADMIN') {

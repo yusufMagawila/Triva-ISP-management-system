@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { Wifi, CreditCard, CheckCircle2, Clock } from 'lucide-react';
 
 export default function ActivatePage() {
-  const { user, setAuth } = useAuthStore();
+  const { user, token, setAuth } = useAuthStore();
   const navigate = useNavigate();
   const [phone, setPhone] = useState(user?.phone ?? '');
   const [loading, setLoading] = useState(false);
@@ -30,16 +30,14 @@ export default function ActivatePage() {
   async function handleCheckStatus() {
     setChecking(true);
     try {
-      const res = await api.get('/auth/me') as { data: { data: { tenantStatus?: string; tenant?: { status: string } } } };
-      const tenantStatus = res.data.data?.tenant?.status ?? res.data.data?.tenantStatus;
-      if (tenantStatus === 'ACTIVE') {
+      const res = await api.get<{ data: Parameters<typeof setAuth>[1] }>('/auth/me');
+      const current = res.data.data;
+      if (token) setAuth(token, current);
+      if (current.tenant?.status === 'ACTIVE') {
         toast.success('Account activated! Welcome to TRIVA.');
-        const meRes = await api.get('/auth/me') as { data: { data: unknown } };
-        const token = localStorage.getItem('token') ?? '';
-        setAuth(token, meRes.data.data as Parameters<typeof setAuth>[1]);
         navigate('/dashboard');
       } else {
-        toast('Payment not confirmed yet. Try again in a moment.', { icon: '⏳' });
+        toast(current.activationManagedByAdmin ? 'Waiting for admin activation. Contact your administrator.' : 'Payment not confirmed yet. Try again in a moment.');
       }
     } catch {
       toast.error('Could not check status. Please try again.');
@@ -74,7 +72,15 @@ export default function ActivatePage() {
         </div>
 
         <div className="card p-8">
-          {!paid ? (
+          {user?.activationManagedByAdmin ? (
+            <div className="text-center space-y-4">
+              <Clock className="w-8 h-8 mx-auto text-orange-500" />
+              <h2 className="text-xl font-semibold">Waiting for admin activation</h2>
+              <p className="text-sm">Your merchant account has been created. Your administrator controls activation and subscription setup. Contact them before opening the hotspot to customers.</p>
+              <p className="text-sm">Owner login: {user.email}</p>
+              <button onClick={handleCheckStatus} disabled={checking} className="w-full rounded-lg bg-orange-500 text-white py-3 disabled:opacity-50">{checking ? 'Checking…' : 'Check activation status'}</button>
+            </div>
+          ) : !paid ? (
             <>
               <div className="text-center mb-6">
                 <div

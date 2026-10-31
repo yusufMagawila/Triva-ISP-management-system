@@ -156,8 +156,27 @@ export async function registerDevice(
     throw new DeviceConflictError({ id: existing.id, siteId: existing.siteId, status: existing.status }, field);
   }
 
+  if (input.siteId) {
+    const site = await prisma.site.findUnique({ where: { id: input.siteId } });
+    if (!site || site.tenantId !== tenantId) throw createError('Site not found', 404);
+  }
+  const routers = input.vendor === 'MIKROTIK' && (serial || mac) ? await prisma.router.findMany({
+    where: { OR: [
+      ...(serial ? [{ serialNumber: { equals: serial, mode: 'insensitive' as const } }] : []),
+      ...(mac ? [{ hardwareMac: { equals: mac, mode: 'insensitive' as const } }] : []),
+    ] },
+  }) : [];
+  const router = routers[0];
+  if (routers.length > 1 || (router && ((serial && router.serialNumber && normalizeRouterSerial(router.serialNumber) !== serial)
+    || (mac && router.hardwareMac && normalizeRouterMac(router.hardwareMac) !== mac)))) {
+    throw createError('MAC and serial identify different routers. Check the label.', 409);
+  }
+  if (router && (router.tenantId !== tenantId || (router.siteId && router.siteId !== input.siteId))) {
+    throw createError('Router already registered elsewhere. Ask an admin to approve its move; do not create a duplicate.', 409);
+  }
   const device = await prisma.device.create({
     data: {
+      routerId: router?.id,
       tenantId,
       vendor: input.vendor,
       deviceType: input.deviceType,

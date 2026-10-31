@@ -267,10 +267,10 @@ export async function getPortalInfo(
     // Resolve the id across both vendor tables (MikroTik first, then TP-Link)
     // so the captive-portal frontend needs no vendor-specific logic.
     const router =
-      (await prisma.router.findUnique({ where: { id: routerId }, select: routerSelect })) ??
+      (await prisma.router.findUnique({ where: { id: routerId }, select: { ...routerSelect, retiredAt: true } })) ??
       (await prisma.tpLinkRouter.findUnique({ where: { id: routerId }, select: routerSelect }));
 
-    if (!router || router.tenant.status !== 'ACTIVE') {
+    if (!router || ('retiredAt' in router && router.retiredAt) || router.tenant.status !== 'ACTIVE') {
       res.status(404).json({ success: false, error: 'Hotspot not available' });
       return;
     }
@@ -363,14 +363,14 @@ export async function redeemPortalVoucher(
     const router =
       (await prisma.router.findUnique({
         where: { id: routerId },
-        select: { id: true, tenantId: true },
+        select: { id: true, tenantId: true, retiredAt: true },
       })) ??
       (await prisma.tpLinkRouter.findUnique({
         where: { id: routerId },
         select: { id: true, tenantId: true },
       }));
 
-    if (!router) {
+    if (!router || ('retiredAt' in router && router.retiredAt)) {
       res.status(404).json({ success: false, error: 'Hotspot not available' });
       return;
     }

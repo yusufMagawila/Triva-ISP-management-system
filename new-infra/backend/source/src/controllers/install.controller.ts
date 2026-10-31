@@ -8,6 +8,8 @@
 
 import { Response, NextFunction } from 'express';
 import crypto from 'crypto';
+import { z } from 'zod';
+import { generateWebhookSecret } from '../lib/crypto';
 import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
@@ -99,6 +101,70 @@ export async function getCapabilities(req: AuthRequest, res: Response, next: Nex
 }
 
 // ─── Customers ───────────────────────────────────────────────────────────────
+
+const merchantInstallationSchema = z.object({
+  shopName: z.string().trim().min(1).max(80),
+  merchantName: z.string().trim().min(1).max(80),
+  email: z.string().trim().email().max(254).transform((s) => s.toLowerCase()),
+  password: z.string().min(12).max(72).refine((value) => Buffer.byteLength(value, 'utf8') <= 72),
+  phone: z.string().trim().max(30).optional(),
+  location: z.string().trim().max(120).optional(),
+}).strict();
+
+export async function createMerchantInstallation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!['INSTALLER', 'SUPER_ADMIN'].includes(req.user!.role) || req.user!.scope === 'install') httpError(403, 'Use your installer login to create a merchant');
+    const parsed = merchantInstallationSchema.safeParse(req.body);
+    if (!parsed.success) httpError(400, 'Enter the merchant name, valid email and a password of at least 12 characters (maximum 72 UTF-8 bytes)');
+    const input = parsed.data;
+    const actor = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!actor?.isActive || actor.role !== req.user!.role) httpError(403, 'Account is disabled');
+    const passwordHash = await bcrypt.hash(input.password, 12);
+    const job = await prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({ data: {
+        name: input.shopName, email: input.email, phone: input.phone, status: 'PENDING',
+        slug: `${input.shopName.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50)}-${crypto.randomBytes(6).toString('hex')}`,
+        webhookSecret: generateWebhookSecret(),
+        users: { create: { name: input.merchantName, email: input.email, passwordHash, role: 'MERCHANT' } },
+      } });
+      const customer = await tx.customer.create({ data: { tenantId: tenant.id, name: input.shopName, contactName: input.merchantName, email: input.email, phone: input.phone } });
+      const site = await tx.site.create({ data: { tenantId: tenant.id, customerId: customer.id, name: input.shopName, location: input.location, installationStatus: 'IN_PROGRESS' } });
+      return tx.installation.create({ data: { tenantId: tenant.id, siteId: site.id, installerId: actor.id, status: 'DRAFT', contractVersion: CONTRACT_VERSION, metadata: { adminManagedActivation: true } } });
+    });
+    await recordAudit({ tenantId: job.tenantId, userId: actor.id, siteId: job.siteId, installationId: job.id, action: 'MERCHANT_ONBOARDING_CREATED', targetType: 'installation', targetId: job.id });
+    res.status(201).json({ success: true, data: job });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') return next(createError('Email already registered. Use an existing merchant installation.', 409));
+    next(err);
+  }
+}
+
+export async function listOnboardingSites(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    assertTokenScope(req, {});
+    const where: Prisma.SiteWhereInput = req.user!.role === 'SUPER_ADMIN' ? {} : req.user!.role === 'INSTALLER'
+      ? { installations: { some: { installerId: req.user!.userId } } } : { tenantId: callerTenantId(req) };
+    const sites = await prisma.site.findMany({ where, select: { id: true, name: true, tenant: { select: { name: true } } }, orderBy: { createdAt: 'desc' } });
+    res.json({ success: true, data: sites });
+  } catch (err) { next(err); }
+}
+
+export async function repeatInstallation(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    assertTokenScope(req, {});
+    if (typeof req.body.siteId !== 'string') httpError(400, 'Select an existing site');
+    const where: Prisma.SiteWhereInput = { id: req.body.siteId,
+      ...(req.user!.role === 'SUPER_ADMIN' ? {} : req.user!.role === 'INSTALLER'
+        ? { installations: { some: { installerId: req.user!.userId } } } : { tenantId: callerTenantId(req) }) };
+    const site = await prisma.site.findFirst({ where });
+    if (!site) httpError(403, 'Site is not assigned to you');
+    const active = await prisma.installation.findFirst({ where: { siteId: site.id, installerId: req.user!.userId, status: { notIn: ['COMPLETED', 'CANCELLED', 'FAILED'] } } });
+    if (active) return void res.json({ success: true, data: active });
+    const job = await prisma.installation.create({ data: { tenantId: site.tenantId, siteId: site.id, installerId: req.user!.userId, status: 'DRAFT', contractVersion: CONTRACT_VERSION } });
+    await recordAudit({ tenantId: site.tenantId, userId: req.user!.userId, siteId: site.id, installationId: job.id, action: 'INSTALLATION_CREATED', targetType: 'installation', targetId: job.id });
+    res.status(201).json({ success: true, data: job });
+  } catch (err) { next(err); }
+}
 
 export async function createCustomer(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -246,9 +312,9 @@ export async function createInstallation(req: AuthRequest, res: Response, next: 
 
 export async function listInstallations(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const tenantId = callerTenantId(req);
-    const where: Record<string, unknown> = { tenantId };
-    if (req.user!.role === 'INSTALLER') where.installerId = req.user!.userId;
+    const where: Record<string, unknown> = req.user!.role === 'INSTALLER'
+      ? { installerId: req.user!.userId }
+      : req.user!.role === 'SUPER_ADMIN' && !req.query.tenantId ? {} : { tenantId: callerTenantId(req) };
     if (req.user!.scope === 'install' && req.user!.installationId) where.id = req.user!.installationId;
     if (typeof req.query.status === 'string') where.status = req.query.status;
 
@@ -273,6 +339,7 @@ export async function getInstallation(req: AuthRequest, res: Response, next: Nex
       where: { id: installation.id },
       include: {
         site: { include: { customer: true } },
+        tenant: { select: { name: true, status: true, users: { where: { role: 'MERCHANT', isActive: true }, select: { email: true, name: true }, take: 1 } } },
         installer: { select: { id: true, name: true, email: true } },
         secrets: { select: { id: true, kind: true, label: true, consumedAt: true, createdAt: true } },
       },
@@ -692,6 +759,15 @@ export async function onboardApply(req: AuthRequest, res: Response, next: NextFu
       httpError(400, `Invalid profile: ${parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`);
     }
     const profile = parsed.data!;
+    const currentPlans = await prisma.plan.findMany({ where: { tenantId: installation.tenantId } });
+    for (const plan of profile.plans) {
+      const current = currentPlans.find((p) => p.name.toLowerCase() === plan.name.toLowerCase());
+      if (current && (current.status !== 'ACTIVE' || Number(current.price) !== plan.price || current.durationMins !== plan.durationMins
+        || current.downloadKbps !== (plan.downloadKbps ?? null) || current.uploadKbps !== (plan.uploadKbps ?? null)
+        || current.dataLimitMb !== (plan.dataLimitMb ?? null) || (current.description ?? '') !== (plan.description ?? ''))) {
+        httpError(409, `Package "${plan.name}" already exists with different settings. Choose a new name or edit it from the merchant dashboard; no setup changes were applied.`);
+      }
+    }
 
     // The WiFi name is stored on the site's router record, so make sure it exists.
     if (profile.wifiName) {
@@ -798,11 +874,17 @@ async function ensureSiteRouter(
     prisma.device.findFirst({
       where: { tenantId: installation.tenantId, siteId: installation.siteId, deviceType: 'ROUTER', vendor: { in: ['MIKROTIK', 'OTHER'] } },
       orderBy: { createdAt: 'desc' },
-      select: { serialNumber: true, macAddress: true },
+      select: { id: true, serialNumber: true, macAddress: true, routerId: true },
     }),
   ]);
   // No scanned device is fine: the router record is then created without a hardware identity.
 
+  if (device?.routerId) {
+    const linked = await prisma.router.findUnique({ where: { id: device.routerId } });
+    if (!linked || linked.tenantId !== installation.tenantId || (linked.siteId && linked.siteId !== installation.siteId)) httpError(409, 'Router needs an approved move before setup');
+    await prisma.router.update({ where: { id: linked.id }, data: { siteId: installation.siteId } });
+    return { routerId: linked.id, created: false };
+  }
   const { results } = await executeActions(
     installation.id,
     [{
@@ -823,10 +905,78 @@ async function ensureSiteRouter(
     where: { tenantId: installation.tenantId, siteId: installation.siteId },
     select: { id: true },
   });
+  if (created && device) await prisma.device.update({ where: { id: device.id }, data: { routerId: created.id } });
   return { routerId: created?.id ?? null, created: true };
 }
 
 /** POST /installations/:id/router — create the router record (idempotent). */
+export async function moveResetDevice(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (req.user!.role !== 'SUPER_ADMIN' || req.user!.scope === 'install') httpError(403, 'An admin must confirm moving a router between sites');
+    const actor = await prisma.user.findUnique({ where: { id: req.user!.userId } });
+    if (!actor?.isActive || actor.role !== 'SUPER_ADMIN') httpError(403, 'Admin account is disabled');
+    const job = await scopedInstallation(req, req.params.id);
+    if (TERMINAL.has(job.status)) httpError(409, 'Start an unfinished installation first');
+    if (req.body.confirmReset !== true || (typeof req.body.deviceId !== 'string' && typeof req.body.routerId !== 'string')) httpError(400, 'Confirm the reset router to move');
+    const moved = await prisma.$transaction(async (tx) => {
+      let found = typeof req.body.deviceId === 'string' ? await tx.device.findUnique({ where: { id: req.body.deviceId } }) : null;
+      if (!found && typeof req.body.routerId === 'string') {
+        const asset = await tx.router.findUnique({ where: { id: req.body.routerId } });
+        if (!asset || asset.retiredAt || (!asset.hardwareMac && !asset.serialNumber)) httpError(404, 'Registered router identity not found');
+        found = await tx.device.findUnique({ where: { routerId: asset.id } }) ?? await tx.device.create({ data: {
+          tenantId: asset.tenantId, siteId: asset.siteId, routerId: asset.id, vendor: 'MIKROTIK', deviceType: 'ROUTER',
+          serialNumber: asset.serialNumber, macAddress: asset.hardwareMac, identitySource: 'HEARTBEAT', status: 'OFFLINE',
+        } });
+      }
+      if (!found || found.vendor !== 'MIKROTIK') httpError(404, 'MikroTik device not found');
+      const previous = { tenantId: found.tenantId, siteId: found.siteId, routerId: found.routerId, serialNumber: found.serialNumber, macAddress: found.macAddress };
+      if (found.tenantId === job.tenantId && found.siteId === job.siteId) return { device: found, previous };
+      const target = await tx.router.findFirst({ where: { tenantId: job.tenantId, siteId: job.siteId } });
+      if (target) httpError(409, 'This site already has a router. Select the correct site instead of replacing it.');
+      const routers = await tx.router.findMany({ where: { OR: [
+        ...(found.routerId ? [{ id: found.routerId }] : []),
+        ...(found.serialNumber ? [{ serialNumber: { equals: found.serialNumber, mode: 'insensitive' as const } }] : []),
+        ...(found.macAddress ? [{ hardwareMac: { equals: found.macAddress, mode: 'insensitive' as const } }] : []),
+      ] } });
+      if (routers.length > 1) httpError(409, 'Conflicting router identities require review');
+      const router = routers[0];
+      if (router && router.tenantId !== found.tenantId) httpError(409, 'Device and router ownership disagree');
+      if (router?.lastSeenAt && Date.now() - router.lastSeenAt.getTime() < 180_000) httpError(409, 'Router is still checking in. Reset the lab device and wait until it is offline before moving it.');
+      if (router) await tx.router.update({ where: { id: router.id }, data: {
+        provisioningKey: null, serialNumber: null, hardwareMac: null, status: 'OFFLINE', siteId: null, wifiSsid: null, wifiSsidApplied: null, retiredAt: new Date(),
+      } });
+      const device = await tx.device.update({ where: { id: found.id }, data: {
+        tenantId: job.tenantId, siteId: job.siteId, routerId: null, installationId: job.id,
+        installedById: req.user!.userId, installedAt: new Date(), status: 'INSTALLING', provisioningStatus: 'NOT_PROVISIONED', lastSeenAt: null,
+      } });
+      await tx.auditLog.create({ data: { tenantId: previous.tenantId, userId: req.user!.userId, siteId: previous.siteId,
+        action: 'RESET_ROUTER_RELEASED', targetType: 'device', targetId: found.id, metadata: { ...previous, toTenantId: job.tenantId, toSiteId: job.siteId } } });
+      return { device, previous };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    await recordAudit({ tenantId: job.tenantId, userId: req.user!.userId, siteId: job.siteId, installationId: job.id, action: 'RESET_ROUTER_MOVED', targetType: 'device', targetId: moved.device.id, metadata: moved.previous });
+    res.json({ success: true, data: sanitizeSecrets(moved.device) });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2034') return next(createError('Router changed concurrently. Refresh and confirm again.', 409));
+    next(err);
+  }
+}
+
+export async function reuseInstallationRouter(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const job = await scopedInstallation(req, req.params.id);
+    if (TERMINAL.has(job.status)) httpError(409, 'Start a repeat installation first');
+    if (req.body.confirmReset !== true) httpError(400, 'Confirm that this is the reset router at this site');
+    const router = await prisma.router.findFirst({ where: { tenantId: job.tenantId, siteId: job.siteId } });
+    if (!router) httpError(404, 'Scan and register the router first');
+    await prisma.router.update({ where: { id: router.id }, data: {
+      provisioningKey: `trk_${crypto.randomBytes(18).toString('base64url')}`,
+      status: 'OFFLINE', lastSeenAt: null, lastBootstrapAt: null, wifiSsidApplied: null, provisionedAt: null,
+    } });
+    await recordAudit({ tenantId: job.tenantId, userId: req.user!.userId, siteId: job.siteId, installationId: job.id, action: 'ROUTER_REUSE_PREPARED', targetType: 'router', targetId: router.id });
+    res.json({ success: true, data: { routerId: router.id } });
+  } catch (err) { next(err); }
+}
+
 export async function ensureInstallationRouter(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     const installation = await scopedInstallation(req, req.params.id);

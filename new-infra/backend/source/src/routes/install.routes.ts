@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireRole, verifyInstallScope } from '../middleware/auth';
+import { authenticate, requireRole, verifyInstallScope, resolveInstallationContext } from '../middleware/auth';
 import * as ctrl from '../controllers/install.controller';
 import * as deviceCtrl from '../controllers/device.controller';
 
@@ -7,7 +7,10 @@ const router = Router();
 
 // Every install route requires a valid JWT; scoped tokens are additionally
 // verified against the InstallerToken table (revocation/expiry checks).
-router.use(authenticate, verifyInstallScope);
+router.use(authenticate, verifyInstallScope, resolveInstallationContext);
+router.post('/merchant-installations', requireRole('INSTALLER', 'SUPER_ADMIN'), ctrl.createMerchantInstallation);
+router.get('/onboarding-sites', requireRole('INSTALLER', 'MERCHANT', 'SUPER_ADMIN'), ctrl.listOnboardingSites);
+router.post('/repeat-installations', requireRole('INSTALLER', 'MERCHANT', 'SUPER_ADMIN'), ctrl.repeatInstallation);
 
 const FIELD_ROLES = ['INSTALLER', 'MERCHANT', 'SUPER_ADMIN'];
 const STAFF_ROLES = ['MERCHANT', 'SUPER_ADMIN'];
@@ -32,6 +35,8 @@ router.post('/installations/:id/execute', requireRole(...FIELD_ROLES), ctrl.exec
 router.get('/installations/:id/bootstrap', requireRole(...FIELD_ROLES), ctrl.getInstallationBootstrap);
 router.get('/installations/:id/readiness', requireRole(...FIELD_ROLES), ctrl.getInstallationReadiness);
 router.post('/installations/:id/router', requireRole(...FIELD_ROLES), ctrl.ensureInstallationRouter);
+router.post('/installations/:id/reuse-router', requireRole(...FIELD_ROLES), ctrl.reuseInstallationRouter);
+router.post('/installations/:id/move-reset-device', requireRole('SUPER_ADMIN'), ctrl.moveResetDevice);
 router.post('/installations/:id/transition', requireRole(...FIELD_ROLES), ctrl.transitionInstallation);
 router.post('/installations/:id/diagnostics', requireRole(...FIELD_ROLES), ctrl.runDiagnostic);
 router.get('/installations/:id/audit', requireRole(...FIELD_ROLES), ctrl.getInstallationAudit);

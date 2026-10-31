@@ -14,8 +14,8 @@ function fmtDuration(mins: number) {
 }
 
 export default function OnboardingChat({
-  installationId, onClose, onApplied,
-}: { installationId: string; onClose: () => void; onApplied: () => void }) {
+  installationId, merchantName, onClose, onApplied,
+}: { installationId: string; merchantName?: string; onClose: () => void; onApplied: () => void }) {
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -106,7 +106,9 @@ export default function OnboardingChat({
 
           {profile && !applied && (
             <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 space-y-2">
-              <p className="font-semibold text-violet-800 text-sm">Review before going live</p>
+              <p className="font-semibold text-violet-800 text-sm">Review before applying</p>
+              <p className="text-sm">Merchant account: <b>{merchantName ?? 'This installation’s merchant'}</b></p>
+              <p className="text-xs text-slate-600">Packages and branding belong to this merchant and are shared by its sites. Existing package names are kept unchanged; edit them from the merchant dashboard.</p>
               <p className="text-sm"><span className="text-slate-500">Shop:</span> <b>{profile.shopName}</b></p>
               {profile.wifiName && <p className="text-sm"><span className="text-slate-500">WiFi name:</span> <b>{profile.wifiName}</b></p>}
               {profile.welcomeMessage && <p className="text-sm text-slate-600">“{profile.welcomeMessage}”</p>}
@@ -127,7 +129,7 @@ export default function OnboardingChat({
 
           {applied && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-800 flex gap-2 items-center">
-              <CheckCircle2 className="w-4 h-4" /> Shop name and packages are live. Next: scan the router and run the plan.
+              <CheckCircle2 className="w-4 h-4" /> Setup saved. Check admin activation, the router's confirmed WiFi name, then test the portal, voucher and payment on a phone.
             </div>
           )}
           <div ref={endRef} />

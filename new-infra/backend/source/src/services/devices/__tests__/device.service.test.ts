@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 const mockPrisma: any = {
   device: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
   site: { findUnique: jest.fn() },
+  router: { findMany: jest.fn() },
   auditLog: { findMany: jest.fn() },
 };
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,6 +50,7 @@ describe('registerDevice — duplicate identity protection', () => {
   it('registers a fresh device and audits it', async () => {
     mockPrisma.device.findFirst.mockResolvedValue(null);
     mockPrisma.device.create.mockResolvedValue({ id: 'd-new', siteId: null });
+    mockPrisma.router.findMany.mockResolvedValue([]);
     await registerDevice('tenant-1', ACTOR.id, { vendor: 'MIKROTIK', deviceType: 'ROUTER', serialNumber: 'F43E0FEFA14C' });
     expect(mockPrisma.device.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ tenantId: 'tenant-1', serialNumber: 'F43E0FEFA14C' }),

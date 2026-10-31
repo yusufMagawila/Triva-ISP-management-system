@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { logger } from '../config/logger';
 import { sessionService } from '../services/session.service';
@@ -9,6 +10,7 @@ import {
   buildRouterBootstrapUrls,
   normalizeRouterMac,
   normalizeRouterSerial,
+  MIKROTIK_SYNC_INTERVAL_SECONDS,
 } from '../services/router-provisioning.service';
 
 function escapeRouterOsString(value: string): string {
@@ -63,6 +65,12 @@ export function buildBootstrapSyncScript(
   // Write into the html-directory the hotspot profile actually serves from
   // (flash/hotspot on flash-based boards, hotspot elsewhere).
   const escapedHotspotNameForDir = escapeRouterOsString(router.hotspotName);
+  lines.push(':global trivaPortalRefreshTicks');
+  lines.push(':if ([:typeof $trivaPortalRefreshTicks] != "num") do={ :set trivaPortalRefreshTicks 0 }');
+  lines.push(':if ($trivaPortalRefreshTicks > 0) do={');
+  lines.push('  :set trivaPortalRefreshTicks ($trivaPortalRefreshTicks - 1)');
+  lines.push('} else={');
+  lines.push(`  :set trivaPortalRefreshTicks ${Math.ceil(300 / MIKROTIK_SYNC_INTERVAL_SECONDS) - 1}`);
   lines.push(':local trivaHtmlDir "hotspot"');
   lines.push(':do {');
   lines.push(`  :local trivaHsId [/ip hotspot find where name="${escapedHotspotNameForDir}"]`);
@@ -80,8 +88,10 @@ export function buildBootstrapSyncScript(
     lines.push(`  /tool fetch mode=https url="${escapedPagesBaseUrl}${page}" dst-path=($trivaHtmlDir . "/${page}") check-certificate=no keep-result=yes`);
     lines.push('} on-error={');
     lines.push(`  :log warning "TRIVA: ${page} refresh failed"`);
+    lines.push('  :set trivaPortalRefreshTicks 0');
     lines.push('}');
   }
+  lines.push('}');
   lines.push('');
 
   // WiFi name: only emitted while the router has not yet confirmed it. The
@@ -222,21 +232,36 @@ async function upsertBootstrapIdentity(
     throw Object.assign(new Error('MAC address does not match the bound router asset'), { statusCode: 409 });
   }
 
-  return prisma.router.update({
-    where: { id: router.id },
-    data: {
-      serialNumber: router.serialNumber ?? identity.serialNumber,
-      hardwareMac: router.hardwareMac ?? identity.hardwareMac,
-      ...(identity.model ? { model: identity.model } : {}),
-      ...(identity.routerOsVersion ? { routerOsVersion: identity.routerOsVersion } : {}),
-      ...(identity.model || identity.routerOsVersion ? { discoveredAt: new Date() } : {}),
-      lastBootstrapAt: new Date(),
-      lastBootstrapIp: identity.remoteIp,
-      lastSeenAt: new Date(),
-      provisionedAt: router.provisionedAt ?? new Date(),
-      status: 'ONLINE',
-    },
-  });
+  const claims: Prisma.RouterWhereInput[] = [];
+  const serialNumber = router.serialNumber ?? identity.serialNumber;
+  const hardwareMac = router.hardwareMac ?? identity.hardwareMac;
+  if (serialNumber) claims.push({ serialNumber: { equals: serialNumber, mode: 'insensitive' } });
+  if (hardwareMac) claims.push({ hardwareMac: { equals: hardwareMac, mode: 'insensitive' } });
+  const conflict = () => Object.assign(new Error('This hardware identity is already registered to another router. Reuse the existing asset or request an administrator-approved reassignment.'), { statusCode: 409 });
+  if (claims.length && await prisma.router.findFirst({ where: { id: { not: router.id }, OR: claims }, select: { id: true } })) {
+    throw conflict();
+  }
+
+  try {
+    return await prisma.router.update({
+      where: { id: router.id },
+      data: {
+        serialNumber,
+        hardwareMac,
+        ...(identity.model ? { model: identity.model } : {}),
+        ...(identity.routerOsVersion ? { routerOsVersion: identity.routerOsVersion } : {}),
+        ...(identity.model || identity.routerOsVersion ? { discoveredAt: new Date() } : {}),
+        lastBootstrapAt: new Date(),
+        lastBootstrapIp: identity.remoteIp,
+        lastSeenAt: new Date(),
+        provisionedAt: router.provisionedAt ?? new Date(),
+        status: 'ONLINE',
+      },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') throw conflict();
+    throw err;
+  }
 }
 
 export async function bootstrapRouter(

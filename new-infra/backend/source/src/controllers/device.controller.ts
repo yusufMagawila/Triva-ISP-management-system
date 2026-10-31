@@ -46,9 +46,20 @@ export async function identifyScannedDevice(req: AuthRequest, res: Response, nex
 
     const identity = normalizeScannedPayload(payload);
     const found = await findDeviceByIdentity(identity);
+    const legacyRouters = !found && (identity.serialNumber || identity.macAddress) ? await prisma.router.findMany({
+      where: { retiredAt: null, OR: [
+        ...(identity.serialNumber ? [{ serialNumber: { equals: identity.serialNumber, mode: 'insensitive' as const } }] : []),
+        ...(identity.macAddress ? [{ hardwareMac: { equals: identity.macAddress, mode: 'insensitive' as const } }] : []),
+      ] }, select: { id: true, name: true, tenantId: true, siteId: true },
+    }) : [];
+    if (legacyRouters.length > 1) httpError(409, 'MAC and serial identify conflicting routers. Check the label.');
+    const legacy = legacyRouters[0];
+    const currentSiteId = req.user!.siteId ?? req.query.siteId;
+    const legacyElsewhere = legacy && (legacy.tenantId !== tenantId || (currentSiteId && legacy.siteId && legacy.siteId !== currentSiteId));
 
     // A device belonging to another tenant must not leak — report NOT_FOUND.
-    const visible = found && found.tenantId === tenantId ? found : null;
+    const visible = found && (req.user!.role === 'SUPER_ADMIN' || (found.tenantId === tenantId
+      && (!req.user!.siteId || !found.siteId || found.siteId === req.user!.siteId))) ? found : null;
 
     await recordAudit({
       tenantId, userId: req.user!.userId,
@@ -60,7 +71,8 @@ export async function identifyScannedDevice(req: AuthRequest, res: Response, nex
     res.json({
       success: true,
       data: {
-        result: visible ? 'FOUND' : 'NOT_FOUND',
+        result: visible ? 'FOUND' : found ? 'UNAVAILABLE' : legacyElsewhere ? (req.user!.role === 'SUPER_ADMIN' ? 'LEGACY_ROUTER' : 'UNAVAILABLE') : 'NOT_FOUND',
+        legacyRouter: legacyElsewhere && req.user!.role === 'SUPER_ADMIN' ? legacy : null,
         identity: sanitizeSecrets(identity),
         device: visible ? sanitizeSecrets(visible) : null,
         alreadyAssigned: Boolean(visible?.siteId),

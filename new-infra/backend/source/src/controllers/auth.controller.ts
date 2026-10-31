@@ -11,6 +11,13 @@ import { reconcilePaymentOrder } from '../services/payment-reconciliation.servic
 
 const ACTIVATION_FEE_TZS = 35_000;
 
+async function activationManagedByAdmin(tenantId: string | null, status?: string): Promise<boolean> {
+  if (!tenantId || !status || status === 'ACTIVE') return false;
+  return Boolean(await prisma.installation.findFirst({
+    where: { tenantId, metadata: { path: ['adminManagedActivation'], equals: true } }, select: { id: true },
+  }));
+}
+
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { shopName, email, phone, merchantName, password } = req.body as {
@@ -121,6 +128,12 @@ export async function initiateActivationPayment(
 
     if (tenant.status === 'ACTIVE') {
       res.status(400).json({ success: false, error: 'Account is already active' });
+      return;
+    }
+
+    const adminManaged = await activationManagedByAdmin(tenantId, tenant.status);
+    if (adminManaged) {
+      res.status(403).json({ success: false, error: 'Your installer-created account is awaiting admin activation. Contact your administrator; no activation payment is required through this screen.' });
       return;
     }
 
@@ -255,11 +268,13 @@ export async function login(req: AuthRequest, res: Response, next: NextFunction)
           name: user.name,
           role: user.role,
           tenantId: user.tenantId,
+          activationManagedByAdmin: await activationManagedByAdmin(user.tenantId, user.tenant?.status),
           tenant: user.tenant
             ? {
                 id: user.tenant.id,
                 name: user.tenant.name,
                 slug: user.tenant.slug,
+                status: user.tenant.status,
                 subscription: user.tenant.subscription,
               }
             : null,
@@ -291,6 +306,7 @@ export async function me(req: AuthRequest, res: Response, next: NextFunction): P
         name: user.name,
         role: user.role,
         tenantId: user.tenantId,
+        activationManagedByAdmin: await activationManagedByAdmin(user.tenantId, user.tenant?.status),
         tenant: user.tenant,
       },
     });

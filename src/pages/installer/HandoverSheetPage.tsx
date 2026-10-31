@@ -38,12 +38,14 @@ export default function HandoverSheetPage() {
       <article className="max-w-xl mx-auto bg-white my-6 print:my-0 p-8 rounded-xl print:rounded-none shadow-sm print:shadow-none text-slate-800">
         <p className="text-xs font-bold tracking-widest text-orange-500">TRIVA WIFI</p>
         <h1 className="text-2xl font-extrabold mt-1">{shop}</h1>
-        <p className="text-sm text-slate-500">Your WiFi hotspot is ready. Installed {new Date().toLocaleDateString()} by {job.installer?.name ?? user?.name ?? 'Triva'}.</p>
+        <p className="text-sm text-slate-500">Installation summary · {new Date().toLocaleDateString()} · {job.installer?.name ?? user?.name ?? 'Triva'}. Verify real internet access before accepting handover.</p>
 
         <section className="mt-6 space-y-3 text-sm">
           <Row label="Shop name on the login page" value={brand?.status === 'pass' ? brand.detail : '—'} />
           <Row label="Packages" value={plans?.detail ?? '—'} />
           <Row label="Manage your shop" value={DASHBOARD_URL} />
+          <Row label="Owner login email" value={job.tenant?.users[0]?.email ?? 'Confirm with the administrator'} />
+          <Row label="Account status" value={job.tenant?.status ?? 'Confirm with the administrator'} />
           <Row label="Customer login page" value={PORTAL_URL} />
         </section>
 

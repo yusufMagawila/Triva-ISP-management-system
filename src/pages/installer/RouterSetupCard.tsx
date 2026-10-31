@@ -11,7 +11,7 @@ const ICON = {
 };
 
 /** Router setup command + live "ready to leave" checklist for one installation. */
-export default function RouterSetupCard({ installationId }: { installationId: string }) {
+export default function RouterSetupCard({ installationId, scanned = false }: { installationId: string; scanned?: boolean }) {
   const navigate = useNavigate();
   const [commands, setCommands] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
@@ -23,7 +23,7 @@ export default function RouterSetupCard({ installationId }: { installationId: st
       let b = await installApi.getBootstrap(installationId);
       // A scanned device has no router record (and no setup command) until
       // one is created; do it once, automatically.
-      if (!b.commands && !triedEnsure.current) {
+      if (scanned && !b.commands && !triedEnsure.current) {
         triedEnsure.current = true;
         try {
           const r = await installApi.ensureRouter(installationId);
@@ -34,7 +34,7 @@ export default function RouterSetupCard({ installationId }: { installationId: st
       setCommands(b.commands);
       setReadiness(r);
     } catch { /* keep the last known state */ }
-  }, [installationId]);
+  }, [installationId, scanned]);
 
   useEffect(() => {
     void refresh();
@@ -80,7 +80,8 @@ export default function RouterSetupCard({ installationId }: { installationId: st
                     await refresh();
                   } catch (e) { toast.error((e as Error).message || 'Could not create the setup command'); }
                 }}
-                className="w-full border rounded-lg py-2.5 text-sm font-medium"
+                disabled={!scanned}
+                className="w-full border rounded-lg py-2.5 text-sm font-medium disabled:opacity-40"
               >
                 Create setup command
               </button>
@@ -88,6 +89,16 @@ export default function RouterSetupCard({ installationId }: { installationId: st
           )}
         </div>
       )}
+
+      {commands && <button onClick={async () => {
+        if (!window.confirm('Use the reset router at this same site? This invalidates its old setup key and requires the fresh command. Existing paid sessions remain with this merchant.')) return;
+        try {
+          setCommands(null);
+          await installApi.reuseRouter(installationId);
+          await refresh();
+          toast.success('Fresh setup command ready. Download it again; do not import the old file.');
+        } catch (e) { toast.error((e as Error).message); }
+      }} className="w-full border rounded-lg py-2.5 text-sm font-medium">Reuse reset router at this site</button>}
 
       {readiness && (
         <ul className="space-y-2 pt-1">

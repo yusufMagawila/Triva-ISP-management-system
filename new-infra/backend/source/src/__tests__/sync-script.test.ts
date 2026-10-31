@@ -6,6 +6,7 @@ jest.mock('../services/session.service', () => ({ sessionService: {} }));
 
 import { buildBootstrapSyncScript } from '../controllers/bootstrap.controller';
 import { isValidSsid } from '../lib/wifi';
+import { buildRouterBootstrapScript } from '../services/router-provisioning.service';
 
 const ROUTER = { id: 'r1', name: 'Lab', hotspotName: 'hotspot1', provisioningKey: 'key-1' };
 const session = (id: string, down: number | null = 5000) => ({
@@ -65,6 +66,32 @@ describe('WiFi name in the sync script', () => {
       expect(s).not.toContain('/interface wireless');
       expect(s).not.toContain('reset-configuration');
     }
+  });
+});
+
+describe('fast MikroTik polling', () => {
+  const bootstrap = buildRouterBootstrapScript({
+    ...ROUTER, ipAddress: '10.251.0.10', apiPort: 8728,
+    username: 'triva-agent', passwordHash: 'fixture-password', updatedAt: new Date(),
+  }, 'https://api.example.com');
+
+  it('polls sessions every 3 seconds without changing the heartbeat interval', () => {
+    expect(bootstrap).toContain('name="triva-sync" interval=3s');
+    expect(bootstrap).toContain('name="triva-heartbeat" interval=1m');
+  });
+
+  it('guards the shared sync file against overlapping named script jobs', () => {
+    expect(bootstrap).toContain(':if ([:len [/system script job find where script="triva-sync"]] <= 1) do={');
+    expect(bootstrap.indexOf('/system script job find')).toBeLessThan(bootstrap.indexOf('dst-path="triva-sync.rsc"'));
+  });
+
+  it('throttles portal file downloads to every 100 successful polling cycles', () => {
+    const script = buildBootstrapSyncScript(ROUTER, [], [], null);
+    expect(script).toContain(':global trivaPortalRefreshTicks');
+    expect(script).toContain(':set trivaPortalRefreshTicks 99');
+    expect(script.indexOf(':if ($trivaPortalRefreshTicks > 0)')).toBeLessThan(script.indexOf('/tool fetch'));
+    expect(script).toContain(':set trivaPortalRefreshTicks ($trivaPortalRefreshTicks - 1)');
+    expect(script).toContain(':set trivaPortalRefreshTicks 0');
   });
 });
 

@@ -38,7 +38,7 @@ async function assertRouterQuota(tenantId: string): Promise<void> {
     where: { id: tenantId },
     include: {
       subscription: true,
-      _count: { select: { routers: true, tplinkRouters: true, omadaSites: true } },
+      _count: { select: { routers: { where: { retiredAt: null } }, tplinkRouters: true, omadaSites: true } },
     },
   });
   const planConfig = getPlanConfig(tenant?.subscription?.plan);

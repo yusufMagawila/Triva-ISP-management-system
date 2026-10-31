@@ -10,15 +10,18 @@ export interface Installation {
   stage?: string;
   siteId: string;
   installerId: string;
+  tenantId: string;
   createdAt: string;
   requestedConfig?: Record<string, unknown>;
   executionResults?: Array<{ actionId: string; type: string; status: string; error?: string; at: string }>;
   site?: { id: string; name: string; customer?: { id: string; name: string } | null };
+  tenant?: { name: string; status: string; users: Array<{ email: string; name: string }> };
   installer?: { id: string; name: string; email: string };
 }
 
 export interface DeviceRecord {
   id: string;
+  tenantId: string;
   vendor: string;
   deviceType: string;
   model?: string;
@@ -31,7 +34,8 @@ export interface DeviceRecord {
 }
 
 export interface IdentifyResult {
-  result: 'FOUND' | 'NOT_FOUND';
+  result: 'FOUND' | 'NOT_FOUND' | 'UNAVAILABLE' | 'LEGACY_ROUTER';
+  legacyRouter?: { id: string; name: string; tenantId: string; siteId: string | null } | null;
   identity: { serialNumber?: string; macAddress?: string; barcodeValue: string; vendorHint?: string; modelHint?: string };
   device: DeviceRecord | null;
   alreadyAssigned: boolean;
@@ -48,6 +52,13 @@ export interface InstallationPlan {
 const unwrap = <T>(p: Promise<{ data: { success: boolean; data: T } }>) => p.then((r) => r.data.data);
 
 export const installApi = {
+  createMerchantInstallation: (body: { shopName: string; merchantName: string; email: string; password: string; phone?: string; location?: string }) =>
+    unwrap<Installation>(api.post('/install/merchant-installations', body)),
+  listOnboardingSites: () => unwrap<Array<{ id: string; name: string; tenant: { name: string } }>>(api.get('/install/onboarding-sites')),
+  repeatInstallation: (siteId: string) => unwrap<Installation>(api.post('/install/repeat-installations', { siteId })),
+  reuseRouter: (id: string) => unwrap<{ routerId: string }>(api.post(`/install/installations/${id}/reuse-router`, { confirmReset: true })),
+  moveResetDevice: (id: string, deviceId: string) => unwrap<DeviceRecord>(api.post(`/install/installations/${id}/move-reset-device`, { deviceId, confirmReset: true })),
+  moveResetRouterAsset: (id: string, routerId: string) => unwrap<DeviceRecord>(api.post(`/install/installations/${id}/move-reset-device`, { routerId, confirmReset: true })),
   listInstallations: () => unwrap<Installation[]>(api.get('/install/installations')),
   getInstallation: (id: string) => unwrap<Installation>(api.get(`/install/installations/${id}`)),
   listSites: () => unwrap<Array<{ id: string; name: string }>>(api.get('/install/sites')),

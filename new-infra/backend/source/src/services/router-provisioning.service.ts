@@ -4,6 +4,7 @@ import { decryptRouterCredential } from '../lib/crypto';
 
 const CONTROL_PLANE_PREFIX = '10.251';
 const ROUTER_API_USERNAME = 'triva-agent';
+export const MIKROTIK_SYNC_INTERVAL_SECONDS = 3;
 
 type BootstrapRouter = {
   id: string;
@@ -248,16 +249,18 @@ export function buildRouterBootstrapScript(router: BootstrapRouter, apiUrl: stri
 
 /system script remove [find where name="triva-sync"]
 /system script add name="triva-sync" policy=read,write,test source={
-  :local syncUrl "${syncScriptUrl}"
-  :do {
-    /tool fetch mode=https url=$syncUrl dst-path="triva-sync.rsc" keep-result=yes check-certificate=no
-    /import file-name="triva-sync.rsc"
-  } on-error={
-    :log warning "TRIVA sync failed"
+  :if ([:len [/system script job find where script="triva-sync"]] <= 1) do={
+    :local syncUrl "${syncScriptUrl}"
+    :do {
+      /tool fetch mode=https url=$syncUrl dst-path="triva-sync.rsc" keep-result=yes check-certificate=no
+      /import file-name="triva-sync.rsc"
+    } on-error={
+      :log warning "TRIVA sync failed"
+    }
   }
 }
 /system scheduler remove [find where name="triva-sync"]
-/system scheduler add name="triva-sync" interval=15s on-event="/system script run triva-sync"
+/system scheduler add name="triva-sync" interval=${MIKROTIK_SYNC_INTERVAL_SECONDS}s on-event="/system script run triva-sync"
 
 :do { /system script run triva-heartbeat } on-error={ :log warning "TRIVA bootstrap heartbeat run failed" }
 :do { /system script run triva-sync } on-error={ :log warning "TRIVA bootstrap session sync run failed" }

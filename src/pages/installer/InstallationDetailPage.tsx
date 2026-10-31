@@ -5,7 +5,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, ScanLine, CheckCircle2, Circle, AlertTriangle, Sparkles,
+  ArrowLeft, ScanLine, CheckCircle2, Circle, Sparkles,
   Play, Stethoscope, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ import { installApi, Installation, DeviceRecord, IdentifyResult } from '../../se
 import DeviceScanner from './DeviceScanner';
 import OnboardingChat from './OnboardingChat';
 import RouterSetupCard from './RouterSetupCard';
+import { useAuthStore } from '../../store/authStore';
 
 const CHECK_STEPS = ['Scanned', 'Detected', 'Assigned', 'Provisioned', 'Verified'];
 
@@ -23,6 +24,7 @@ function StepIcon({ done }: { done: boolean }) {
 export default function InstallationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const isAdmin = useAuthStore((s) => s.user?.role === 'SUPER_ADMIN');
   const [job, setJob] = useState<Installation | null>(null);
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [scanning, setScanning] = useState(false);
@@ -95,6 +97,21 @@ export default function InstallationDetailPage() {
     setBusy(null);
   };
 
+  const confirmMove = async () => {
+    if (!job || !scanResult || !isAdmin) return;
+    if (!window.confirm('Move this reset router to this merchant/site? Previous setup access will stop working. Confirm it is no longer serving the previous site.')) return;
+    setBusy('move');
+    try {
+      if (scanResult.device) await installApi.moveResetDevice(job.id, scanResult.device.id);
+      else if (scanResult.legacyRouter) await installApi.moveResetRouterAsset(job.id, scanResult.legacyRouter.id);
+      else return;
+      setScanResult(null);
+      await load();
+      toast.success('Router moved. Use the fresh setup command.');
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setBusy(null); }
+  };
+
   const runPlan = async () => {
     if (!job) return;
     setBusy('plan');
@@ -164,7 +181,13 @@ export default function InstallationDetailPage() {
           </div>
         </section>
 
-        <RouterSetupCard installationId={job.id} />
+        <section className="bg-white rounded-xl border p-4 text-sm space-y-1">
+          <p className="font-semibold">Merchant: {job.tenant?.name ?? job.site?.name}</p>
+          <p>Owner login: {job.tenant?.users[0]?.email ?? 'Ask the administrator to confirm the merchant account'}</p>
+          <p>Account: {job.tenant?.status ?? 'Unknown'}{job.tenant?.status === 'PENDING' ? ' — waiting for admin activation. You can prepare WiFi and packages now.' : ''}</p>
+          <p className="text-slate-500">Scan router → run setup → AI shop setup → test internet → hand over.</p>
+        </section>
+        <RouterSetupCard installationId={job.id} scanned={devices.length > 0} />
 
         {/* Devices at this site */}
         {devices.length > 0 && (
@@ -188,20 +211,24 @@ export default function InstallationDetailPage() {
         {/* Scan result */}
         {scanResult && (
           <section className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            {scanResult.result === 'FOUND' && scanResult.device ? (
+            {scanResult.result === 'UNAVAILABLE' ? <p className="text-sm text-amber-800">This router is registered elsewhere. Ask an admin to confirm its reuse; you do not need to delete or register it again.</p> : scanResult.result === 'LEGACY_ROUTER' ? <div className="space-y-2">
+              <p className="text-sm">Existing router found: {scanResult.legacyRouter?.name}. Reuse it here without deleting its history.</p>
+              {isAdmin && <button disabled={busy === 'move'} onClick={confirmMove} className="w-full border rounded-lg py-2.5 text-sm font-medium">Confirm reset router reuse here</button>}
+            </div> : scanResult.result === 'FOUND' && scanResult.device ? (
               <>
                 <p className="font-semibold text-blue-800">✓ DEVICE IDENTIFIED</p>
                 <p className="text-sm mt-1">{scanResult.device.vendor} {scanResult.device.model ?? ''}</p>
                 <p className="text-xs font-mono text-slate-600 mt-1">
                   Serial: {scanResult.device.serialNumber ?? '—'}<br />MAC: {scanResult.device.macAddress ?? '—'}
                 </p>
-                {scanResult.alreadyAssigned ? (
-                  <p className="mt-2 text-sm text-amber-700 flex gap-1 items-center">
-                    <AlertTriangle className="w-4 h-4" /> This device is already assigned to another site.
-                  </p>
+                {scanResult.device.tenantId !== job.tenantId || (scanResult.device.siteId && scanResult.device.siteId !== job.siteId) ? (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-sm text-amber-700">Registered at another site. An admin can confirm reuse of the reset router here.</p>
+                    {isAdmin && <button disabled={busy === 'move'} onClick={confirmMove} className="w-full border rounded-lg py-2.5 text-sm font-medium">Confirm reset router reuse here</button>}
+                  </div>
                 ) : (
                   <button onClick={assignFound} disabled={busy === 'assign'} className="mt-3 w-full bg-blue-600 text-white rounded-lg py-2.5 font-medium">
-                    {busy === 'assign' ? 'Assigning…' : 'Assign to Installation'}
+                    {busy === 'assign' ? 'Preparing…' : scanResult.device.siteId === job.siteId ? 'Reuse this router' : 'Use this router'}
                   </button>
                 )}
               </>
@@ -298,7 +325,7 @@ export default function InstallationDetailPage() {
               <button onClick={() => setScanning(true)} className="flex items-center justify-center gap-1.5 bg-blue-600 text-white rounded-lg py-3 text-sm font-semibold">
                 <ScanLine className="w-4 h-4" /> 1. Scan router
               </button>
-              <button onClick={() => setOnboarding(true)} className="flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-lg py-3 text-sm font-semibold">
+              <button onClick={() => setOnboarding(true)} disabled={!devices.length} className="flex items-center justify-center gap-1.5 bg-emerald-600 text-white rounded-lg py-3 text-sm font-semibold disabled:opacity-40">
                 <Sparkles className="w-4 h-4" /> 2. Shop setup
               </button>
               <button onClick={() => setShowMore((v) => !v)} aria-label="More tools" className="px-3 rounded-lg border text-slate-500 text-sm">
@@ -310,7 +337,7 @@ export default function InstallationDetailPage() {
       )}
 
       {scanning && <DeviceScanner onScan={handleScan} onClose={() => setScanning(false)} />}
-      {onboarding && <OnboardingChat installationId={job.id} onClose={() => setOnboarding(false)} onApplied={load} />}
+      {onboarding && <OnboardingChat installationId={job.id} merchantName={job.tenant?.name} onClose={() => setOnboarding(false)} onApplied={load} />}
     </div>
   );
 }

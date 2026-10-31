@@ -9,6 +9,7 @@ interface User {
   phone?: string;
   role: 'SUPER_ADMIN' | 'MERCHANT' | 'INSTALLER';
   tenantId: string | null;
+  activationManagedByAdmin?: boolean;
   tenant: {
     id: string;
     name: string;

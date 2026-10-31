@@ -113,7 +113,7 @@ export class SessionService {
       ? null
       : await prisma.tpLinkRouter.findUnique({ where: { id: routerId } });
 
-    if (!router && !tplinkRouter) {
+    if ((!router && !tplinkRouter) || router?.retiredAt) {
       throw new Error('Router not found');
     }
 

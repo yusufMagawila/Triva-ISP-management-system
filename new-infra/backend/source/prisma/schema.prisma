@@ -291,6 +291,7 @@ model Router {
   wifiSsid        String?      // desired WiFi name, applied by the router pull-sync
   wifiSsidApplied String?      // last name the router confirmed
   provisionedAt   DateTime?
+  retiredAt       DateTime?
   sessions        Session[]
   device          Device?
   createdAt       DateTime     @default(now())
