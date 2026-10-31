@@ -11,6 +11,9 @@ services:
       TZ: Africa/Dar_es_Salaam
       SHOW_SERVER_LOGS: "true"
       SHOW_MONGODB_LOGS: "false"
+    labels:
+      - "traefik.http.services.trivaomadacontroller-jmrdnk-35-web.loadbalancer.server.scheme=https"
+      - "traefik.http.services.trivaomadacontroller-jmrdnk-35-websecure.loadbalancer.server.scheme=https"
     expose:
       - "8043"
       - "8088"
