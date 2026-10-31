@@ -1,0 +1,40 @@
+services:
+  omada-controller:
+    image: mbentley/omada-controller:5.15.24.19@sha256:908a4e38ff273b0be77db5525237cf039f724c169f33d3be8b32f3acf34bbe2b
+    restart: unless-stopped
+    stop_grace_period: 60s
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+    environment:
+      TZ: Africa/Dar_es_Salaam
+      SHOW_SERVER_LOGS: "true"
+      SHOW_MONGODB_LOGS: "false"
+    expose:
+      - "8043"
+      - "8088"
+      - "8843"
+    ports:
+      - "${OMADA_DEVICE_BIND_ADDRESS:-127.0.0.1}:29810:29810/udp"
+      - "${OMADA_DEVICE_BIND_ADDRESS:-127.0.0.1}:29811-29817:29811-29817/tcp"
+    volumes:
+      - controller_data:/opt/tplink/EAPController/data
+      - controller_logs:/opt/tplink/EAPController/logs
+      - controller_work:/opt/tplink/EAPController/work
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+        reservations:
+          memory: 1G
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  controller_data:
+  controller_logs:
+  controller_work:
