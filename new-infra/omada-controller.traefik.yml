@@ -1,0 +1,4 @@
+http:
+  serversTransports:
+    triva-omada-controller-lab:
+      insecureSkipVerify: true
