@@ -11,9 +11,22 @@ services:
       TZ: Africa/Dar_es_Salaam
       SHOW_SERVER_LOGS: "true"
       SHOW_MONGODB_LOGS: "false"
+    networks:
+      - default
+      - dokploy-network
     labels:
-      - "traefik.http.services.trivaomadacontroller-jmrdnk-35-web.loadbalancer.server.scheme=https"
-      - "traefik.http.services.trivaomadacontroller-jmrdnk-35-websecure.loadbalancer.server.scheme=https"
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.triva-omada-controller-http.rule=Host(`omada.trivaconnect.site`)"
+      - "traefik.http.routers.triva-omada-controller-http.entrypoints=web"
+      - "traefik.http.routers.triva-omada-controller-http.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.triva-omada-controller-http.service=triva-omada-controller"
+      - "traefik.http.routers.triva-omada-controller-https.rule=Host(`omada.trivaconnect.site`)"
+      - "traefik.http.routers.triva-omada-controller-https.entrypoints=websecure"
+      - "traefik.http.routers.triva-omada-controller-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.triva-omada-controller-https.service=triva-omada-controller"
+      - "traefik.http.services.triva-omada-controller.loadbalancer.server.port=8043"
+      - "traefik.http.services.triva-omada-controller.loadbalancer.server.scheme=https"
     expose:
       - "8043"
       - "8088"
@@ -41,3 +54,8 @@ volumes:
   controller_data:
   controller_logs:
   controller_work:
+
+networks:
+  default:
+  dokploy-network:
+    external: true
